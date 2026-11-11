@@ -133,7 +133,7 @@ export const useAgGridPagination = <T extends Record<string, any>>(
         } catch (err) {
             // リクエストキャンセルエラーは無視
             if ((err as Error).name !== 'AbortError') {
-                const errorObj = err instanceof Error ? err : new Error('数据请求失败');
+                const errorObj = err instanceof Error ? err : new Error('データ取得に失敗しました');
                 callbacksRef.current.onError?.(errorObj);
             }
         } finally {
@@ -197,7 +197,7 @@ export const useAgGridPagination = <T extends Record<string, any>>(
         } catch (err) {
             // リクエストキャンセルエラーは無視
             if ((err as Error).name !== 'AbortError') {
-                const errorObj = err instanceof Error ? err : new Error('数据请求失败');
+                const errorObj = err instanceof Error ? err : new Error('データ取得に失敗しました');
                 callbacksRef.current.onError?.(errorObj);
             }
         } finally {

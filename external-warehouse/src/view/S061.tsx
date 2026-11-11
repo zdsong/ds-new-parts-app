@@ -40,6 +40,8 @@ const S061: React.FC = () => {
     const [roleId, setRoleId] = useState<string>('');
     const [roleVersion, setRoleVersion] = useState<number>(0);
     const [selectedMenuIds, setSelectedMenuIds] = useState<string[]>([]);
+    // 父子連動の設定（0:連動する、1:連動しない）
+    const [menuCheckStrictly, setMenuCheckStrictly] = useState<string>('0');
     const navigate = useNavigate();
     const notify = useNotify();
 
@@ -60,6 +62,7 @@ const S061: React.FC = () => {
                 });
                 setRoleId(id);
                 setRoleVersion(roleData.version || 0);
+                setMenuCheckStrictly(roleData.menuCheckStrictly?.toString() || '0');
             }
         } catch (error) {
         }
@@ -101,6 +104,7 @@ const S061: React.FC = () => {
             });
             setRoleId(stateRoleData.roleId);
             setRoleVersion(stateRoleData.version || 0);
+            setMenuCheckStrictly(stateRoleData.menuCheckStrictly?.toString() || '0');
             setIsEditMode(true);
             fetchRoleMenus(stateRoleData.roleId);
         } else {
@@ -116,6 +120,7 @@ const S061: React.FC = () => {
                 menuCheckStrictly: '0'
             });
             setSelectedMenuIds([]);
+            setMenuCheckStrictly('0');
             fetchRoleMenus('');
         }
     }, [location.state]);
@@ -128,7 +133,7 @@ const S061: React.FC = () => {
                 dataScope: data.dataScope || '1', // デフォルト値を保証する
                 status: data.status || '0', // デフォルト値を保証する
                 menuIds: selectedMenuIds,
-                menuCheckStrictly: parseInt(data.menuCheckStrictly || '0')
+                menuCheckStrictly: parseInt(menuCheckStrictly || '0')
             };
             
             if (isEditMode) {
@@ -264,6 +269,9 @@ const S061: React.FC = () => {
                                 defaultValue={selectedMenuIds}
                                 onChange={handleTreeSelectChange}
                                 defaultExpandedItems={['1', '900']}
+                                showToolbar={true}
+                                checkStrictly={menuCheckStrictly === '1'}
+                                onCheckStrictlyChange={(strictly) => setMenuCheckStrictly(strictly ? '1' : '0')}
                             />
                         </div>
                     </div>

@@ -95,7 +95,7 @@ const N003 = () => {
                 color: 'black'
                 }}
             >
-                新 産 直 く ん 
+                新部品管理システム｜外部倉庫管理 
             </Typography>
             <Typography 
                 gutterBottom

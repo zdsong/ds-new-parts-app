@@ -371,7 +371,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
             <div key={day} style={{ textAlign: 'center', fontSize: 12, color: '#666' }}>{day}</div> 
           ))}
         </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}> {/* gap 1 → 0.7（缩小1/3） */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}> {/* gap 1 → 0.7（1/3に縮小） */}
           {dateCells}
         </Box>
         <Box 

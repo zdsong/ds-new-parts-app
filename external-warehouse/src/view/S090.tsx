@@ -268,7 +268,7 @@ const S090: React.FC = () => {
             field: 'concurrent',
             width:120,
             cellRenderer: (params: any) => (
-                <span>{params.value === '0' ? '许可' : '禁止'}</span>
+                <span>{params.value === '0' ? '許可' : '禁止'}</span>
             ),
         },
         {
@@ -439,7 +439,7 @@ const S090: React.FC = () => {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333' }}>同時実行:</div>
-                                <div>{currentTask.concurrent === '0' ? '许可' : '禁止'}</div>
+                                <div>{currentTask.concurrent === '0' ? '許可' : '禁止'}</div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333' }}>計画ポリシー:</div>
