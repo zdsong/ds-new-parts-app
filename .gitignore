@@ -85,3 +85,4 @@ coverage/
 
 # 型定義の自動生成ファイルなど（必要に応じて追加）
 *.tsbuildinfo
+external-warehouse/yarn.lock
