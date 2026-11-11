@@ -168,7 +168,7 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
       <IconButton
         color="inherit"
         onClick={handleToggleMenu}
-        aria-label="主菜单"
+        aria-label="メインメニュー"
         sx={sxStyles.iconButton}
       >
         <MenuIcon />

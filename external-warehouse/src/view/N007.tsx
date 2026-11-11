@@ -209,7 +209,7 @@ const formatPrice = (price: number | string | undefined) => {
         marginBottom: '1rem' 
       }}>
         <Typography style={{ fontWeight: 'bold', marginTop: '2rem'}}>注文詳細</Typography>
-        {/* 戻る按钮 */}
+        {/* 戻るボタン */}
         <button
           onClick={handleGoBack}
           style={{

@@ -400,7 +400,7 @@ const formatPrice = (price: number | string | undefined) => {
           </div>
         </div>
 
-      {/* 問い合わせ履歴弹窗 */}
+      {/* 問い合わせ履歴モーダル */}
         <CustomModal
           open={isN020Open}
           onClose={() => setIsN020Open(false)}

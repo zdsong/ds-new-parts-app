@@ -300,7 +300,7 @@ export const authProvider: AuthProvider = {
             }
             
             if (!response.data?.id || !response.data?.username) {
-                throw handleError(new Error('ユーザー情報が不完整です'), response);
+                throw handleError(new Error('ユーザー情報が不完全です'), response);
             }
             return Promise.resolve({
                 id: response.data.id,

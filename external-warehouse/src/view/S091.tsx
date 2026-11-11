@@ -179,7 +179,7 @@ const S091: React.FC = () => {
                             source="concurrent"
                             label="同時実行"
                             choices={[
-                                { key: '0', value: '许可' },
+                                { key: '0', value: '許可' },
                                 { key: '1', value: '禁止' },
                             ]}
                             validate={[required()]}

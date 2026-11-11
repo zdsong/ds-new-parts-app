@@ -26,7 +26,7 @@ interface NokaSearch {
   id: string;
 }
 
-// 検索フォームのプロパティインターフェース（无需 onSubmit，内部处理）
+// 検索フォームのプロパティインターフェース（onSubmit 不要、内部で処理）
 interface SearchFormProps { }
 
 // 農家管理画面コンポーネント 

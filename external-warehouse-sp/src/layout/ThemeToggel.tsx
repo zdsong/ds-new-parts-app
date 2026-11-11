@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { IconButton, Menu, MenuItem } from '@mui/material';
 import PaletteIcon from '@mui/icons-material/Palette';
-const themeColor  = import.meta.env.VITE_THEME_COLOR;
+// 環境変数が未設定の場合は既定テーマ（blue）を使用する
+const themeColor = import.meta.env.VITE_THEME_COLOR;
 
 type ThemeType = 'green' | 'blue' | 'purple';
 interface ThemeConfig {
@@ -36,7 +37,10 @@ const THEME_CACHE_KEY = 'yamato-theme-config';
 
 const ThemeToggle: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [currentTheme, setCurrentTheme] = useState<ThemeType>(themeColor);
+  // 未定義または不正なテーマ値の場合は blue にフォールバックする
+  const initialTheme: ThemeType =
+    themeColor && themeColor in themeStyles ? (themeColor as ThemeType) : 'blue';
+  const [currentTheme, setCurrentTheme] = useState<ThemeType>(initialTheme);
 
   const changeTheme = (theme: ThemeType) => {
     setCurrentTheme(theme);
