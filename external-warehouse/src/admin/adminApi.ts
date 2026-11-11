@@ -26,9 +26,14 @@ interface ApiResponse<T> {
   [key: string]: any;
 }
 
-// 管理メニュー一覧を取得する
+// 管理メニュー一覧を取得する（ログイン中ユーザーが参照可能なメニューのみ）
 export const fetchAdminMenus = async (): Promise<AdminMenu[]> => {
-  const response = await fetch(`${apiUrl}/api/system/menu/adminMenus`);
+  const token = sessionStorage.getItem('externalWarehouseToken');
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  const response = await fetch(`${apiUrl}/api/system/menu/myMenus`, { headers });
   const body = (await response.json()) as ApiResponse<AdminMenu[]>;
   return body.data || [];
 };

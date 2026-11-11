@@ -89,59 +89,84 @@ const logoutMenuItem: MenuItemType = {
   icon: <Logout fontSize="small" />,
 };
 
-// メニューアイテムの再帰的レンダリング
-const renderMenuItems = (
-  items: MenuItemType[],
-  onClose: () => void,
-  navigate: (path: string) => void,
-  isRootLevel = true
-) => {
-  return items.map((item) => {
-    // 子メニューが存在する場合
-    if (item.children && item.children.length > 0) {
-      const [isOpen, setIsOpen] = useState(false);
-      return (
-        <React.Fragment key={item.name}>
-          <MenuItem
-            onClick={() => setIsOpen(!isOpen)}
-            sx={sxStyles.parentMenuItem}
-          >
-            <div style={{ display: 'flex', alignItems: 'center'}}>
-              {item.icon}
-              <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
-            </div>
-            <ChevronRight
-              fontSize="small"
-              sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
-            />
-          </MenuItem>
-          <Collapse in={isOpen} timeout="auto" unmountOnExit>
-            {renderMenuItems(item.children!, onClose, navigate, false)}
-          </Collapse>
-        </React.Fragment>
-      );
-    }
-    // 子メニューが存在しない場合
+// メニューの1項目を描画する
+const MenuNode: React.FC<{
+  item: MenuItemType;
+  onClose: () => void;
+  navigate: (path: string) => void;
+  isRootLevel: boolean;
+}> = ({ item, onClose, navigate, isRootLevel }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // 子メニューが存在する場合
+  if (item.children && item.children.length > 0) {
     return (
-      <MenuItem
-        key={item.name}
-        onClick={() => {
-          item.name && navigate(`/${item.name}`);
-          onClose();
-        }}
-        sx={isRootLevel ? sxStyles.rootMenuItem : sxStyles.childMenuItem}
-      >
-        <div style={{ display: 'flex', alignItems: 'center'}}>
-          {item.icon}
-          <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
-        </div>
-        <ChevronRight
-          fontSize="small"
-          sx={sxStyles.arrowIcon}
-        />
-      </MenuItem>
+      <>
+        <MenuItem
+          onClick={() => setIsOpen(!isOpen)}
+          sx={sxStyles.parentMenuItem}
+        >
+          <div style={{ display: 'flex', alignItems: 'center'}}>
+            {item.icon}
+            <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
+          </div>
+          <ChevronRight
+            fontSize="small"
+            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+          />
+        </MenuItem>
+        <Collapse in={isOpen} timeout="auto" unmountOnExit>
+          <RecursiveMenuItems items={item.children} onClose={onClose} navigate={navigate} isRootLevel={false} />
+        </Collapse>
+      </>
     );
-  });
+  }
+
+  // 子メニューが存在しない場合
+  const isDirectory = item.meta?.menuType === 'M';
+  return (
+    <MenuItem
+      onClick={() => {
+        // ディレクトリは展開専用のため画面遷移しない
+        if (!isDirectory && item.name) {
+          navigate(`/${item.name}`);
+        }
+        onClose();
+      }}
+      sx={isRootLevel ? sxStyles.rootMenuItem : sxStyles.childMenuItem}
+    >
+      <div style={{ display: 'flex', alignItems: 'center'}}>
+        {item.icon}
+        <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
+      </div>
+      <ChevronRight
+        fontSize="small"
+        sx={sxStyles.arrowIcon}
+      />
+    </MenuItem>
+  );
+};
+
+// メニューアイテムの再帰的レンダリング
+const RecursiveMenuItems: React.FC<{
+  items: MenuItemType[];
+  onClose: () => void;
+  navigate: (path: string) => void;
+  isRootLevel?: boolean;
+}> = ({ items, onClose, navigate, isRootLevel = true }) => {
+  return (
+    <>
+      {items.map((item) => (
+        <MenuNode
+          key={item.name || item.meta?.title}
+          item={item}
+          onClose={onClose}
+          navigate={navigate}
+          isRootLevel={isRootLevel}
+        />
+      ))}
+    </>
+  );
 };
 
 // カスタムAppBarメニューコンポーネント
@@ -211,7 +236,7 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
           </Box>
         {/* メニューコンテンツ */}
         <Box sx={sxStyles.menuContent}>
-          {renderMenuItems(menuItems, closeAllPopups, navigate)}
+          <RecursiveMenuItems items={menuItems} onClose={closeAllPopups} navigate={navigate} />
         </Box>
         <Divider sx={sxStyles.divider} />
           <Box sx={{ display: 'flex', alignItems: 'center', paddingLeft: '10px', '&:hover': { bgcolor: 'action.hover' }}} onClick={()=>{logout()}}>

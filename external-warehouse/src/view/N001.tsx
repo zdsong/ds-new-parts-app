@@ -78,7 +78,7 @@ const N001: React.FC<LoginPageDatas> = () => {
                 fontWeight='600'
                 style={{ color: 'black' }}
             >
-                新 産 直 く ん 
+                新部品管理システム｜外部倉庫管理 
             </Typography>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <SimpleForm

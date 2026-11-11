@@ -10,7 +10,7 @@ import customIcon from '../assets/icons/logo-icon.png';
 import { useNavigate } from 'react-router';
 import { Notice } from './Notice';
 import ThemeToggle from './ThemeToggel';
-import { fetchAdminMenus } from '../admin/adminApi';
+import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
 
 import SIcon from '../assets/icons/S.png';
 import DIcon from '../assets/icons/D.png';
@@ -22,7 +22,80 @@ interface MenuItem {
   component?: string,
   path?: string,
   meta: any,
+  children?: MenuItem[],
 }
+
+// 既存画面が存在するルート名の一覧
+const AVAILABLE_ROUTES = [
+  'C005',
+  'C013',
+  'S010',
+  'S020',
+  'S030',
+  'S040',
+  'S050',
+  'S060',
+  'S090',
+  'appVersion',
+];
+
+// メニューの遷移先を決定する
+const resolveMenuName = (menu: AdminMenu) => {
+  return AVAILABLE_ROUTES.includes(menu.routeName)
+    ? menu.routeName
+    : `admin/${menu.path}`;
+};
+
+// フラットなメニュー一覧から親子階層のメニューを構築する
+const buildMenuItems = (menus: AdminMenu[]): MenuItem[] => {
+  // ボタン種別・非表示・停止中のメニューは対象外とする
+  const validMenus = menus
+    .filter((menu) => menu.menuType !== 'F' && menu.status !== '1' && menu.visible !== '1')
+    .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
+
+  const nodeMap = new Map<string, MenuItem>();
+  validMenus.forEach((menu) => {
+    nodeMap.set(String(menu.menuId), {
+      name: resolveMenuName(menu),
+      meta: { title: menu.menuName, menuType: menu.menuType },
+      children: [],
+    });
+  });
+
+  const roots: MenuItem[] = [];
+  validMenus.forEach((menu) => {
+    const node = nodeMap.get(String(menu.menuId))!;
+    const parent = nodeMap.get(String(menu.parentId));
+    if (String(menu.parentId) === '0' || !parent) {
+      roots.push(node);
+    } else {
+      parent.children = parent.children || [];
+      parent.children.push(node);
+    }
+  });
+
+  // 子メニューを持たない項目は遷移可能な項目として扱い、空のディレクトリは除外する
+  const normalize = (items: MenuItem[]): MenuItem[] => {
+    const result: MenuItem[] = [];
+    items.forEach((item) => {
+      if (item.children && item.children.length > 0) {
+        const children = normalize(item.children);
+        if (children.length > 0) {
+          item.children = children;
+          result.push(item);
+          return;
+        }
+      }
+      delete item.children;
+      // 配下に表示可能なメニューが無いディレクトリは表示しない
+      if (item.meta?.menuType !== 'M') {
+        result.push(item);
+      }
+    });
+    return result;
+  };
+  return normalize(roots);
+};
 
 // AppBarコンテナスタイル
 const AppBarContainer = styled(Box)(({ theme }) => ({
@@ -68,30 +141,9 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
 
   // 管理メニューの読み込み
   React.useEffect(() => {
-    // 既存画面が存在するルート名の一覧
-    const availableRoutes = [
-      'C005',
-      'C013',
-      'S010',
-      'S020',
-      'S030',
-      'S040',
-      'S050',
-      'S060',
-      'S090',
-      'appVersion',
-    ];
     fetchAdminMenus()
       .then((menus) => {
-        const children = menus
-          .filter((menu) => menu.menuType !== 'M' && menu.status !== '1')
-          .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0))
-          .map((menu) => ({
-            name: availableRoutes.includes(menu.routeName)
-              ? menu.routeName
-              : `admin/${menu.path}`,
-            meta: { title: menu.menuName },
-          }));
+        const children = buildMenuItems(menus);
         if (children.length === 0) return;
         setMenuItems((prev) => [...prev, ...children]);
       })
@@ -153,7 +205,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
               style={{ color: 'black', cursor: 'pointer' }}
               onClick={()=> navigateN006()}
           >
-              新 産 直 く ん 
+              新部品管理システム｜外部倉庫管理
           </Typography>
         </LeftSection>
 

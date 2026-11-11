@@ -57,7 +57,7 @@ const S051: React.FC = () => {
             setFormDefaultValues({
                 menuId: stateMenuData.menuId || '',
                 menuName: stateMenuData.menuName || '',
-                menuType: 'C',
+                menuType: stateMenuData.menuType || 'C',
                 parentId: stateMenuData.parentId?.toString() || '',
                 orderNum: stateMenuData.orderNum || '',
                 path: stateMenuData.path || '',
@@ -75,10 +75,17 @@ const S051: React.FC = () => {
             setIsEditMode(true);
         } else {
             setIsEditMode(false);
+            // 親メニューから子メニューを追加する場合、親IDと種別を引き継ぐ
+            const parentId = location.state?.parentId?.toString() || '';
+            const parentMenuType = location.state?.parentMenuType;
+            // 親が指定されている場合のみ子メニューの種別を決定する
+            const childMenuType = parentId
+                ? (parentMenuType === 'M' ? 'C' : 'F')
+                : 'C';
             setFormDefaultValues({
                 menuName: '',
-                menuType: 'C',
-                parentId:'',
+                menuType: childMenuType,
+                parentId,
                 orderNum: '',
                 path: '',
                 component: '',
@@ -223,6 +230,20 @@ const S051: React.FC = () => {
     const renderFormFields = () => {
                 return (
                     <>
+                        <FormInput
+                            structure='top-bottom'
+                            type={'filter-select'}
+                            source="menuType"
+                            label="種別"
+                            choices={[
+                                { key: 'M', value: 'ディレクトリ' },
+                                { key: 'C', value: 'メニュー' },
+                                { key: 'F', value: 'ボタン' },
+                            ]}
+                            validate={[required()]}
+                            required={true}
+                            placeholder='選択する必要があります'
+                        />
                         <FormInput
                             structure='top-bottom'
                             type={'text'}
