@@ -1,0 +1,26 @@
+.ag-theme-alpine {
+    .ag-header {
+      background-color: #00B441 !important;
+      border-bottom: 1px solid #d9d9d9 !important;
+    }
+  
+    .ag-header-cell {
+      background-color: #00B441 !important;
+      color: white !important;
+      border-right: 1px solid #d9d9d9 !important;
+      border-left: none !important;
+    }
+  
+    .ag-cell {
+      border-left: none !important;
+    }
+  
+    .ag-header-cell-last, .ag-cell-last {
+      border-right: none !important;
+    }
+
+    .ag-header-cell-resize{
+        display: none;
+    }
+  
+  }
