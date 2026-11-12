@@ -48,6 +48,22 @@ const N001: React.FC<LoginPageDatas> = () => {
         navigate('/login/verify/login')
     }
 
+    // 直接ログイン（ユーザーID/パスワード検証 + トークン検証）
+    const submitDirectLogin = async (values: any) => {
+
+        setLoading(true)
+        try{
+            await authProvider.directLogin(values)
+            navigate('/N006')
+        }catch(e){
+            if(e instanceof Error){
+                notify(e.message, { type: 'error' })
+            }
+        }
+        setLoading(false)
+
+    };
+
     const navigateN002 = () =>{
         navigate('/login/send-email')
     }
@@ -80,7 +96,7 @@ const N001: React.FC<LoginPageDatas> = () => {
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center',marginTop: '5vh', width: '100%', padding: 0, }}>
                 <SimpleForm
                     toolbar={false}
-                    onSubmit={submitLogin}
+                    onSubmit={submitDirectLogin}
                     defaultValues={{ username: '', password: '' }}
                     mode="onSubmit"
                     reValidateMode="onChange"
@@ -124,6 +140,19 @@ const N001: React.FC<LoginPageDatas> = () => {
                         flexDirection: 'column',
                         gap: '2vh',
                     }}>
+                        <Box sx={{ display: 'none' }}>
+                            <Button
+                                variant="contained"
+                                disabled={loading}
+                                sx={buttonSx.loginButton}
+                                type="submit"
+                            >
+                                {loading ? (
+                                    <CircularProgress size={19} thickness={3} sx={{ color: 'white' }} />
+                                ) : '認証コードを送信'}
+                            </Button>
+                        </Box>
+
                         <Button
                             variant="contained"
                             disabled={loading}
@@ -132,7 +161,7 @@ const N001: React.FC<LoginPageDatas> = () => {
                         >
                             {loading ? (
                                 <CircularProgress size={19} thickness={3} sx={{ color: 'white' }} />
-                            ) : '認証コードを送信'}
+                            ) : 'ログイン'}
                         </Button>
 
                         <Typography
