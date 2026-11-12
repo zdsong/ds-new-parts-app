@@ -1,6 +1,6 @@
 {
-  "short_name": "CRM",
-  "name": "yamato crm",
+  "short_name": "warehouse",
+  "name": "external warehouse",
   "icons": [
     {
       "src": "custom-ivon.png",

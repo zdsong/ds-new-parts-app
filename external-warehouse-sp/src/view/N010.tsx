@@ -98,7 +98,7 @@ const N010: React.FC<SearchFormProps> = () => {
       <div>
       <Box sx={pageSx.titleContainer}>
         <div style = {{display: 'flex', flexDirection: 'column'}}>
-          <span style={{ marginRight: '4px', color: 'var(--mui-yamato-page-header-color)', }} onClick={handleGoBack}>&lt; 戻る</span>
+          <span style={{ marginRight: '4px', color: 'var(--mui-page-header-color)', }} onClick={handleGoBack}>&lt; 戻る</span>
           <label style={pageSx.title}>
         商品詳細
         </label>

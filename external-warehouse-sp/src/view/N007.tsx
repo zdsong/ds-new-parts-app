@@ -187,7 +187,7 @@ const formatPrice = (price: number | string | undefined) => {
   // 顧客IDの緑色スタイル
   const customerIdGreenStyle = {
     input: {
-      color: 'var(--mui-yamato-page-header-color)',
+      color: 'var(--mui-page-header-color)',
     }
   };
 
@@ -318,7 +318,7 @@ const formatPrice = (price: number | string | undefined) => {
                   style={{
                     padding: '10px',
                     borderBottom: '1px solid #d9d9d9',
-                    color: 'var(--mui-yamato-page-header-color)'
+                    color: 'var(--mui-page-header-color)'
                   }}
                 >
                   <div>{item.itemName}</div>
@@ -364,7 +364,7 @@ const formatPrice = (price: number | string | undefined) => {
                   style={{
                     padding: '10px',
                     borderBottom: '1px solid #d9d9d9',
-                    color: 'var(--mui-yamato-page-header-color)'
+                    color: 'var(--mui-page-header-color)'
                   }}
                 >
                   <div>{item.itemName}</div>

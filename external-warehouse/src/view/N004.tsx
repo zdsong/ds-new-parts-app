@@ -3,7 +3,7 @@ import React from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import LoginLogoIcon from '../assets/icons/login-logo-icon.png'
+import LoginLogoIcon from '../assets/icons/D.png'
 
 import { Box, Typography, CircularProgress, styled } from '@mui/material';
 import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
@@ -56,14 +56,14 @@ const N004 = () => {
                    notify(e.message, { type: 'error' })
                }
            }
-            navigateN006()
+            navigateS050()
         }
         setLoading(false)
         
     };
 
-    const navigateN006 = () =>{
-        navigate('/N006')
+    const navigateS050 = () =>{
+        navigate('/S050')
     }
 
     return (
@@ -202,7 +202,7 @@ const N004 = () => {
                 fontWeight='600'
                 style={{ fontSize: '15px', marginTop: '20px',color: '#7f7f7f' }}
             >
-                © Yamato Transport Co., Ltd. All Rights Reserved.
+                © nasta Transport Co., Ltd. All Rights Reserved.
             </Typography>
         </Box>
     );

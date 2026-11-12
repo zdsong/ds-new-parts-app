@@ -33,7 +33,7 @@ const themeStyles: Record<ThemeType, ThemeConfig> = {
   }
 };
 
-const THEME_CACHE_KEY = 'yamato-theme-config';
+const THEME_CACHE_KEY = 'theme-config';
 
 const ThemeToggle: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -48,7 +48,7 @@ const ThemeToggle: React.FC = () => {
     setAnchorEl(null);
     const root = document.documentElement;
     Object.entries(themeStyles[theme]).forEach(([key, value]) => {
-      root.style.setProperty(`--mui-yamato-${key}`, value);
+      root.style.setProperty(`--mui-${key}`, value);
     });
     localStorage.setItem(THEME_CACHE_KEY, theme);
   };

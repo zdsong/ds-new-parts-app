@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import LoginLogoIcon from '../assets/icons/login-logo-icon.png'
+import LoginLogoIcon from '../assets/icons/D.png'
 
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
@@ -97,7 +97,7 @@ const N003 = () => {
                 color: 'black'
                 }}
             >
-                新 産 直 く ん 
+                新部品管理システム｜外部倉庫管理 
             </Typography>
             <Typography 
                 gutterBottom
@@ -185,7 +185,7 @@ const N003 = () => {
                 fontWeight='600'
                 style={{ fontSize: '12px',color: '#7f7f7f', whiteSpace: 'nowrap', marginBottom: '70px' }}
             >
-                © Yamato Transport Co., Ltd. All Rights Reserved.
+                © nasta Transport Co., Ltd. All Rights Reserved.
             </Typography>
         </Box>
     );

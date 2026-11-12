@@ -118,7 +118,7 @@ const N016: React.FC<SearchFormProps> = () => {
     <Box sx={pageSx.pageContainer}>
       <Box sx={pageSx.titleContainer}>
         <div style = {{display: 'flex', flexDirection: 'column'}}>
-          <span style={{ marginRight: '4px', color: 'var(--mui-yamato-page-header-color)', }} onClick={handleGoBack}>&lt; 戻る</span>
+          <span style={{ marginRight: '4px', color: 'var(--mui-page-header-color)', }} onClick={handleGoBack}>&lt; 戻る</span>
           <label style={pageSx.title}>
         顧客詳細
         </label>
@@ -246,7 +246,7 @@ return (
       style={{
         padding: '2px 10px',
         borderBottom: '1px solid #d9d9d9',
-        backgroundColor: 'var(--mui-yamato-card-header-color)'
+        backgroundColor: 'var(--mui-card-header-color)'
       }}
     >
       <div style={{display: 'flex', justifyContent: 'end', fontSize: '13px', color: '#7f7f7f'}} onClick={()=>{item.itemId ? handleIdClick(item.itemId): ''}}><div>{'商品ID：' + item.itemId || ''}</div></div>
@@ -259,7 +259,7 @@ return (
       {
         !showFlg ?
         <div 
-        style = {{flex: '1', display: 'flex', alignContent: 'center', justifyContent: 'center', border: '1px solid var(--mui-yamato-page-header-color)', color: 'var(--mui-yamato-page-header-color)', margin: '0 20px'}}
+        style = {{flex: '1', display: 'flex', alignContent: 'center', justifyContent: 'center', border: '1px solid var(--mui-page-header-color)', color: 'var(--mui-page-header-color)', margin: '0 20px'}}
         onClick = {() => { setShowFlg(true) }}
         >
         残りの詳細を表示する

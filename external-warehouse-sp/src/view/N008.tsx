@@ -83,7 +83,7 @@ const N008: React.FC<SearchFormProps> = () => {
 
     return (
       <div style = {{width: '100%', height: '100%'}} onClick = {handleClick}>
-      <span style={{ color: 'var(--mui-yamato-page-header-color)', fontWeight: 'bold', fontSize: '14px' }}>&gt;</span>
+      <span style={{ color: 'var(--mui-page-header-color)', fontWeight: 'bold', fontSize: '14px' }}>&gt;</span>
       </div>
     );
   };
@@ -231,7 +231,7 @@ const N008: React.FC<SearchFormProps> = () => {
       <label style={pageSx.title}>
           商品マスタ
         </label>
-        <Typography sx={{ display: 'flex', color: 'var(--mui-yamato-page-header-color)' }}
+        <Typography sx={{ display: 'flex', color: 'var(--mui-page-header-color)' }}
           component="h2"
           onClick={handleToggleChat}
         >

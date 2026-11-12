@@ -19,16 +19,16 @@ export const buttonSx = {
     loginButton:{
         height: '50px',
         width: '400px',
-        bgcolor: 'color-mix(in srgb, var(--mui-yamato-page-header-color) 90%, white 10%)',
+        bgcolor: 'color-mix(in srgb, var(--mui-page-header-color) 90%, white 10%)',
         fontSize: '20px',
         borderRadius: 0,
         color: 'white',
-        '&:hover': { bgcolor: 'color-mix(in srgb, var(--mui-yamato-page-header-color) 80%, black 20%)' },
+        '&:hover': { bgcolor: 'color-mix(in srgb, var(--mui-page-header-color) 80%, black 20%)' },
         '&:disabled': { bgcolor: '#cccccc', cursor: 'not-allowed' },
     },
                         
     button : {
-        backgroundColor: 'var(--mui-yamato-page-header-color)',
+        backgroundColor: 'var(--mui-page-header-color)',
         padding: '0.5rem 1rem',
         color: 'white',
         border: 'none',
@@ -56,7 +56,7 @@ export const tableSx = {
 
     linkFontColumn : {
         cursor: 'pointer', 
-        color: 'var(--mui-yamato-page-header-color)' 
+        color: 'var(--mui-page-header-color)' 
     }
 }
 
@@ -84,16 +84,16 @@ export const formSx = {
 
 export const font = {
     linkFont : {
-        color: 'var(--mui-yamato-card-header-color)'
+        color: 'var(--mui-card-header-color)'
     },
     loginLinkFont : {
-        color: 'color-mix(in srgb, var(--mui-yamato-page-header-color) 90%, white 10%)',
+        color: 'color-mix(in srgb, var(--mui-page-header-color) 90%, white 10%)',
         cursor: 'pointer',
         '&:hover': {
             textDecoration: 'underline',
-            textDecorationColor: 'color-mix(in srgb, var(--mui-yamato-page-header-color) 80%, black 20%)',
+            textDecorationColor: 'color-mix(in srgb, var(--mui-page-header-color) 80%, black 20%)',
             textUnderlineOffset: '2px',
-            color: 'color-mix(in srgb, var(--mui-yamato-page-header-color) 80%, black 20%)',
+            color: 'color-mix(in srgb, var(--mui-page-header-color) 80%, black 20%)',
         }
     }
 }

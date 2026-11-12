@@ -257,7 +257,7 @@ const N006: React.FC<SearchFormProps> = () => {
           style={{
             padding: '2px 10px',
             borderBottom: '1px solid #d9d9d9',
-            backgroundColor: 'var(--mui-yamato-card-header-color)'
+            backgroundColor: 'var(--mui-card-header-color)'
           }}
         >
           <div>{order.paymentDate ? formatDate(order.paymentDate) : ''}</div>
@@ -459,7 +459,7 @@ const N006: React.FC<SearchFormProps> = () => {
           注文一覧 
         </label>
         <Typography 
-          sx={{ display: 'flex', color: 'var(--mui-yamato-page-header-color)', cursor: 'pointer' }}
+          sx={{ display: 'flex', color: 'var(--mui-page-header-color)', cursor: 'pointer' }}
           component="h2" 
           onClick={handleToggleChat}
         >

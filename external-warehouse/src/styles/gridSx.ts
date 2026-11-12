@@ -13,7 +13,7 @@ export const gridStyles = `
   }
 
   .ag-theme-alpine .ag-header-container {
-    background-color: var(--mui-yamato-page-header-color);
+    background-color: var(--mui-page-header-color);
     font-weight: bold !important;
     font-size: 14px !important;
   }
