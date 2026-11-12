@@ -124,20 +124,7 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
 }) => {
 
   // メニューアイテム初期データ
-  const [menuItems, setMenuItems] = React.useState<MenuItem[]>([
-    {
-      name: 'N006',
-      meta: { title: '注文一覧' }
-    },
-    {
-      name: 'N008',
-      meta: { title: '商品マスタ' }
-    },
-    {
-      name: 'N015',
-      meta: { title: '顧客マスタ' }
-    },
-  ]);
+  const [menuItems, setMenuItems] = React.useState<MenuItem[]>([]);
 
   // 管理メニューの読み込み
   React.useEffect(() => {
@@ -183,8 +170,8 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
 
   const navigate = useNavigate();
 
-  const navigateN006 = () =>{
-    navigate('/N006')
+  const navigateS050 = () =>{
+    navigate('/S050')
   }
 
   const icon = themeIcon === 'S' ? SIcon : themeIcon === 'D' ? DIcon : customIcon
@@ -203,7 +190,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
               component="h3" 
               gutterBottom
               style={{ color: 'black', cursor: 'pointer' }}
-              onClick={()=> navigateN006()}
+              onClick={()=> navigateS050()}
           >
               新部品管理システム｜外部倉庫管理
           </Typography>
