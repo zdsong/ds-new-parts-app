@@ -113,7 +113,8 @@ const S050: React.FC = () => {
             nodes.sort((a, b) => {
                 const orderDiff = Number(a.orderNum || 0) - Number(b.orderNum || 0);
                 if (orderDiff !== 0) return orderDiff;
-                return Number(a.menuId) - Number(b.menuId);
+                // メニューID は 19 桁の雪花IDを含むため Number 変換せず文字列で比較する
+                return String(a.menuId).localeCompare(String(b.menuId));
             });
             nodes.forEach((node) => sortNodes(node.children || []));
         };
@@ -348,7 +349,7 @@ const S050: React.FC = () => {
                         />
                         <div></div>
                         <div style={buttonSx.buttonBar}>
-                            <button style={buttonSx.button} type="submit">
+                            <button style={buttonSx.button} type="submit" onClick={fetchMenuList}>
                                 検索
                             </button>
                             <button style={buttonSx.button} type="button" onClick={handleReset}>

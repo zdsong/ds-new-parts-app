@@ -36,6 +36,7 @@ const AVAILABLE_ROUTES = [
   'S050',
   'S060',
   'S090',
+  'P303',
   'appVersion',
 ];
 
@@ -148,8 +149,8 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
     justifyContent: 'end',
   }}>
     <ThemeToggle></ThemeToggle>
-    <MessageChatAppBar></MessageChatAppBar>
-    <Notice></Notice>
+    {/* <MessageChatAppBar></MessageChatAppBar>
+    <Notice></Notice> */}
     <CustomAppBarMenu menuItems={menuItems}></CustomAppBarMenu>
   </Box>
 );}

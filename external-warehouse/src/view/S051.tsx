@@ -26,13 +26,36 @@ interface MenuFormData {
     remark: string;
 }
 
-const S051: React.FC = () => {
-    const { request } = useApiRequest();
-    const location = useLocation();
-    const [formDefaultValues, setFormDefaultValues] = useState<MenuFormData>({
+// 画面遷移時の状態からフォーム初期値を組み立てる
+const buildFormDefaultValues = (state: any): MenuFormData => {
+    if (state?.menuData) {
+        const m = state.menuData;
+        return {
+            menuId: m.menuId != null ? String(m.menuId) : '',
+            menuName: m.menuName ?? '',
+            menuType: m.menuType ?? 'C',
+            parentId: m.parentId != null ? String(m.parentId) : '',
+            orderNum: m.orderNum != null ? String(m.orderNum) : '',
+            path: m.path ?? '',
+            component: m.component ?? '',
+            query: m.query ?? '',
+            routeName: m.routeName ?? '',
+            isFrame: m.isFrame != null ? String(m.isFrame) : '',
+            isCache: m.isCache != null ? String(m.isCache) : '',
+            visible: m.visible != null ? String(m.visible) : '',
+            status: m.status != null ? String(m.status) : '',
+            perms: m.perms ?? '',
+            icon: m.icon ?? '',
+            remark: m.remark ?? ''
+        };
+    }
+    // 親メニューから子メニューを追加する場合、親IDと種別を引き継ぐ
+    const parentId = state?.parentId != null ? String(state.parentId) : '';
+    const parentMenuType = state?.parentMenuType;
+    return {
         menuName: '',
-        menuType: 'C',
-        parentId:'',
+        menuType: parentId ? (parentMenuType === 'M' ? 'C' : 'F') : 'C',
+        parentId,
         orderNum: '',
         path: '',
         component: '',
@@ -45,61 +68,25 @@ const S051: React.FC = () => {
         perms: '',
         icon: '',
         remark: ''
-    });
-    const [isEditMode, setIsEditMode] = useState(false);
+    };
+};
+
+const S051: React.FC = () => {
+    const { request } = useApiRequest();
+    const location = useLocation();
+    // 初期値は初回描画時に確定させる。
+    // useEffect で setState すると SimpleForm のマウント後に defaultValues が変わり、
+    // 編集時に入力欄が空のまま（＝未入力で送信され、既存値が更新されない）になるため。
+    const [formDefaultValues, setFormDefaultValues] = useState<MenuFormData>(() => buildFormDefaultValues(location.state));
+    const [isEditMode, setIsEditMode] = useState<boolean>(!!location.state?.menuData);
     const [parentMenuOptions, setParentMenuOptions] = useState<Array<{ key: string; value: string }>>([]);
     const notify = useNotify();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (location.state?.menuData) {
-            const stateMenuData = location.state.menuData;
-            setFormDefaultValues({
-                menuId: stateMenuData.menuId || '',
-                menuName: stateMenuData.menuName || '',
-                menuType: stateMenuData.menuType || 'C',
-                parentId: stateMenuData.parentId?.toString() || '',
-                orderNum: stateMenuData.orderNum || '',
-                path: stateMenuData.path || '',
-                component: stateMenuData.component || '',
-                query: stateMenuData.query || '',
-                routeName: stateMenuData.routeName || '',
-                isFrame: stateMenuData.isFrame?.toString() || '',
-                isCache: stateMenuData.isCache?.toString() || '',
-                visible: stateMenuData.visible?.toString() || '',
-                status: stateMenuData.status?.toString() || '',
-                perms: stateMenuData.perms || '',
-                icon: stateMenuData.icon || '',
-                remark: stateMenuData.remark || ''
-            });
-            setIsEditMode(true);
-        } else {
-            setIsEditMode(false);
-            // 親メニューから子メニューを追加する場合、親IDと種別を引き継ぐ
-            const parentId = location.state?.parentId?.toString() || '';
-            const parentMenuType = location.state?.parentMenuType;
-            // 親が指定されている場合のみ子メニューの種別を決定する
-            const childMenuType = parentId
-                ? (parentMenuType === 'M' ? 'C' : 'F')
-                : 'C';
-            setFormDefaultValues({
-                menuName: '',
-                menuType: childMenuType,
-                parentId,
-                orderNum: '',
-                path: '',
-                component: '',
-                query: '',
-                routeName: '',
-                isFrame: '',
-                isCache: '',
-                visible: '',
-                status: '',
-                perms: '',
-                icon: '',
-                remark: ''
-            });
-        }
+        // 同一画面内で遷移状態が変わった場合のみ再適用する
+        setFormDefaultValues(buildFormDefaultValues(location.state));
+        setIsEditMode(!!location.state?.menuData);
     }, [location.state]);
 
     useEffect(() => {
@@ -122,11 +109,15 @@ const S051: React.FC = () => {
 
     const handleSubmit = async (data: any) => {
         try {
+            // メニューID／親メニューID は 19 桁の雪花IDを含むため、Number 変換すると
+            // 精度が落ちて別のIDになる。文字列のまま送信すること。
             const paramsData = {
                 menuName: data.menuName,
                 menuType: data.menuType,
-                parentId: data.parentId ? Number(data.parentId) : null,
-                orderNum: Number(data.orderNum),
+                parentId: data.parentId ? String(data.parentId) : null,
+                orderNum: data.orderNum === '' || data.orderNum === undefined || data.orderNum === null
+                    ? null
+                    : Number(data.orderNum),
                 path: data.path,
                 component: data.component,
                 query: data.query,
@@ -143,7 +134,7 @@ const S051: React.FC = () => {
             if (isEditMode && location.state?.menuData?.menuId) {
                 await request('put', 'api/system/menu', {
                     ...paramsData,
-                    menuId: Number(location.state.menuData.menuId)
+                    menuId: String(location.state.menuData.menuId)
                 });
             } else {
                 await request('post', 'api/system/menu', paramsData);
@@ -259,8 +250,6 @@ const S051: React.FC = () => {
                             source="parentId"
                             label="親メニューID"
                             choices={parentMenuOptions}
-                            validate={[required()]}
-                            required={true}
                             placeholder='選択する必要があります'
                         />
                         <FormInput
@@ -292,9 +281,6 @@ const S051: React.FC = () => {
                             type={'text'}
                             source="query"
                             label="ルーティングパラメータ"
-                            validate={[required()]}
-                            required={true}
-                            placeholder='入力する必要があります'
                         />
                         <FormInput
                             structure='top-bottom'
@@ -311,9 +297,6 @@ const S051: React.FC = () => {
                             source="isFrame"
                             label="フレーム内かどうか"
                             choices={sysYesNo}
-                            validate={[required()]}
-                            required={true}
-                            placeholder='選択する必要があります'
                         />
                         <FormInput
                             structure='top-bottom'
@@ -321,9 +304,6 @@ const S051: React.FC = () => {
                             source="isCache"
                             label="キャッシュするかどうか"
                             choices={sysYesNo}
-                            validate={[required()]}
-                            required={true}
-                            placeholder='選択する必要があります'
                         />
                         <FormInput
                             structure='top-bottom'
@@ -375,6 +355,7 @@ const S051: React.FC = () => {
         <PageContainer title={isEditMode ? 'メニューの変更' : '新しいメニュー'}>
             <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="メニュー情報">
                 <SimpleForm
+                    key={isEditMode ? `edit-${formDefaultValues.menuId}` : 'new'}
                     sx={formSx.formContainer}
                     onSubmit={handleSubmit}
                     toolbar={false}
