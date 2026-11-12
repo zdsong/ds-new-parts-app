@@ -28,6 +28,11 @@ import N003 from './view/N003';
 import N004 from './view/N004';
 
 import AppVersionPage from './view/AppVersionPage';
+import C005 from './view/C005';
+import C006 from './view/C006';
+import C013 from './view/C013';
+import C014 from './view/C014';
+import C015 from './view/C015';
 import S010 from './view/S010';
 import S011 from './view/S011';
 import S020 from './view/S020';
@@ -121,6 +126,18 @@ const App = () => {
 
             <Route element={<RequireAuth />}>
               <Route path="/" element={<Navigate to="/S050" replace />} />
+
+              <Route path="/C013">
+                <Route index element={<C013 />} />
+                <Route path="C014/:cd" element={<C014 />} />
+                <Route path="C015/:cd?" element={<C015 />} />
+              </Route>
+
+              <Route path="/C005">
+                <Route index element={<C005 />} />
+                <Route path="C006/:farmerId?/:orderId?" element={<C006 />} />
+                <Route path="C006/:farmerId?" element={<C006 />} />
+              </Route>
 
               <Route path="/S010">
                 <Route index element={<S010 />} />
