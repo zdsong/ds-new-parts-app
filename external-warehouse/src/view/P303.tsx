@@ -6,6 +6,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { SimpleForm, useNotify } from 'react-admin';
 import { Typography } from '@mui/material';
 import { ColDef } from 'ag-grid-community';
+import { useNavigate } from 'react-router-dom';
 
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
@@ -255,6 +256,7 @@ const normalizeChoiceValue = (value: any): string => {
 
 const P303: React.FC = () => {
     const notify = useNotify();
+    const navigate = useNavigate();
 
     // パレット情報（フォームの初期値として使用）
     const [formData, setFormData] = useState<PalletFormData>(INITIAL_FORM);
@@ -345,6 +347,14 @@ const P303: React.FC = () => {
         setCategory(nextFormData.category);
         setFormVersion((version) => version + 1);
         notify(`パレット番号 ${palletNo} を発番しました。`, { type: 'success' });
+
+        // 発番後はパレット情報詳細画面へ遷移する（発番内容と積載明細を引き継ぐ）
+        navigate('/P305', {
+            state: {
+                pallet: nextFormData,
+                details,
+            },
+        });
     };
 
     /** リセット処理（入力内容と明細を初期状態に戻す） */
@@ -457,6 +467,7 @@ const P303: React.FC = () => {
             <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="基本情報" border={false}>
                 <SimpleForm
                     key={formVersion}
+                    id="p303-form"
                     sx={formSx.formContainer}
                     onSubmit={handleIssue}
                     toolbar={false}
@@ -509,23 +520,6 @@ const P303: React.FC = () => {
                                 placeholder="入力してください"
                             />
                         </div>
-                    </div>
-
-                    {/* 操作ボタン */}
-                    <div style={buttonSx.buttonBar}>
-                        <button
-                            style={buttonSx.button}
-                            type="button"
-                            onClick={handleReset}
-                        >
-                            リセット
-                        </button>
-                        <button
-                            style={buttonSx.button}
-                            type="submit"
-                        >
-                            発番
-                        </button>
                     </div>
                 </SimpleForm>
             </CustomCard>
@@ -681,6 +675,24 @@ const P303: React.FC = () => {
                     </div>
                 )}
             </CustomCard>
+
+            {/* 操作ボタン（設計書どおり画面右下に配置する） */}
+            <div style={buttonSx.buttonBar}>
+                <button
+                    style={buttonSx.button}
+                    type="button"
+                    onClick={handleReset}
+                >
+                    リセット
+                </button>
+                <button
+                    style={buttonSx.button}
+                    type="submit"
+                    form="p303-form"
+                >
+                    発番
+                </button>
+            </div>
 
             {/* 部品検索モーダル */}
             <CustomModal

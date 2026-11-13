@@ -51,6 +51,7 @@ import S090 from './view/S090';
 import S091 from './view/S091';
 import S095 from './view/S095';
 import P303 from './view/P303';
+import P305 from './view/P305';
 
 
 
@@ -177,6 +178,7 @@ const App = () => {
               </Route>
 
               <Route path="/P303" element={<P303 />} />
+              <Route path="/P305" element={<P305 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
