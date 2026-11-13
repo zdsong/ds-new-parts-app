@@ -24,8 +24,8 @@ const sxStyles = {
     flex: 1,
     marginTop: '50px',
     minWidth: 250,
-    maxHeight: '80vh',
-    overflow: 'auto',
+    maxHeight: '90vh',
+    overflow: 'hidden',
     boxShadow: 3,
     display: 'flex',
     flexDirection: 'column',
@@ -56,6 +56,14 @@ const sxStyles = {
   },
   menuContent: {
     flex: 1,
+    minHeight: 0,
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    '&::-webkit-scrollbar': { width: '8px' },
+    '&::-webkit-scrollbar-thumb': {
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      borderRadius: '4px',
+    },
   },
   divider: {
     my: 0.5,
@@ -139,10 +147,6 @@ const MenuNode: React.FC<{
         {item.icon}
         <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
       </div>
-      <ChevronRight
-        fontSize="small"
-        sx={sxStyles.arrowIcon}
-      />
     </MenuItem>
   );
 };
@@ -216,7 +220,8 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'end',
-            height: '500px'
+            maxHeight: 'calc(90vh - 30px)',
+            minHeight: 0
           }}
         >
           {/* 閉じるボタン */}
