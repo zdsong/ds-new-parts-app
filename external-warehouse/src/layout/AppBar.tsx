@@ -10,6 +10,7 @@ import customIcon from '../assets/icons/logo-icon.png';
 import { useNavigate } from 'react-router';
 import { Notice } from './Notice';
 import ThemeToggle from './ThemeToggel';
+import LoginUserInfoBar from './LoginUserInfo';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
 
 import SIcon from '../assets/icons/S.png';
@@ -146,13 +147,15 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
   <Box
   sx={{
     display: 'flex',
-    flexColumn: 'row',
+    flexDirection: 'row',
     flex: 1,
     justifyContent: 'end',
   }}>
     <ThemeToggle></ThemeToggle>
     {/* <MessageChatAppBar></MessageChatAppBar>
     <Notice></Notice> */}
+    {/* ログインユーザー情報（ID・最終ログイン・ログアウト） */}
+    <LoginUserInfoBar />
     <CustomAppBarMenu menuItems={menuItems}></CustomAppBarMenu>
   </Box>
 );}
