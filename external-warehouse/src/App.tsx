@@ -26,6 +26,7 @@ import { PropsWithChildren } from 'react';
 import N002 from './view/N002';
 import N003 from './view/N003';
 import N004 from './view/N004';
+import N008 from './view/N008';
 
 import AppVersionPage from './view/AppVersionPage';
 import C005 from './view/C005';
@@ -182,6 +183,7 @@ const App = () => {
           </CustomRoutes>
 
           <Resource name="N004" list={N004} />
+          <Resource name="N008" list={N008} />
         </Admin>
       </CacheProvider>
     </StyledEngineProvider>
