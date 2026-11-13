@@ -33,6 +33,8 @@ const C015: React.FC<SearchFormProps> = () => {
     password: '',
     userName: '',
     nickName: '',
+    email: '',
+    phonenumber: '',
     roleId: '2',
     status: '0'
   });
@@ -93,6 +95,8 @@ const C015: React.FC<SearchFormProps> = () => {
 
   // 利用状態の選択肢定義
   const [sysUsageStatus, setSysUsageStatus] = useState([])
+  // 権限の選択肢定義（ロール一覧から動的に取得する）
+  const [roleOptions, setRoleOptions] = useState<{ key: string; value: string }[]>([])
 
   useEffect(() => {
 
@@ -118,6 +122,23 @@ const C015: React.FC<SearchFormProps> = () => {
       }
       }
       fetchCommonCode();
+  }, []);
+
+  // ロール一覧を取得して権限の選択肢を動的に生成する
+  useEffect(() => {
+    const fetchRoleOptions = async () => {
+      try {
+        const response = await request('get', 'api/system/role/optionselect', {}, {}, false, false);
+        const roles = response?.data || [];
+        setRoleOptions(roles.map((role: { roleId: string; roleName: string }) => ({
+          key: String(role.roleId),
+          value: role.roleName
+        })));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchRoleOptions();
   }, []);
 
   const [showPwdTip, setShowPwdTip] = useState(false);
@@ -221,19 +242,41 @@ const C015: React.FC<SearchFormProps> = () => {
                 }
             }}
             />
+            <FormInput
+              structure='top-bottom'
+              type={'text'}
+              source="email"
+              label="メールアドレス"
+              sx={{ width: '400px' }}
+              slotProps={{
+                htmlInput: {
+                    maxLength: 255
+                }
+            }}
+            />
             <div></div>
             <FormInput
               structure='top-bottom'
-              type={'radio'}
-              choices={[
-                { key: '2', value: '一般' },
-                { key: '3', value: '管理者' },
-              ]}
+              type={'filter-select'}
+              choices={roleOptions}
               source="roleId"
               label="権限"
               validate={[required()]}
               required={true}
+              placeholder='選択する必要があります'
               sx={{ width: '300px' }}
+            />
+            <FormInput
+              structure='top-bottom'
+              type={'text'}
+              source="phonenumber"
+              label="電話番号"
+              sx={{ width: '300px' }}
+              slotProps={{
+                htmlInput: {
+                    maxLength: 20
+                }
+            }}
             />
             <FormInput
               structure='top-bottom'
