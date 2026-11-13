@@ -41,7 +41,8 @@ const C013: React.FC<SearchFormProps> = () => {
   });
   
   const newGridRef = useRef<DataGridRef<UserSearch> | null>(null);
-
+  // 権限の選択肢定義（ロール一覧から動的に取得する）
+  const [roleOptions, setRoleOptions] = useState<{ key: string; value: string }[]>([])
   /**
    * APIを呼び出してユーザーリストデータを取得する
    */
@@ -141,6 +142,20 @@ const C013: React.FC<SearchFormProps> = () => {
       }
       }
       fetchCommonCode();
+
+      const fetchRoleOptions = async () => {
+      try {
+        const response = await request('get', 'api/system/role/optionselect', {}, {}, false, false);
+        const roles = response?.data || [];
+        setRoleOptions(roles.map((role: { roleId: string; roleName: string }) => ({
+          key: String(role.roleId),
+          value: role.roleName
+        })));
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchRoleOptions();
   }, []);
 
   const handleClear = () =>{
@@ -189,10 +204,7 @@ const C013: React.FC<SearchFormProps> = () => {
             />
             <FormInput
               type={'multiple-choice'}
-              choices={[
-                { key: '2', value: '一般' },
-                { key: '3', value: '管理者' },
-              ]}
+             choices={roleOptions}
               source="roleId"
               label="権限"
               onChange={(value)=>{setSearchForm((prev: any) => ({
