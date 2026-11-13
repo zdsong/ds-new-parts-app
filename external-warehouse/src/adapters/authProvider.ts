@@ -145,6 +145,44 @@ export const authProvider: AuthProvider = {
         }
     },
 
+    // 直接ログイン（ユーザーID/パスワード検証 + トークン検証）
+    directLogin: async ({ username, password }: LoginParams) => {
+        const request = new Request(`${apiUrl}/api/auth/directLogin`, {
+            method: 'POST',
+            body: JSON.stringify({ username, password }),
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+        });
+
+        try {
+            const response = await fetch(request);
+            const responseData = await response.json().catch(() => ({})) as CustomApiResponse<any>;
+
+            if (!response.ok) {
+                throw handleError(new Error(response.statusText), responseData);
+            }
+
+            if (!responseData.data) {
+                throw handleError(new Error('トークンが取得できませんでした'), responseData);
+            }
+
+            // トークンを保存
+            sessionStorage.setItem('externalWarehouseToken', responseData.data);
+
+            // トークンの正確性を検証
+            const verifyResponse: CustomApiResponse = await customApiCall.get('api/auth/userInfo');
+            if (verifyResponse.code < 200 || verifyResponse.code >= 300 || !verifyResponse.data) {
+                sessionStorage.removeItem('externalWarehouseToken');
+                throw handleError(new Error('トークンの検証に失敗しました'), verifyResponse);
+            }
+            sessionStorage.setItem('user', JSON.stringify(verifyResponse.data));
+
+            return responseData;
+        } catch (error) {
+            const formattedError = handleError(error);
+            throw formattedError;
+        }
+    },
+
     // 認証コード送信（メールアドレス指定）
     sendMail: async ({ mailAddress }: sendMailParam) => {
         const request = new Request(`${apiUrl}/api/auth/sendAuthCode`, {
