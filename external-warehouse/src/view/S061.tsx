@@ -324,6 +324,23 @@ const S061: React.FC = () => {
                                 required={true}
                                 placeholder='選択する必要があります'
                             />
+                            <Box sx={{ marginTop: '20px', marginBottom: '20px' }}>
+                            <Typography variant="h6" gutterBottom>
+                                メニュー権限
+                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+                                    <CheckboxTreeSelect
+                                        treeData={mockTreeData}
+                                        mode="multiple"
+                                        defaultValue={selectedMenuIds}
+                                        onChange={handleTreeSelectChange}
+                                        defaultExpandedItems={['1', '900']}
+                                        showToolbar={true}
+                                        checkStrictly={menuCheckStrictly === '1'}
+                                        onCheckStrictlyChange={(strictly) => setMenuCheckStrictly(strictly ? '1' : '0')}
+                                    />
+                                </Box>
+                            </Box>
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <FormInput
@@ -420,23 +437,7 @@ const S061: React.FC = () => {
                         </Box>
                     </Box>
                     
-                    <Box sx={{ marginTop: '20px', marginBottom: '20px' }}>
-                        <Typography variant="h6" gutterBottom>
-                            メニュー権限
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
-                            <CheckboxTreeSelect
-                                treeData={mockTreeData}
-                                mode="multiple"
-                                defaultValue={selectedMenuIds}
-                                onChange={handleTreeSelectChange}
-                                defaultExpandedItems={['1', '900']}
-                                showToolbar={true}
-                                checkStrictly={menuCheckStrictly === '1'}
-                                onCheckStrictlyChange={(strictly) => setMenuCheckStrictly(strictly ? '1' : '0')}
-                            />
-                        </Box>
-                    </Box>
+                    
                     
                     <div style={buttonSx.buttonBar}>
                         <button 
