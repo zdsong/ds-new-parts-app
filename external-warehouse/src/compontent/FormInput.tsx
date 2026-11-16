@@ -62,13 +62,15 @@ const dateInputSx = {
 }
 
 // 日付入力スタイル
+// ラベルと横並びになるため width: 100% は指定しない（指定すると flex アイテムの基準幅が
+// 親いっぱいになり、ラベル枠 150px が縮んで入力欄が右へ広がってしまう）。
 const dateSelectSx = {
     '& .MuiInputLabel-root': { display: 'none' },
     '& .MuiInputBase-input ': { height: '24px', padding: '2px 5px 0 5px' },
     '& .MuiInputBase-root': { borderRadius: '5px 0 0 5px' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
-    width: '100%',
+    minWidth: 0,
     ...inputContainer
 }
 

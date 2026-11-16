@@ -22,7 +22,7 @@ import { buttonSx, formSx, tableSx } from '../styles/commonSX';
  * 画面イメージ：②移動依頼管理　②外部倉庫から行田工場へ移動する場合（入庫）
  *
  * 構成は設計書の画面イメージに合わせている。
- *   ・基本情報…移動依頼番号／移動先（行田工場）／ロケ番／移動希望日／依頼者／備考
+ *   ・基本情報…移動依頼番号／移動先＋ロケ番（横並び）／依頼者／移動希望日／備考
  *   ・品目一覧…「品目追加」で「移動（入庫）品目検索」を開き、選択した品目を明細に追加する
  *   ・明細の移動数は画面内で直接編集できる（設計書の入力欄に相当）
  *
@@ -482,32 +482,36 @@ const P406: React.FC = () => {
                             readOnly
                             placeholder="未採番"
                         />
-                        {/* 設計書では1行目の右側は空欄（移動希望日は2行目の右側） */}
-                        <div />
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        {/*
+                         * 設計書では移動依頼番号の右側に移動先が並ぶ（左右配置）。
+                         * 移動先の右隣はラベルの無い入力欄（ロケ番）で、2 つの入力欄が横並びになる。
+                         */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <FormInput
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
                                 choices={DEST_CHOICES}
+                                // sx={{ flex: '1.35 1 0', label: { width: '' } }}
                             />
                             <FormInput
                                 type={'filter-select'}
                                 source="locationNo"
-                                label="ロケ番"
+                                // label="ロケ番"
                                 choices={LOCATION_CHOICES}
+                                sx={{ flex: '1 1 0' }}
                             />
                         </div>
-                        <FormInput
-                            type={'input-date'}
-                            source="desiredDate"
-                            label="移動希望日"
-                        />
                         <FormInput
                             type={'text'}
                             source="requester"
                             label="依頼者"
                             placeholder="入力してください"
+                        />
+                        <FormInput
+                            type={'input-date'}
+                            source="desiredDate"
+                            label="移動希望日"
                         />
                         <div style={{ gridColumn: '1 / -1' }}>
                             <FormInput

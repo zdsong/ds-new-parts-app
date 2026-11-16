@@ -411,10 +411,14 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
       );
     };
 
+    // ラベルと横並びで使うため width: 100% ではなく flex: 1 で残り幅を埋める。
+    // 100% を指定すると flex アイテムの基準幅が親いっぱいになり、ラベル枠（150px）が
+    // flex-shrink で縮んで日付入力欄だけが右へ広がる。minWidth: 0 で入力側を縮められるようにする。
     const mergedSx = {
       display: 'flex',
       alignItems: 'center',
-      width: '100%',
+      flex: 1,
+      minWidth: 0,
       ...sx?.input,
       '& .MuiTextField-root': { flex: 1 },
     };
