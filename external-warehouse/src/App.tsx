@@ -52,6 +52,10 @@ import S091 from './view/S091';
 import S095 from './view/S095';
 import P303 from './view/P303';
 import P305 from './view/P305';
+import P401 from './view/P401';
+
+// 動作確認用（テーブル内編集のデモ）。本番のメニューには載せない。
+import W900 from './view/W900';
 
 
 
@@ -179,6 +183,12 @@ const App = () => {
 
               <Route path="/P303" element={<P303 />} />
               <Route path="/P305" element={<P305 />} />
+
+              {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
+              <Route path="/P401" element={<P401 />} />
+
+              {/* 動作確認用。テーブル内編集デモ（本番メニューには載せない） */}
+              <Route path="/W900" element={<W900 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>

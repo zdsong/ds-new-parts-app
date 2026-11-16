@@ -12,7 +12,9 @@ import {
   AllCommunityModule,
   ModuleRegistry,
   RowClassParams,
-  RowStyle
+  RowStyle,
+  CellValueChangedEvent,
+  CellClickedEvent
 } from 'ag-grid-community';
 import Pagination from '@mui/material/Pagination';
 
@@ -44,7 +46,7 @@ export interface DataGridRef<T extends BaseItemColumn> {
 }
 
 // コンポーネントPropsインターフェース
-interface DataGridProps<T extends BaseItemColumn> {
+export interface DataGridProps<T extends BaseItemColumn> {
   columnDefs: ColDef<T>[];
   rowData: T[];
   defaultColDef?: ColDef<T>;
@@ -63,6 +65,24 @@ interface DataGridProps<T extends BaseItemColumn> {
   pinnedBottomRowData?: any;
   sortable?: boolean;
   getRowStyle?: (params: RowClassParams<T, any>) => RowStyle | undefined;
+
+  /**
+   * セル編集モード。
+   * 既定は false（＝従来どおり参照専用）。true にすると
+   * ・suppressCellFocus を解除してセルにフォーカスを当てられるようにする
+   * ・セルからフォーカスが外れたら編集を確定する
+   * ・Ctrl/Cmd+Z によるセル編集の取り消しを有効にする
+   * を行う。列側で `editable: true` を指定した列だけが編集可能になる。
+   */
+  editing?: boolean;
+  /** 編集確定方式。singleCell＝セル単位（既定）／fullRow＝行単位でまとめて編集 */
+  editType?: 'singleCell' | 'fullRow';
+  /** セル値が変更されたときに呼ばれる（編集・api.setValue の両方が対象） */
+  onCellValueChanged?: (event: CellValueChangedEvent<T>) => void;
+  /** セルクリック時に呼ばれる */
+  onCellClicked?: (event: CellClickedEvent<T>) => void;
+  /** GridApi を受け取る。編集開始・確定・再描画などを親から制御したい場合に使う */
+  onApiReady?: (api: GridApi<T>) => void;
 }
 
 // デフォルト列定義
@@ -97,7 +117,12 @@ const DataGrid = forwardRef(
       noRowsShow = '該当するデータはありません。',
       pinnedBottomRowData,
       sortable = false,
-      getRowStyle
+      getRowStyle,
+      editing = false,
+      editType = 'singleCell',
+      onCellValueChanged,
+      onCellClicked,
+      onApiReady
     } = props;
 
     // Grid API保存
@@ -113,7 +138,8 @@ const DataGrid = forwardRef(
     // Grid初期化完了処理
     const handleGridReady = useCallback((params: GridReadyEvent<T>) => {
       setGridApi(params.api);
-    }, [enableDebug]);
+      onApiReady?.(params.api as GridApi<T>);
+    }, [enableDebug, onApiReady]);
 
     // 行の一意ID取得（型安全）
     const getRowId: GetRowIdFunc<T> = useCallback((params: GetRowIdParams<T>) => {
@@ -238,8 +264,20 @@ const DataGrid = forwardRef(
         ...getGridBaseOptions<T>(rowHeight, selectionMode), 
         suppressColumnMove: true,
         suppressDragLeaveHidesColumns: true,
+        // 編集モードのみ有効にするオプション群。
+        // 参照専用の既存画面の挙動を変えないよう、editing=false では一切指定しない。
+        ...(editing
+          ? {
+              stopEditingWhenCellsLoseFocus: true,
+              enterNavigatesVertically: true,
+              enterNavigatesVerticallyAfterEdit: true,
+              undoRedoCellEditing: true,
+              undoRedoCellEditingLimit: 30,
+              editType,
+            }
+          : {}),
       }),
-    [rowHeight, selectionMode]);
+    [rowHeight, selectionMode, editing, editType]);
 
     // コンテナスタイルマージ
     const mergedContainerStyle = useMemo<CSSProperties>(() => ({
@@ -267,8 +305,12 @@ const DataGrid = forwardRef(
           gridOptions={mergedGridOptions}
           domLayout="autoHeight"
           onSelectionChanged={handleSelectionChanged}
-          suppressCellFocus = {true}
+          // 参照専用のときは従来どおりセルフォーカスを抑止する。
+          // 抑止したままだと編集（ダブルクリック／Enter）が開始できないため、編集モードでは解除する。
+          suppressCellFocus={!editing}
           overlayNoRowsTemplate={noRowsTemplate}
+          onCellValueChanged={onCellValueChanged}
+          onCellClicked={onCellClicked}
           pinnedBottomRowData={pinnedBottomRowData}
           getRowStyle={getRowStyle}
         />
