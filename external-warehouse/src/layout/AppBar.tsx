@@ -38,9 +38,11 @@ const AVAILABLE_ROUTES = [
   'S060',
   'S090',
   'P303',
+  'P304',
   'P305',
   'N008',
   'P401',
+  'P406',
   'appVersion',
 ];
 
@@ -54,8 +56,16 @@ const resolveMenuName = (menu: AdminMenu) => {
 // フラットなメニュー一覧から親子階層のメニューを構築する
 const buildMenuItems = (menus: AdminMenu[]): MenuItem[] => {
   // ボタン種別・非表示・停止中のメニューは対象外とする
+  // 同じ menu_id が重複して返る場合に備えて、2 件目以降は読み捨てる
+  const seenMenuIds = new Set<string>();
   const validMenus = menus
-    .filter((menu) => menu.menuType !== 'F' && menu.status !== '1' && menu.visible !== '1')
+    .filter((menu) => {
+      if (menu.menuType === 'F' || menu.status === '1' || menu.visible === '1') return false;
+      const menuId = String(menu.menuId);
+      if (seenMenuIds.has(menuId)) return false;
+      seenMenuIds.add(menuId);
+      return true;
+    })
     .sort((a, b) => (a.orderNum || 0) - (b.orderNum || 0));
 
   const nodeMap = new Map<string, MenuItem>();
@@ -102,6 +112,43 @@ const buildMenuItems = (menus: AdminMenu[]): MenuItem[] => {
   return normalize(roots);
 };
 
+// メニュー取得結果のキャッシュ（トークン単位）
+// 再マウントや HMR で effect が再実行されても、取得は 1 回で済ませる
+let menuCache: { token: string; items: MenuItem[] } | null = null;
+let menuPending: { token: string; promise: Promise<MenuItem[]> } | null = null;
+
+/**
+ * 管理メニューを取得する
+ * ・同じトークンで取得済みならキャッシュを返す
+ * ・取得中の場合は同じ Promise を共有する（二重リクエスト防止）
+ */
+const loadMenuItems = (): Promise<MenuItem[]> => {
+  const token = sessionStorage.getItem('externalWarehouseToken') || '';
+
+  if (menuCache && menuCache.token === token) {
+    return Promise.resolve(menuCache.items);
+  }
+  if (menuPending && menuPending.token === token) {
+    return menuPending.promise;
+  }
+
+  const promise = fetchAdminMenus()
+    .then((menus) => {
+      const items = buildMenuItems(menus);
+      menuCache = { token, items };
+      if (menuPending && menuPending.token === token) menuPending = null;
+      return items;
+    })
+    .catch(() => {
+      // 管理メニューが取得できない場合は既存メニューのみ表示する（次回再試行できるようにする）
+      if (menuPending && menuPending.token === token) menuPending = null;
+      return [] as MenuItem[];
+    });
+
+  menuPending = { token, promise };
+  return promise;
+};
+
 // AppBarコンテナスタイル
 const AppBarContainer = styled(Box)(({ theme }) => ({
   ...AppBarSx.AppBarContainerSx,
@@ -133,15 +180,15 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
 
   // 管理メニューの読み込み
   React.useEffect(() => {
-    fetchAdminMenus()
-      .then((menus) => {
-        const children = buildMenuItems(menus);
-        if (children.length === 0) return;
-        setMenuItems((prev) => [...prev, ...children]);
-      })
-      .catch(() => {
-        // 管理メニューが取得できない場合は既存メニューのみ表示する
-      });
+    let active = true;
+    loadMenuItems().then((items) => {
+      if (!active || items.length === 0) return;
+      // 追記ではなく置き換える（effect 再実行時に同じメニューが二重に並ぶのを防ぐ）
+      setMenuItems(items);
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (

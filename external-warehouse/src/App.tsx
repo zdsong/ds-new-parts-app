@@ -51,8 +51,10 @@ import S090 from './view/S090';
 import S091 from './view/S091';
 import S095 from './view/S095';
 import P303 from './view/P303';
+import P304 from './view/P304';
 import P305 from './view/P305';
 import P401 from './view/P401';
+import P406 from './view/P406';
 
 
 const i18nProvider = polyglotI18nProvider(() => japaneseMessages, 'jp');
@@ -177,11 +179,14 @@ const App = () => {
                 <Route path="S095" element={<S095 />} />
               </Route>
 
+              {/* ①パレット番号管理：発番・一覧・詳細 */}
               <Route path="/P303" element={<P303 />} />
+              <Route path="/P304" element={<P304 />} />
               <Route path="/P305" element={<P305 />} />
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
+              <Route path="/P406" element={<P406 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
