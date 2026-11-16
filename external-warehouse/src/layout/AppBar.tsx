@@ -42,6 +42,9 @@ const AVAILABLE_ROUTES = [
   'P305',
   'N008',
   'P401',
+  'P403',
+  'P404',
+  'P405',
   'P406',
   'appVersion',
 ];

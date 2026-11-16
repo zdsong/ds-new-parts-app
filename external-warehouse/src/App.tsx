@@ -53,6 +53,9 @@ import S095 from './view/S095';
 import P303 from './view/P303';
 import P304 from './view/P304';
 import P305 from './view/P305';
+import P403 from './view/P403';
+import P404 from './view/P404';
+import P405 from './view/P405';
 import P401 from './view/P401';
 import P406 from './view/P406';
 
@@ -187,6 +190,10 @@ const App = () => {
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
               <Route path="/P406" element={<P406 />} />
+              {/* ②移動依頼管理：2. 移動依頼を確認する（生産管理） */}
+              <Route path="/P403" element={<P403 />} />
+              <Route path="/P404" element={<P404 />} />
+              <Route path="/P405" element={<P405 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
