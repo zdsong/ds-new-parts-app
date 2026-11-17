@@ -3,24 +3,23 @@ import React, { useEffect } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import LoginLogoIcon from '../assets/icons/D.png'
-
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
 import  LabelInput from '../compontent/LabelInput';
+import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
 
 import { useNavigate } from 'react-router-dom';
 import { authProvider } from '../adapters/authProvider';
-import { buttonSx, font } from '../styles/commonSX';
+import { font } from '../styles/commonSX';
 
 
 const N002 = () => {
 
-    
+
     const [loading, setLoading] = React.useState(false);
     const notify = useNotify();
     const translate = useTranslate();
-    const navigate = useNavigate() 
+    const navigate = useNavigate()
 
     useEffect(() => {
         const tempToken = sessionStorage.getItem('externalWarehouseToken')
@@ -41,9 +40,9 @@ const N002 = () => {
                 notify(e.message, { type: 'error' })
             }
         }
-        
+
         setLoading(false)
-        
+
     };
 
     const navigateN003 = () =>{
@@ -52,59 +51,24 @@ const N002 = () => {
 
 
     return (
-        <Box sx={{
-            padding: '100px',
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-        }}>
-            <img src={LoginLogoIcon} alt="customIcon" style={{
-            margin: '5px',
-            height: '120px',
-            width: '150px'
-            }}/>
-            <Typography 
-                variant='h4'
-                component="h2" 
-                gutterBottom
-                fontWeight='600'
-                style={{ 
-                color: 'black'
-                }}
-            >
-                新部品管理システム｜外部倉庫管理 
-            </Typography>
-            <Typography 
-                gutterBottom
-                fontWeight='600'
-                style={{ 
-                fontSize: '15px',
-                margin: '30px 0'
-                }}
-            >
-                パスワード再発行用の認証コードを送信します。登録しているメールアドレスを入力してください
-            </Typography>
-
-            <div
-            style={{
-                flex: 1,
-            }}
-            >
+        <LoginShell
+            subtitle="パスワード再発行用の認証コードを送信します。登録しているメールアドレスを入力してください"
+        >
             <SimpleForm
              toolbar={false}
              onSubmit={submitSendMail}
              defaultValues={{mailAddress: ''}}
              mode="onSubmit"
              reValidateMode="onChange"
+             // カード内側の余白（MUI CardContent 既定）は外して幅を外枠側で管理する
+             sx={{ width: '100%', padding: '0' }}
             >
                 <div
                     style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '2rem',
-                        width: '600px',
+                        gap: FLUID.fieldGap,
+                        width: '100%',
                     }}
                 >
 
@@ -112,7 +76,8 @@ const N002 = () => {
                 source="mailAddress"
                 label="メールアドレス"
                 type="text"
-                validate={[required()]} 
+                validate={[required()]}
+                sx={fluidInputSx}
                 />
 
                 </div>
@@ -120,17 +85,15 @@ const N002 = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    width: '600px',
-                    marginTop: '50px',
+                    width: '100%',
+                    marginTop: FLUID.actionMarginTop,
                     flexDirection: 'column',
                     gap: '10px',
-                    height: '100%',
-                    flex: 1
                 }}>
                     <Button
                         variant="contained"
                         disabled={loading}
-                        sx={buttonSx.loginButton}
+                        sx={fluidLoginButtonSx}
                         type="submit"
                     >
                         {loading ? (
@@ -138,8 +101,9 @@ const N002 = () => {
                                 className={LoginFormClasses.icon}
                                 size={19}
                                 thickness={3}
+                                sx={{ color: 'white' }}
                             />
-                        ) : 
+                        ) :
                             '認証コードを送信'
                         }
                     </Button>
@@ -147,22 +111,14 @@ const N002 = () => {
                         variant='body1'
                         component="span"
                         fontWeight='600'
-                        sx={font.loginLinkFont}
+                        sx={{ ...font.loginLinkFont, fontSize: FLUID.inputFont }}
                         onClick={()=>{navigate(-1)}}
                     >
-                        ログインに戻る 
+                        ログインに戻る
                     </Typography>
                 </Box>
             </SimpleForm>
-            </div>
-            <Typography 
-                gutterBottom
-                fontWeight='600'
-                style={{ fontSize: '15px', marginTop: '20px',color: '#7f7f7f' }}
-            >
-                © nasta Transport Co., Ltd. All Rights Reserved.
-            </Typography>
-        </Box>
+        </LoginShell>
     );
 };
 

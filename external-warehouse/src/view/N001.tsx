@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import LoginLogoIcon from '../assets/icons/D.png';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
-import  LabelInput  from '../compontent/LabelInput';
+import LabelInput from '../compontent/LabelInput';
+import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
 import { useNavigate } from 'react-router-dom';
 
 import {authProvider} from '../adapters/authProvider'
-import { buttonSx, font } from '../styles/commonSX';
+import { font } from '../styles/commonSX'
 
 interface LoginPageDatas {
-    
+
 }
 
 const N001: React.FC<LoginPageDatas> = () => {
@@ -44,7 +44,7 @@ const N001: React.FC<LoginPageDatas> = () => {
             }
         }
         setLoading(false)
-        
+
     };
 
     const navigateN003 = () =>{
@@ -72,112 +72,84 @@ const N001: React.FC<LoginPageDatas> = () => {
     }
 
     return (
-        <Box sx={{
-
-            padding: '100px',
-            display: 'flex',
-            alignItems: 'center',
-            height: '100%',
-            width: '100%',
-            flexDirection: 'column',
-            boxSizing: 'border-box',
-        }}>
-            <img 
-                src={LoginLogoIcon} 
-                alt="customIcon" 
-                style={{ margin: '5px', height: '120px', width: '150px' }}
-            />
-            <Typography 
-                variant='h4'
-                component="h2" 
-                gutterBottom
-                fontWeight='600'
-                style={{ color: 'black' }}
+        <LoginShell>
+            <SimpleForm
+                toolbar={false}
+                onSubmit={submitDirectLogin}
+                defaultValues={{ username: '', password: '' }}
+                mode="onSubmit"
+                reValidateMode="onChange"
+                // カード内側の余白（MUI CardContent 既定）は外して幅を外枠側で管理する
+                sx={{ width: '100%', padding: '0' }}
             >
-                新部品管理システム｜外部倉庫管理 
-            </Typography>
-            <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <SimpleForm
-                    toolbar={false}
-                    onSubmit={submitDirectLogin}
-                    defaultValues={{ username: '', password: '' }}
-                    mode="onSubmit"
-                    reValidateMode="onChange"
-                >
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2rem',
-                        width: '600px',
-                    }}>
-                        <LabelInput
-                            source="username"
-                            label="ユーザID"
-                            type="text"
-                            validate={[required()]} 
-                        />
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: FLUID.fieldGap,
+                    width: '100%',
+                }}>
+                    <LabelInput
+                        source="username"
+                        label="ユーザID"
+                        type="text"
+                        validate={[required()]}
+                        sx={fluidInputSx}
+                    />
 
-                        <LabelInput
-                            source="password"
-                            label="パスワード"
-                            type="password"
-                            validate={[required()]} 
-                        />
-                    </div>
+                    <LabelInput
+                        source="password"
+                        label="パスワード"
+                        type="password"
+                        validate={[required()]}
+                        sx={fluidInputSx}
+                    />
+                </div>
 
-                    <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        width: '100%',
-                        marginTop: '50px',
-                        flexDirection: 'column',
-                        gap: '10px',
-                    }}>
-                        <Box sx={{ display: 'none' }}>
-                            <Button
-                                variant="contained"
-                                disabled={loading}
-                                sx={buttonSx.loginButton}
-                                type="submit"
-                            >
-                                {loading ? (
-                                    <CircularProgress size={19} thickness={3} sx={{ color: 'white' }} />
-                                ) : '認証コードを送信'}
-                            </Button>
-                        </Box>
-
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    marginTop: FLUID.actionMarginTop,
+                    flexDirection: 'column',
+                    gap: '10px',
+                }}>
+                    <Box sx={{ display: 'none' }}>
                         <Button
                             variant="contained"
                             disabled={loading}
-                            sx={buttonSx.loginButton}
+                            sx={fluidLoginButtonSx}
                             type="submit"
                         >
                             {loading ? (
                                 <CircularProgress size={19} thickness={3} sx={{ color: 'white' }} />
-                            ) : 'ログイン'}
+                            ) : '認証コードを送信'}
                         </Button>
-
-                        <Typography
-                            variant='body1'
-                            component="span"
-                            fontWeight='600'
-                            sx={font.loginLinkFont}
-                            onClick={()=>{navigateN002()}}
-                        >
-                            パスワードを忘れた方はこちら 
-                        </Typography>
                     </Box>
-                </SimpleForm>
-            </div>
-            <Typography
-                gutterBottom
-                fontWeight='600'
-                style={{ fontSize: '15px', marginTop: '20px',color: '#7f7f7f' }}
-            >
-                © nasta Transport Co., Ltd. All Rights Reserved.
-            </Typography>
-        </Box>
+
+                    <Button
+                        variant="contained"
+                        disabled={loading}
+                        sx={fluidLoginButtonSx}
+                        type="submit"
+                    >
+                        {loading ? (
+                            <CircularProgress size={19} thickness={3} sx={{ color: 'white' }} />
+                        ) : 'ログイン'}
+                    </Button>
+
+                    <Typography
+                        variant='body1'
+                        component="span"
+                        fontWeight='600'
+                        sx={{ ...font.loginLinkFont, fontSize: FLUID.inputFont }}
+                        onClick={()=>{navigateN002()}}
+                    >
+                        パスワードを忘れた方はこちら
+                    </Typography>
+                </Box>
+            </SimpleForm>
+        </LoginShell>
     );
 };
 
