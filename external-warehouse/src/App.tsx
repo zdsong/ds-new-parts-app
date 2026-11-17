@@ -58,6 +58,9 @@ import P404 from './view/P404';
 import P405 from './view/P405';
 import P401 from './view/P401';
 import P406 from './view/P406';
+import P601 from './view/P601';
+import P602 from './view/P602';
+import P603 from './view/P603';
 
 
 const i18nProvider = polyglotI18nProvider(() => japaneseMessages, 'jp');
@@ -194,6 +197,11 @@ const App = () => {
               <Route path="/P403" element={<P403 />} />
               <Route path="/P404" element={<P404 />} />
               <Route path="/P405" element={<P405 />} />
+
+              {/* ⑤ロケ番マスタ：一覧・新規登録・更新 */}
+              <Route path="/P601" element={<P601 />} />
+              <Route path="/P602" element={<P602 />} />
+              <Route path="/P603" element={<P603 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
