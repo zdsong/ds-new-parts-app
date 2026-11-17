@@ -24,6 +24,11 @@ interface CustomInputProps {
     placeholder?: string;
     required?: boolean;
     multiline?: boolean;
+    /**
+     * 複数行入力（multiline）の高さ。数値は px として扱う（例：96 / '96px' / '6rem'）。
+     * 指定した場合は入力枠の高さを固定し、枠内でスクロールする。
+     */
+    inputHeight?: number | string;
     structure?: 'left-right' | 'top-bottom' // ラベルと入力の配置構造
     readOnly?: boolean;
     defaultValue?: any;
@@ -190,6 +195,7 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
     validate,
     readOnly,
     multiline = false,
+    inputHeight,
     sx = {},
     value,
     defaultValue,
@@ -232,6 +238,69 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
         clearStartDate: () => (startDateInputRef.current as any)?.clear?.(),
         clearEndDate: () => (endDateInputRef.current as any)?.clear?.(),
       }), [type, inputRef, startDateInputRef, endDateInputRef]);
+
+    // 複数行入力（備考など）の高さ指定。
+    // 設計書の入力枠は高さ固定のため、外側から高さを渡せるようにしている（例：inputHeight={96}）。
+    const multilineHeight =
+        multiline && inputHeight !== undefined && inputHeight !== null && inputHeight !== ''
+            ? typeof inputHeight === 'number'
+                ? `${inputHeight}px`
+                : inputHeight
+            : undefined;
+
+    // inputSx の「.MuiInputBase-root」は 25.56px 固定なので、複数行時は同じセレクタで上書きする
+    // （'& .MuiInputBase-root ' の末尾スペース付きとは別セレクタになるため、後勝ちで効く）。
+    const multilineSx: any = multilineHeight
+        ? {
+              '& .MuiInputBase-root': {
+                  height: multilineHeight,
+                  minHeight: multilineHeight,
+                  alignItems: 'flex-start',
+                  // MUI の OutlinedInput は複数行時に左右 14px のパディングが付き、
+                  // textarea（とスクロールバー）が枠から内側にずれる。単行入力と同じく
+                  // 左右は枠いっぱいに使うため 0 にする。
+                  paddingTop: '4px',
+                  paddingRight: '0px',
+                  paddingBottom: '4px',
+                  paddingLeft: '0px',
+                  borderRadius: '5px',
+              },
+              '& .MuiInputBase-input': {
+                  height: '100%',
+                  paddingTop: '0px',
+                  paddingBottom: '0px',
+                  paddingLeft: '5px',
+                  // スクロールバーが枠の右端に接するように右パディングは持たせない
+                  paddingRight: '0px',
+                  lineHeight: '1.6',
+                  resize: 'none',
+              },
+              // MUI は multiline の textarea に overflow: hidden を当てるため、
+              // 枠内スクロールできるよう !important で上書きする
+              '& .MuiInputBase-inputMultiline': {
+                  height: '100% !important',
+                  overflow: 'auto !important',
+              },
+              '& textarea': {
+                  height: '100% !important',
+                  boxSizing: 'border-box',
+                  overflowY: 'auto !important',
+                  resize: 'none',
+              },
+              // 標準のスクロールバーはトラック内側に余白が入り、枠から浮いて見えるため
+              // 幅とつまみを明示して枠の右端に接するようにする
+              '& textarea::-webkit-scrollbar': {
+                  width: '12px',
+              },
+              '& textarea::-webkit-scrollbar-track': {
+                  backgroundColor: 'transparent',
+              },
+              '& textarea::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#c1c1c1',
+                  borderRadius: '6px',
+              },
+          }
+        : {};
 
     // 共通の値変更ハンドラ（数値文字列の自動変換 + 非活性時無効）
     const commonHandleComponentChange = useCallback(async (...args: any[]) => {
@@ -676,7 +745,7 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
                 return (
                     <TextInput
                     inputRef={inputRef}
-                        sx={{ ...inputSx, ...sx?.input }}
+                        sx={{ ...inputSx, ...multilineSx, ...sx?.input }}
                         helperText={helperText ? helperText : false}
                         source={source}
                         label=""
@@ -759,7 +828,14 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
     };
 
     return (
-        <div style={structure === 'left-right' ? { ...attributeLeftRightSx, ...sx } as React.CSSProperties : { ...attributeTopBottomSx, ...sx } as React.CSSProperties}>
+        <div style={structure === 'left-right'
+            ? {
+                  ...attributeLeftRightSx,
+                  // 複数行入力は枠が高いため、外枠の 30px 固定を解除してラベルを上寄せにする
+                  ...(multilineHeight ? { height: 'auto', alignItems: 'flex-start' } : {}),
+                  ...sx
+              } as React.CSSProperties
+            : { ...attributeTopBottomSx, ...sx } as React.CSSProperties}>
             {/* ラベル表示（必須マーク付き） */}
             {label && (
                 <div

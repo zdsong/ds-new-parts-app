@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -13,6 +13,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import DataGrid from '../compontent/DataGrid';
 import CustomModal from '../compontent/CustomModal';
+import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
 import type { PalletNumberSheetLabel } from '../utils/palletNumberSheet';
@@ -20,18 +21,23 @@ import type { PalletNumberSheetLabel } from '../utils/palletNumberSheet';
 /**
  * パレット情報詳細画面（P305）
  *
- * 発番済みパレットの内容を確認し、パレット番号表を印刷する。
+ * 発番済みパレットの内容を確認・更新・削除し、パレット番号表を印刷する。
  * 画面イメージ：②仕入先から部品が届いた時 (2) パレット情報詳細画面
  *
  * P303（パレット番号発番画面）を基にしており、相違点は操作ボタンのみ。
  *   ・「番号表印刷」…基本情報カードの右上に配置
  *   ・画面右下…削除（左）／リセット・更新（右）
  *
- * P303 から遷移した場合は、発番内容と積載明細を location.state で受け取る。
- * 直接開いた場合は設計書の画面イメージに近いサンプルデータを表示する。
+ * バックエンド連携：
+ *   ・パレット情報の取得 … GET /api/pallet/{palletNo}（積載明細を含む）
+ *   ・更新 … PUT /api/pallet（version による楽観ロック。明細はサーバ側で入れ替え）
+ *   ・削除 … DELETE /api/pallet/{palletNo}（論理削除）
+ *   ・選択肢／品目検索 … P303 と同じ API を使用する
  */
 
 // 積載明細（パレットに積載する部品／製品）の型
+// 画面内で扱う名称（quantity／storageCategory／remark）は API の項目名と異なるため、
+// API へ送る際は toApiDetail()、受け取る際は toDetailItem() で変換する。
 interface PalletDetailItem {
     id: string;
     itemCode: string;
@@ -50,16 +56,14 @@ interface PalletDetailItem {
     updatedBy: string;
 }
 
-// 品目マスタ（部品検索・製品検索の仮データ）
+// 品目検索結果（/api/item/list の行）
 interface ItemMaster {
     id: string;
-    /** 区分（1:製品 / 2:仕掛品） */
-    category: string;
+    itemId: string;
     itemCode: string;
     itemName: string;
-    productGroup: string;
-    arrangementNo: string;
-    capacity: string;
+    sysItemCode: string;
+    janCode: string;
 }
 
 // パレット入力情報の型
@@ -73,172 +77,74 @@ interface PalletFormData {
     remark: string;
 }
 
-// 区分の選択肢（製品／仕掛品）
-const CATEGORY_CHOICES = [
-    { key: '1', value: '製品' },
-    { key: '2', value: '仕掛品' },
-];
+// 選択肢（/api/common/options の戻り値）
+interface OptionItem {
+    key: string;
+    value: string;
+    isDefault?: string;
+}
 
-// 保管場所の選択肢
-const STORAGE_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
+// GET /api/pallet/{palletNo} のレスポンス
+interface PalletNumberVo {
+    id: string;
+    palletNo: string;
+    storagePeriod: string;
+    classification: string;
+    inboundDate: string;
+    whCd: string;
+    locCd: string;
+    memo1: string;
+    version: number;
+    details?: PalletDetailVo[];
+}
 
-// ロケ番の選択肢
-const LOCATION_CHOICES = [
-    { key: 'A-01-03-02', value: 'A-01-03-02' },
-    { key: 'A-01-03-03', value: 'A-01-03-03' },
-    { key: 'B-02-01-01', value: 'B-02-01-01' },
-    { key: 'B-02-01-02', value: 'B-02-01-02' },
-];
+interface PalletDetailVo {
+    id: string;
+    itemCode: string;
+    itemName: string;
+    productGroup: string;
+    arrangementNo: string;
+    storageQty: number;
+    storageCapacity: number | null;
+    storageType: string;
+    usableFlag: string;
+    remarks: string;
+    createTime: string;
+    createBy: string;
+    updateTime: string;
+    updateBy: string;
+}
 
-// 製品群の選択肢
+// 製品群の選択肢（商品マスタに製品群の項目が無いため、当面は固定の候補から選ぶ）
 const PRODUCT_GROUP_CHOICES = [
     { key: '門柱', value: '門柱' },
     { key: '横桟', value: '横桟' },
     { key: '付属品', value: '付属品' },
 ];
 
-// 保管区分の選択肢（製品明細のみ）
-const STORAGE_CATEGORY_CHOICES = [
-    { key: '1', value: '移動' },
-    { key: '2', value: '不移動' },
-    { key: '3', value: '廃棄候補' },
-    { key: '4', value: 'SP' },
-];
-
-// 使用可否の選択肢（製品明細のみ）
-const USABLE_CHOICES = [
-    { key: '1', value: '使用可' },
-    { key: '2', value: '使用不可' },
-];
-
-// 初期値（区分＝仕掛品、保管場所＝行田工場、ロケ番＝A-01-03-02）
+// 初期値（パレット情報を取得するまでは空。ロケ番は保管場所の選択後に取得した候補から選ぶ）
 const INITIAL_FORM: PalletFormData = {
     palletNo: '',
     storagePeriod: '',
-    category: '2',
+    category: '',
     inboundDate: '',
-    storageLocation: '1',
-    locationNo: 'A-01-03-02',
+    storageLocation: '',
+    locationNo: '',
     remark: '',
 };
 
-// 品目マスタの仮データ
-const ITEM_MASTER: ItemMaster[] = [
-    {
-        id: '1',
-        category: '2',
-        itemCode: 'GP20A-101-RN-NAV3-00',
-        itemName: 'アルミ支柱 A',
-        productGroup: '門柱',
-        arrangementNo: '3130300285',
-        capacity: '1.655',
-    },
-    {
-        id: '2',
-        category: '2',
-        itemCode: 'GP20A-101-RN-DB5-00',
-        itemName: 'アルミ支柱 A',
-        productGroup: '門柱',
-        arrangementNo: '3130301000',
-        capacity: '1.655',
-    },
-    {
-        id: '3',
-        category: '2',
-        itemCode: 'GP20A-102-RN-NAV3-00',
-        itemName: 'アルミ支柱 B',
-        productGroup: '門柱',
-        arrangementNo: '3130300286',
-        capacity: '1.720',
-    },
-    {
-        id: '4',
-        category: '2',
-        itemCode: 'TLR560LB-S400-200-00',
-        itemName: '横桟 B',
-        productGroup: '横桟',
-        arrangementNo: '3130300512',
-        capacity: '2.100',
-    },
-    {
-        id: '5',
-        category: '2',
-        itemCode: 'HP30C-310-RN-NBV2-01',
-        itemName: '化粧キャップ C',
-        productGroup: '付属品',
-        arrangementNo: '3130300777',
-        capacity: '0.320',
-    },
-    {
-        id: '6',
-        category: '1',
-        itemCode: 'V15FSM-100-00',
-        itemName: '本体ASSY',
-        productGroup: '門柱',
-        arrangementNo: '3130300901',
-        capacity: '1.900',
-    },
-    {
-        id: '7',
-        category: '1',
-        itemCode: 'V15FSM-110-00',
-        itemName: '本体ASSY A',
-        productGroup: '門柱',
-        arrangementNo: '3130300902',
-        capacity: '1.900',
-    },
-    {
-        id: '8',
-        category: '1',
-        itemCode: 'V15FSM-200-00',
-        itemName: '本体ASSY B',
-        productGroup: '横桟',
-        arrangementNo: '3130300910',
-        capacity: '2.100',
-    },
-];
-
-// 保管容量の選択肢（品目マスタに存在する容量を候補にする）
-const CAPACITY_CHOICES = Array.from(new Set(ITEM_MASTER.map((item) => item.capacity)))
-    .sort()
-    .map((capacity) => ({ key: capacity, value: capacity }));
-
-// 画面を直接開いた場合に表示するサンプルデータ（設計書の画面イメージに合わせた仮データ）
-const SAMPLE_FORM: PalletFormData = {
-    palletNo: 'B261010-001',
-    storagePeriod: '9ヶ月',
-    category: '2',
-    inboundDate: '',
-    storageLocation: '1',
-    locationNo: 'A-01-03-02',
-    remark: '',
+/**
+ * 部品区分 → 商品マスタの sales_flg
+ * mast_item.sales_flg は 1:製品 / 0:部品 として部品・製品を区分する。
+ * （辞書 bss_classification は 1:製品 / 3:仕掛品）
+ */
+const SALES_FLG_BY_CLASSIFICATION: Record<string, string> = {
+    '1': '1',
+    '3': '0',
 };
 
-// サンプルの積載明細（品目マスタの先頭 2 件を使用する）
-const buildSampleDetail = (item: ItemMaster): PalletDetailItem => ({
-    id: item.id,
-    itemCode: item.itemCode,
-    itemName: item.itemName,
-    productGroup: item.productGroup,
-    arrangementNo: item.arrangementNo,
-    storageCapacity: item.capacity,
-    quantity: 10,
-    remark: '',
-    storageCategory: '1',
-    usableFlag: '1',
-    createdAt: '2026/01/01 15:00',
-    createdBy: '山田 太郎（123456）',
-    updatedAt: '2026/10/01 15:00',
-    updatedBy: '山田 太郎（123456）',
-});
-
-const SAMPLE_DETAILS: PalletDetailItem[] = [
-    buildSampleDetail(ITEM_MASTER[0]),
-    buildSampleDetail(ITEM_MASTER[1]),
-];
+// 品目検索の1ページあたりの件数
+const ITEM_PAGE_SIZE = 10;
 
 /**
  * 日時を「YYYY/MM/DD HH:mm」形式に整形する（明細の追加日時・更新日時用）
@@ -270,35 +176,89 @@ const normalizeChoiceValue = (value: any): string => {
     return normalized === undefined || normalized === null ? '' : String(normalized);
 };
 
+/**
+ * 画面の明細を API（/api/pallet）の明細項目へ変換する
+ */
+const toApiDetail = (detail: PalletDetailItem) => ({
+    itemCode: detail.itemCode,
+    itemName: detail.itemName,
+    productGroup: detail.productGroup,
+    arrangementNo: detail.arrangementNo,
+    storageQty: detail.quantity,
+    storageCapacity: detail.storageCapacity === '' ? null : Number(detail.storageCapacity),
+    storageType: detail.storageCategory,
+    usableFlag: detail.usableFlag,
+    remarks: detail.remark,
+});
+
+/**
+ * API の明細を画面の明細へ変換する
+ */
+const toDetailItem = (detail: PalletDetailVo): PalletDetailItem => ({
+    id: detail.id,
+    itemCode: detail.itemCode || '',
+    itemName: detail.itemName || '',
+    productGroup: detail.productGroup || '',
+    arrangementNo: detail.arrangementNo || '',
+    storageCapacity:
+        detail.storageCapacity === null || detail.storageCapacity === undefined
+            ? ''
+            : String(detail.storageCapacity),
+    quantity: detail.storageQty ?? 0,
+    remark: detail.remarks || '',
+    storageCategory: detail.storageType || '',
+    usableFlag: detail.usableFlag || '',
+    createdAt: detail.createTime || '',
+    createdBy: detail.createBy || '',
+    updatedAt: detail.updateTime || '',
+    updatedBy: detail.updateBy || '',
+});
+
 const P305: React.FC = () => {
     const notify = useNotify();
     const navigate = useNavigate();
     const location = useLocation();
+    const { request } = useApiRequest();
 
-    // P303 から遷移した場合は発番内容と積載明細を引き継ぎ、直接開いた場合はサンプルを表示する
-    const initialState = useMemo(() => {
+    // 遷移元（P303／P304）から渡されたパレット番号
+    const initialPalletNo = useMemo(() => {
         const state = location.state as
-            | { pallet?: PalletFormData; details?: PalletDetailItem[] }
+            | { pallet?: PalletFormData; palletNo?: string }
             | null;
-        return {
-            pallet: state?.pallet ? { ...INITIAL_FORM, ...state.pallet } : SAMPLE_FORM,
-            details: state?.details ?? SAMPLE_DETAILS,
-        };
+        if (!state) return '';
+        return normalizeChoiceValue(state.pallet?.palletNo) || normalizeChoiceValue(state.palletNo);
     }, [location.state]);
 
     // パレット情報（フォームの初期値として使用）
-    const [formData, setFormData] = useState<PalletFormData>(initialState.pallet);
+    const [formData, setFormData] = useState<PalletFormData>({
+        ...INITIAL_FORM,
+        palletNo: initialPalletNo,
+    });
     // フォームを初期値で再描画するための世代番号
     const [formVersion, setFormVersion] = useState(0);
     // 積載明細（部品／製品のカード一覧）
-    const [details, setDetails] = useState<PalletDetailItem[]>(initialState.details);
+    const [details, setDetails] = useState<PalletDetailItem[]>([]);
     // 区分（基本情報の選択値。積載明細の表示切替に使用する）
-    const [category, setCategory] = useState(initialState.pallet.category);
+    const [category, setCategory] = useState('');
+    // 保管場所（ロケ番の取得に使用する）
+    const [whCd, setWhCd] = useState('');
+    // 楽観ロック用の version（取得した値をそのまま更新時に返す）
+    const [version, setVersion] = useState<number | undefined>(undefined);
+
+    // 選択肢（辞書・倉庫・ロケ番）
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
+    const [storageTypeOptions, setStorageTypeOptions] = useState<OptionItem[]>([]);
+    const [usableFlagOptions, setUsableFlagOptions] = useState<OptionItem[]>([]);
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
 
     // 部品検索モーダル関連
     const [itemModalOpen, setItemModalOpen] = useState(false);
     const [itemSearchValues, setItemSearchValues] = useState({ itemCode: '', itemName: '' });
     const [itemSearchCondition, setItemSearchCondition] = useState({ itemCode: '', itemName: '' });
+    const [itemRows, setItemRows] = useState<ItemMaster[]>([]);
+    const [itemTotal, setItemTotal] = useState(0);
+    const [itemPage, setItemPage] = useState(1);
 
     // ログインユーザー（明細の追加者・最終更新者）
     const loginUserLabel = useMemo(getLoginUserLabel, []);
@@ -306,7 +266,9 @@ const P305: React.FC = () => {
     // 区分が製品かどうか
     const isProduct = category === '1';
     // 区分が選択済みかどうか（未選択時は追加ボタンを非活性にする）
-    const isCategorySelected = category === '1' || category === '2';
+    const isCategorySelected = category !== '';
+    // パレット番号が確定しているかどうか（未指定時は更新・削除できない）
+    const hasPalletNo = !!formData.palletNo;
 
     // 追加ボタンの表示名（区分に応じて切り替える）
     const addButtonLabel = isProduct ? '製品追加' : '部品追加';
@@ -315,23 +277,119 @@ const P305: React.FC = () => {
         ? '積載する製品が登録されていません。'
         : '積載する部品が登録されていません。';
 
-    // 検索結果（区分・品目コード・品目名で絞り込む）
-    const itemSearchResult = useMemo(() => {
-        const code = (itemSearchCondition.itemCode || '').trim();
-        const name = (itemSearchCondition.itemName || '').trim();
-        return ITEM_MASTER.filter(
-            (item) =>
-                item.category === category &&
-                (!code || item.itemCode.includes(code)) &&
-                (!name || item.itemName.includes(name))
-        );
-    }, [itemSearchCondition, category]);
-
     // 既に明細へ追加済みの品目コード
     const addedItemCodes = useMemo(
         () => details.map((detail) => detail.itemCode),
         [details]
     );
+
+    /**
+     * 取得したパレット情報を画面へ反映する
+     */
+    const applyPallet = (vo: PalletNumberVo) => {
+        setFormData({
+            palletNo: vo.palletNo || '',
+            storagePeriod: vo.storagePeriod || '',
+            category: vo.classification || '',
+            inboundDate: vo.inboundDate || '',
+            storageLocation: vo.whCd || '',
+            locationNo: vo.locCd || '',
+            remark: vo.memo1 || '',
+        });
+        setCategory(vo.classification || '');
+        setWhCd(vo.whCd || '');
+        setVersion(vo.version);
+        setDetails((vo.details || []).map(toDetailItem));
+        // 取得した値でフォームを作り直す（初期値の表示名を選択肢から解決するため）
+        setFormVersion((current) => current + 1);
+    };
+
+    /**
+     * パレット情報を取得する
+     */
+    const loadPallet = async (palletNo: string) => {
+        if (!palletNo) return;
+        try {
+            const result = await request('get', `api/pallet/${palletNo}`, {}, {}, true, false);
+            if (result?.code !== 200 || !result?.data) return;
+            applyPallet(result.data as PalletNumberVo);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    /** 選択肢（辞書データ・倉庫）を取得する */
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const [classification, storageType, usableFlag, warehouse] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_pallet_storage_type' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_usable_flag' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setClassificationOptions(classification?.data || []);
+                setStorageTypeOptions(storageType?.data || []);
+                setUsableFlagOptions(usableFlag?.data || []);
+                setWarehouseOptions(warehouse?.data || []);
+                // 選択肢の取得後にフォームを作り直す（保管場所などの表示名を解決するため）
+                setFormVersion((current) => current + 1);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchOptions();
+    }, []);
+
+    /** 保管場所に紐づくロケ番を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!whCd) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request('get', `api/common/${whCd}/location/options`, {}, {}, false, false);
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [whCd]);
+
+    /** パレット情報を取得する（遷移元からパレット番号を受け取った場合） */
+    useEffect(() => {
+        if (!initialPalletNo) {
+            notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
+                type: 'warning',
+            });
+            return;
+        }
+        loadPallet(initialPalletNo);
+    }, [initialPalletNo]);
+
+    /** 品目を検索する（区分に応じて sales_flg を切り替える） */
+    const searchItems = async (condition: { itemCode: string; itemName: string }, page: number) => {
+        try {
+            const result = await request(
+                'get',
+                'api/item/list',
+                {
+                    itemCode: condition.itemCode,
+                    itemName: condition.itemName,
+                    salesFlg: SALES_FLG_BY_CLASSIFICATION[category] || '',
+                },
+                { current: page, pageSize: ITEM_PAGE_SIZE },
+                false,
+                false
+            );
+            setItemRows(result?.rows || []);
+            setItemTotal(result?.total || 0);
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     /**
      * 区分の変更処理
@@ -348,31 +406,65 @@ const P305: React.FC = () => {
         }
     };
 
-    /** 更新処理（編集内容を画面に反映する。API 連携時にサーバ更新へ置き換える） */
-    const handleUpdate = (values: any) => {
-        if (!values?.category) {
+    /** 保管場所の変更処理（ロケ番は選択し直す） */
+    const handleWarehouseChange = (value: any) => {
+        setWhCd(normalizeChoiceValue(value));
+    };
+
+    /** 更新処理（入力内容をサーバへ登録する） */
+    const handleUpdate = async (values: any) => {
+        const palletNo = formData.palletNo;
+        const classification = normalizeChoiceValue(values?.category);
+        const warehouse = normalizeChoiceValue(values?.storageLocation);
+        const locationCd = normalizeChoiceValue(values?.locationNo);
+
+        if (!palletNo) {
+            notify('パレット番号が指定されていません。', { type: 'warning' });
+            return;
+        }
+        if (!classification) {
             notify('区分を選択してください。', { type: 'warning' });
             return;
         }
-        if (!values?.storageLocation) {
+        if (!warehouse) {
             notify('保管場所を選択してください。', { type: 'warning' });
             return;
         }
+        if (!locationCd) {
+            notify('ロケ番を選択してください。', { type: 'warning' });
+            return;
+        }
 
-        const nextFormData: PalletFormData = {
-            palletNo: formData.palletNo,
-            storagePeriod: values.storagePeriod || '',
-            category: values.category || '',
-            inboundDate: values.inboundDate || '',
-            storageLocation: values.storageLocation || '',
-            locationNo: values.locationNo || '',
-            remark: values.remark || '',
-        };
+        try {
+            const result = await request(
+                'put',
+                'api/pallet',
+                {
+                    palletNo,
+                    storagePeriod: values?.storagePeriod || '',
+                    classification,
+                    inboundDate: values?.inboundDate || '',
+                    whCd: warehouse,
+                    locCd: locationCd,
+                    memo1: values?.remark || '',
+                    version,
+                    details: details.map(toApiDetail),
+                },
+                {},
+                true,
+                false
+            );
 
-        setFormData(nextFormData);
-        setCategory(nextFormData.category);
-        setFormVersion((version) => version + 1);
-        notify('パレット情報を更新しました。', { type: 'success' });
+            if (result?.code !== 200) {
+                return;
+            }
+
+            notify('パレット情報を更新しました。', { type: 'success' });
+            // 更新後の状態（version・更新日時・明細ID）をサーバから取り直す
+            await loadPallet(palletNo);
+        } catch (error) {
+            console.error(error);
+        }
     };
 
     /**
@@ -391,7 +483,7 @@ const P305: React.FC = () => {
 
         // 設計書の記入例（備考１＝行田工場）に合わせ、備考１は保管場所、備考２は明細の備考を出力する
         const storageLocationLabel =
-            STORAGE_CHOICES.find((choice) => choice.key === formData.storageLocation)?.value ?? '';
+            warehouseOptions.find((choice) => choice.key === formData.storageLocation)?.value ?? '';
 
         const labels: PalletNumberSheetLabel[] = details.map((detail) => ({
             category: formData.category,
@@ -401,7 +493,6 @@ const P305: React.FC = () => {
             itemName: detail.itemName,
             remark1: storageLocationLabel,
             remark2: detail.remark,
-            // バーコードは JAN コード。品目マスタ連携時に明細へ持たせる（未設定時はパレット番号を出力）
         }));
 
         if (!printPalletNumberSheet(labels)) {
@@ -414,20 +505,34 @@ const P305: React.FC = () => {
     };
 
     /** 削除処理（パレット情報を削除して発番画面へ戻る） */
-    const handleDelete = () => {
+    const handleDelete = async () => {
+        const palletNo = formData.palletNo;
+        if (!palletNo) {
+            notify('パレット番号が指定されていません。', { type: 'warning' });
+            return;
+        }
         if (!window.confirm('このパレット情報を削除してもよろしいですか？')) return;
-        notify('パレット情報を削除しました。', { type: 'success' });
-        navigate('/P303');
+
+        try {
+            const result = await request('delete', `api/pallet/${palletNo}`, {}, {}, true, false);
+            if (result?.code !== 200) {
+                return;
+            }
+            notify('パレット情報を削除しました。', { type: 'success' });
+            navigate('/P303');
+        } catch (error) {
+            console.error(error);
+        }
     };
 
-    /** リセット処理（入力内容と明細を遷移直後の状態に戻す） */
-    const handleReset = () => {
-        setFormData({ ...initialState.pallet });
-        setCategory(initialState.pallet.category);
-        setFormVersion((version) => version + 1);
-        setDetails(initialState.details.map((detail) => ({ ...detail })));
+    /** リセット処理（サーバから取得した状態に戻す） */
+    const handleReset = async () => {
         setItemSearchValues({ itemCode: '', itemName: '' });
         setItemSearchCondition({ itemCode: '', itemName: '' });
+        setItemRows([]);
+        setItemTotal(0);
+        setItemPage(1);
+        await loadPallet(formData.palletNo);
     };
 
     /** 部品検索モーダルを開く */
@@ -435,7 +540,9 @@ const P305: React.FC = () => {
         if (!isCategorySelected) return;
         setItemSearchValues({ itemCode: '', itemName: '' });
         setItemSearchCondition({ itemCode: '', itemName: '' });
+        setItemPage(1);
         setItemModalOpen(true);
+        searchItems({ itemCode: '', itemName: '' }, 1);
     };
 
     /** 部品検索モーダルを閉じる */
@@ -445,16 +552,27 @@ const P305: React.FC = () => {
 
     /** 部品検索を実行する */
     const handleItemSearch = (values: any) => {
-        setItemSearchCondition({
+        const condition = {
             itemCode: values?.itemCode || '',
             itemName: values?.itemName || '',
-        });
+        };
+        setItemSearchCondition(condition);
+        setItemPage(1);
+        searchItems(condition, 1);
     };
 
     /** 部品検索条件をリセットする */
     const handleItemSearchReset = () => {
         setItemSearchValues({ itemCode: '', itemName: '' });
         setItemSearchCondition({ itemCode: '', itemName: '' });
+        setItemPage(1);
+        searchItems({ itemCode: '', itemName: '' }, 1);
+    };
+
+    /** 検索結果のページを変更する */
+    const handleItemPageChange = (current: number) => {
+        setItemPage(current);
+        searchItems(itemSearchCondition, current);
     };
 
     /** 検索結果から積載明細を追加する */
@@ -468,13 +586,16 @@ const P305: React.FC = () => {
                 id: item.id,
                 itemCode: item.itemCode,
                 itemName: item.itemName,
-                productGroup: item.productGroup,
-                arrangementNo: item.arrangementNo,
-                storageCapacity: item.capacity,
+                productGroup: '',
+                arrangementNo: '',
+                storageCapacity: '',
                 quantity: 10,
                 remark: '',
-                storageCategory: '1',
-                usableFlag: '1',
+                // 保管区分・使用可否は辞書の既定値（使用可は isDefault=Y）を初期値にする
+                storageCategory: storageTypeOptions[0]?.key || '',
+                usableFlag: usableFlagOptions.find((option) => option.isDefault === 'Y')?.key
+                    || usableFlagOptions[0]?.key
+                    || '',
                 createdAt: now,
                 createdBy: loginUserLabel,
                 updatedAt: now,
@@ -501,10 +622,8 @@ const P305: React.FC = () => {
     // 部品検索結果の列定義
     const itemColumnDefs: ColDef<ItemMaster>[] = [
         { headerName: '品目コード', field: 'itemCode', flex: 1, minWidth: 200 },
-        { headerName: '品目名', field: 'itemName', flex: 1, minWidth: 140 },
-        { headerName: '製品群', field: 'productGroup', width: 110 },
-        { headerName: '手配番号', field: 'arrangementNo', width: 130 },
-        { headerName: '保管容量', field: 'capacity', width: 110 },
+        { headerName: '品目名', field: 'itemName', flex: 1, minWidth: 180 },
+        { headerName: 'システム商品番号', field: 'sysItemCode', width: 200 },
         {
             headerName: '追加',
             width: 90,
@@ -566,7 +685,7 @@ const P305: React.FC = () => {
                             type={'filter-select'}
                             source="category"
                             label="区分"
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                             onChange={handleCategoryChange}
                         />
                         <FormInput
@@ -578,13 +697,14 @@ const P305: React.FC = () => {
                             type={'filter-select'}
                             source="storageLocation"
                             label="保管場所"
-                            choices={STORAGE_CHOICES}
+                            choices={warehouseOptions}
+                            onChange={handleWarehouseChange}
                         />
                         <FormInput
                             type={'filter-select'}
                             source="locationNo"
                             label="ロケ番"
-                            choices={LOCATION_CHOICES}
+                            choices={locationOptions}
                         />
                         <div style={{ gridColumn: '1 / -1' }}>
                             <FormInput
@@ -592,6 +712,7 @@ const P305: React.FC = () => {
                                 source="remark"
                                 label="備考"
                                 multiline
+                                inputHeight={96}
                                 placeholder="入力してください"
                             />
                         </div>
@@ -624,7 +745,6 @@ const P305: React.FC = () => {
                                 title={<Typography variant={'body1'}>{`No.${index + 1}`}</Typography>}
                                 action={
                                     <div
-                                        // style={}
                                         style={{ ...tableSx.linkFontColumn as React.CSSProperties, marginRight: '20px', marginTop: '10px' }}
                                         onClick={() => handleRemoveDetail(detail.id)}
                                     >
@@ -673,10 +793,10 @@ const P305: React.FC = () => {
                                             onChange={(value) => handleDetailChange(detail.id, 'quantity', value)}
                                         />
                                         <FormInput
-                                            type={'filter-select'}
+                                            type={'text-number'}
                                             source="storageCapacity"
                                             label="保管容量"
-                                            choices={CAPACITY_CHOICES}
+                                            placeholder="入力してください"
                                             onChange={(value) => handleDetailChange(detail.id, 'storageCapacity', value)}
                                         />
                                         <div style={{ gridColumn: '1 / -1' }}>
@@ -684,7 +804,7 @@ const P305: React.FC = () => {
                                                 type={'radio'}
                                                 source="storageCategory"
                                                 label="保管区分"
-                                                choices={STORAGE_CATEGORY_CHOICES}
+                                                choices={storageTypeOptions}
                                                 onChange={(value) => handleDetailChange(detail.id, 'storageCategory', value)}
                                             />
                                         </div>
@@ -693,7 +813,7 @@ const P305: React.FC = () => {
                                                 type={'radio'}
                                                 source="usableFlag"
                                                 label="使用可否"
-                                                choices={USABLE_CHOICES}
+                                                choices={usableFlagOptions}
                                                 onChange={(value) => handleDetailChange(detail.id, 'usableFlag', value)}
                                             />
                                         </div>
@@ -703,6 +823,7 @@ const P305: React.FC = () => {
                                                 source="remark"
                                                 label="備考"
                                                 multiline
+                                                inputHeight={96}
                                                 placeholder="入力してください"
                                                 onChange={(value) => handleDetailChange(detail.id, 'remark', value)}
                                             />
@@ -742,8 +863,9 @@ const P305: React.FC = () => {
             {/* 操作ボタン（設計書どおり画面下部に配置する：左＝削除、右＝リセット・更新） */}
             <div style={{ ...buttonSx.buttonBar, justifyContent: 'space-between' }}>
                 <button
-                    style={buttonSx.button}
+                    style={hasPalletNo ? buttonSx.button : buttonSx.disabledButton}
                     type="button"
+                    disabled={!hasPalletNo}
                     onClick={handleDelete}
                 >
                     削除
@@ -817,9 +939,11 @@ const P305: React.FC = () => {
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
                     <DataGrid<ItemMaster>
                         columnDefs={itemColumnDefs}
-                        rowData={itemSearchResult}
-                        page={1}
-                        onPageChange={() => {}}
+                        rowData={itemRows}
+                        page={itemPage}
+                        rowTotal={itemTotal}
+                        pageSize={ITEM_PAGE_SIZE}
+                        onPageChange={handleItemPageChange}
                         rowUniqueKey="id"
                         selectionMode="none"
                         noRowsShow={isProduct ? '該当する製品がありません。' : '該当する部品がありません。'}

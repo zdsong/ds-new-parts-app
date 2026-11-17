@@ -534,6 +534,7 @@ const P304: React.FC = () => {
                                 source="remark"
                                 label="備考"
                                 multiline
+                                inputHeight={96}
                                 placeholder="入力してください"
                             />
                         </div>

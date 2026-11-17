@@ -81,12 +81,20 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
 
     const inputTextRef = useRef(null);
 
+    // フォーム（react-hook-form）のフィールド。clear からも参照するため、
+    // 各 useCallback より前に宣言しておく。
+    const {
+        field: { name, value, onChange, onBlur },
+    } = useInput(props);
+
     const clear = useCallback(() => {
       setInputValue('');
       setOldDate('');
       const now = new Date();
       setDisplayYear(now.getFullYear());
       setDisplayMonth(now.getMonth());
+      // クリア時もフォーム値を空にする（onBlur だけでは値が残る）
+      if (onChange) {onChange('');}
       if (props.onBlur) {
         props.onBlur(
             { 
@@ -110,10 +118,6 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
       clear,
       focus,
     }));
-
-    const {
-        field: { name, value, onChange, onBlur },
-    } = useInput(props);
 
       
     const [inputValue, setInputValue] = useState<string>(
@@ -177,6 +181,8 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
         const rawValue = target.value;
         const trimmedValue = rawValue.trim();
         if(!trimmedValue) {
+          // 空入力で確定した場合もフォーム値を空へ同期する
+          if (onChange) {onChange('');}
           if (props.onBlur) {
               props.onBlur(
                   { 
@@ -201,6 +207,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
                 setDisplayYear(parsedDate.getFullYear());
                 setDisplayMonth(parsedDate.getMonth());
             }
+            if (onChange) {onChange(formattedValue);}
             if (onBlur) {onBlur(e);}
             if (props.onBlur) {
                 props.onBlur(
@@ -217,6 +224,8 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
             setOldDate(formattedValue)
         }else{
             setInputValue(oldDate)
+            // 不正な入力は直前の確定値へ戻し、フォーム値もそれに合わせる
+            if (onChange) {onChange(oldDate || '');}
             if (props.onBlur) {
                 props.onBlur(
                     { 
@@ -236,6 +245,10 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
         const newStrValue = formatDateToString(date);
         setInputValue(newStrValue);
 
+        // カレンダーから選択した場合は入力欄の blur が発生しないため、
+        // ここでフォーム（react-hook-form）の値も直接更新する。
+        // これが無いと送信時に日付が空文字のままになる。
+        if (onChange) {onChange(newStrValue);}
         if (props.onBlur) {
             props.onBlur(
                 { 
