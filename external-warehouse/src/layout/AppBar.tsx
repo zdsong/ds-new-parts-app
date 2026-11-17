@@ -17,6 +17,30 @@ import SIcon from '../assets/icons/S.png';
 import DIcon from '../assets/icons/D.png';
 const themeIcon  = import.meta.env.VITE_THEME_ICON;
 
+/**
+ * 画面幅に応じて連続的に変化させる寸法（clamp による線形補間）
+ *
+ * 計算式：clamp(最小値, calc(A + B vw), 最大値)
+ *   ・390px（スマートフォン）で最小値
+ *   ・1200px 以上で最大値＝PC の従来値
+ *   A = 最小値 - 0.4815 * (最大値 - 最小値) ／ B = (最大値 - 最小値) / 8.1
+ * 幅が狭くなるほどロゴとタイトル文字が少しずつ縮み、レイアウト自体は崩さない。
+ */
+const FLUID = {
+  // ロゴの高さ：28px → 40px
+  logoHeight: 'clamp(28px, calc(22.2px + 1.48vw), 40px)',
+  // タイトル文字：13px → 20px
+  titleFont: 'clamp(15px, calc(9.6px + 0.86vw), 20px)',
+};
+
+/**
+ * 表示を切り替える画面幅
+ * ・900px 未満（MUI の md 未満）：ログインユーザー情報（ID・最終ログイン・ログアウト）を非表示
+ * ・600px 未満（MUI の sm 未満）：ロゴアイコンを非表示（タイトルとメニューアイコンだけ残す）
+ */
+const hideUserInfoSx = { display: { xs: 'none', md: 'flex' } };
+const hideLogoBelowSmSx = { display: { xs: 'none', sm: 'block' } };
+
 interface MenuItem {
   name: string,
   hidden?: boolean,
@@ -46,6 +70,11 @@ const AVAILABLE_ROUTES = [
   'P404',
   'P405',
   'P406',
+  'SP301',
+  'SP302',
+  'SP303',
+  'SP304',
+  'SP305',
   'appVersion',
 ];
 
@@ -205,8 +234,11 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
     <ThemeToggle></ThemeToggle>
     {/* <MessageChatAppBar></MessageChatAppBar>
     <Notice></Notice> */}
-    {/* ログインユーザー情報（ID・最終ログイン・ログアウト） */}
-    <LoginUserInfoBar />
+    {/* ログインユーザー情報（ID・最終ログイン・ログアウト）
+        画面幅が狭いときは表示しない（メニューアイコンの領域を確保する） */}
+    <Box sx={hideUserInfoSx}>
+      <LoginUserInfoBar />
+    </Box>
     <CustomAppBarMenu menuItems={menuItems}></CustomAppBarMenu>
   </Box>
 );}
@@ -237,17 +269,35 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
     <AppBar {...props} userMenu={false} toolbar={null} sx={AppBarSx.baseAppBarSx} >
       <AppBarContainer>
         {/* 左側セクション（ロゴ + タイトル） */}
-        <LeftSection>
-          <img src={icon} alt="customIcon" style={{
-            margin: '5px',
-            height: '40px'
-          }}/>
-          <Typography 
+        <LeftSection sx={{ minWidth: 0 }}>
+          <Box
+            component="img"
+            src={icon}
+            alt="customIcon"
+            sx={{
+              ...hideLogoBelowSmSx,
+              // 縮小時にロゴが潰れないよう、伸縮させない
+              flexShrink: 0,
+              margin: '5px',
+              height: FLUID.logoHeight,
+              width: 'auto',
+            }}
+          />
+          <Typography
               variant='h6'
-              component="h3" 
+              component="h3"
               gutterBottom
-              style={{ color: 'black', cursor: 'pointer' }}
               onClick={()=> navigateS050()}
+              sx={{
+                color: 'black',
+                cursor: 'pointer',
+                // 文字は折り返さず、幅に応じて少しずつ縮める（極端に狭い場合のみ省略記号）
+                fontSize: FLUID.titleFont,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                minWidth: 0,
+              }}
           >
               新部品管理システム｜外部倉庫管理
           </Typography>

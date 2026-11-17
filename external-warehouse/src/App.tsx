@@ -57,6 +57,11 @@ import P403 from './view/P403';
 import P404 from './view/P404';
 import P405 from './view/P405';
 import P401 from './view/P401';
+import SP301 from './view/SP301';
+import SP302 from './view/SP302';
+import SP303 from './view/SP303';
+import SP304 from './view/SP304';
+import SP305 from './view/SP305';
 import P406 from './view/P406';
 
 
@@ -186,6 +191,13 @@ const App = () => {
               <Route path="/P303" element={<P303 />} />
               <Route path="/P304" element={<P304 />} />
               <Route path="/P305" element={<P305 />} />
+
+              {/* ①パレット番号管理（SP）：製品・部品選択〜パレット情報詳細 */}
+              <Route path="/SP301" element={<SP301 />} />
+              <Route path="/SP302" element={<SP302 />} />
+              <Route path="/SP303" element={<SP303 />} />
+              <Route path="/SP304" element={<SP304 />} />
+              <Route path="/SP305" element={<SP305 />} />
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
