@@ -219,6 +219,26 @@ export const spSx = {
         cursor: 'pointer',
         whiteSpace: 'nowrap' as const,
     },
+    /** 操作できない状態のリンク（追加・削除） */
+    linkDisabled: {
+        color: '#9e9e9e',
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'not-allowed',
+        whiteSpace: 'nowrap' as const,
+    },
+    /** 操作できない状態のボタン（印刷済みなど） */
+    buttonDisabled: {
+        opacity: 0.5,
+        cursor: 'default',
+    },
+    /** 印刷済みの案内文（番号表を印刷した後は変更できない） */
+    printedNotice: {
+        color: '#d32f2f',
+        fontSize: '12px',
+        lineHeight: 1.5,
+        marginTop: '2px',
+    },
     /** 空メッセージ */
     empty: {
         color: '#757575',

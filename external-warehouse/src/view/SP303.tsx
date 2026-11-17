@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
+import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import {
     CATEGORY_CHOICES,
-    LOCATION_CHOICES,
-    STORAGE_CHOICES,
-    generatePalletNo,
     normalizeChoiceValue,
     printPalletLabels,
+    toApiDetail,
 } from '../utils/palletData';
-import type { PalletDetailItem, PalletFormData } from '../utils/palletData';
+import type { OptionItem, PalletDetailItem, PalletFormData } from '../utils/palletData';
 
 /**
  * パレット番号発番画面（SP303）
  *
  * 設計書：①パレット番号管理 3.3 パレット番号発番
  *   品目検索（SP302）で追加した品目と、保管倉庫・ロケ番・備考を確認して発番する。
- *   発番後はパレット情報詳細（SP305）へ遷移し、パレット番号表の印刷が可能になる。
+ *   発番は POST /api/pallet でサーバ側の採番結果を受け取り、
+ *   パレット情報詳細（SP305）へパレット番号を引き継いで遷移する。
  */
 interface Sp303State {
     category?: string;
@@ -41,6 +41,7 @@ const SP303: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const notify = useNotify();
+    const { request } = useApiRequest();
 
     const state = (location.state || {}) as Sp303State;
 
@@ -48,14 +49,63 @@ const SP303: React.FC = () => {
     const [pallet, setPallet] = useState<PalletFormData>({
         palletNo: state.pallet?.palletNo || '',
         category: state.pallet?.category || state.category || '1',
-        storageLocation: state.pallet?.storageLocation || '1',
-        locationNo: state.pallet?.locationNo || 'A-01-03-02',
+        storageLocation: state.pallet?.storageLocation || '',
+        locationNo: state.pallet?.locationNo || '',
         remark: state.pallet?.remark || '',
     });
     // 積載明細
     const [details, setDetails] = useState<PalletDetailItem[]>(state.details || []);
     // フォーム再描画用の世代番号
     const [formKey, setFormKey] = useState(0);
+
+    // 保管倉庫・ロケ番の選択肢
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+
+    /** 保管倉庫の選択肢を取得する */
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+                const options: OptionItem[] = result?.data || [];
+                setWarehouseOptions(options);
+                // 未選択の場合は先頭の倉庫を初期値にする
+                setPallet((prev) =>
+                    prev.storageLocation || options.length === 0
+                        ? prev
+                        : { ...prev, storageLocation: options[0].key }
+                );
+                setFormKey((key) => key + 1);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchWarehouses();
+    }, []);
+
+    /** 保管倉庫に紐づくロケ番の選択肢を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!pallet.storageLocation) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request(
+                    'get',
+                    `api/common/${pallet.storageLocation}/location/options`,
+                    {},
+                    {},
+                    false,
+                    false
+                );
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [pallet.storageLocation]);
 
     /** 数量を変更する */
     const handleQuantityChange = (id: string, value: number) => {
@@ -81,40 +131,113 @@ const SP303: React.FC = () => {
         });
     };
 
-    /** 発番する */
-    const handleIssue = (values: any) => {
+    /** 保管倉庫・ロケ番の変更を画面の状態に反映する */
+    const handleSelectChange = (field: 'storageLocation' | 'locationNo', value: unknown) => {
+        const next = normalizeChoiceValue(value);
+        if (field === 'storageLocation') {
+            // 倉庫が変わったらロケ番は選び直す（フォームも初期値で作り直す）
+            setPallet((prev) => ({ ...prev, storageLocation: next, locationNo: '' }));
+            setFormKey((key) => key + 1);
+            return;
+        }
+        setPallet((prev) => ({ ...prev, locationNo: next }));
+    };
+
+    /** 区分の変更を画面の状態に反映する（品目追加時の区分に使用する） */
+    const handleCategoryChange = (value: unknown) => {
+        setPallet((prev) => ({ ...prev, category: normalizeChoiceValue(value) }));
+    };
+
+    /** 発番する（サーバ側で採番してパレット情報を登録する） */
+    const handleIssue = async (values: any) => {
         if (details.length === 0) {
             notify('積載する品目を追加してください。', { type: 'warning' });
             return;
         }
 
-        const nextPallet: PalletFormData = {
-            palletNo: pallet.palletNo || generatePalletNo(),
-            category: normalizeChoiceValue(values?.category) || pallet.category,
-            storageLocation: normalizeChoiceValue(values?.storageLocation) || '1',
-            locationNo: normalizeChoiceValue(values?.locationNo) || '',
-            remark: values?.remark || '',
-        };
+        const classification = normalizeChoiceValue(values?.category) || pallet.category;
+        const whCd = normalizeChoiceValue(values?.storageLocation) || pallet.storageLocation;
+        const locCd = normalizeChoiceValue(values?.locationNo) || pallet.locationNo;
 
-        setPallet(nextPallet);
-        notify(`パレット番号 ${nextPallet.palletNo} を発番しました。`, { type: 'success' });
+        if (!classification) {
+            notify('区分は必須選択項目です。', { type: 'warning' });
+            return;
+        }
+        if (!whCd) {
+            notify('保管倉庫は必須入力項目です。', { type: 'warning' });
+            return;
+        }
+        if (!locCd) {
+            notify('保管エリア（ロケ番）は必須入力項目です。', { type: 'warning' });
+            return;
+        }
 
-        // 発番後はパレット情報詳細へ遷移する（発番内容と積載明細を引き継ぐ）
-        navigate('/SP305', { state: { pallet: nextPallet, details } });
+        try {
+            const result = await request(
+                'post',
+                'api/pallet',
+                {
+                    classification,
+                    whCd,
+                    locCd,
+                    storagePeriod: '',
+                    memo1: values?.remark || '',
+                    details: details.map(toApiDetail),
+                },
+                {},
+                false,
+                false
+            );
+
+            if (result?.code !== 200) {
+                notify(result?.message || 'パレット番号の発番に失敗しました。', { type: 'error' });
+                return;
+            }
+
+            const palletNo = result?.palletNo || result?.data || '';
+            notify(`パレット番号 ${palletNo} を発番しました。`, { type: 'success' });
+            // 発番後はパレット情報詳細へ遷移する（詳細はサーバから取得する）
+            navigate('/SP305', { state: { palletNo } });
+        } catch (error) {
+            console.error(error);
+        }
     };
 
-    /** 番号表を印刷する（発番済みの場合のみ） */
+    /** 番号表を印刷する（発番済みの場合のみ。パレット 1 件につき 1 枚） */
     const handlePrint = () => {
         if (!pallet.palletNo) {
             notify('発番後に番号表を印刷できます。', { type: 'warning' });
             return;
         }
-        const count = printPalletLabels([{ ...pallet, details }]);
+        const count = printPalletLabels([
+            {
+                palletNo: pallet.palletNo,
+                category: pallet.category,
+                storageLocation: pallet.storageLocation,
+                // 備考１には保管倉庫の名称を印字する
+                storageLocationName:
+                    warehouseOptions.find((option) => option.key === pallet.storageLocation)?.value ?? '',
+                details,
+            },
+        ]);
         if (count === 0) {
             notify('印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。', {
                 type: 'warning',
             });
         }
+    };
+
+    /** 入力内容と積載明細を初期化する */
+    const handleReset = () => {
+        setPallet({
+            palletNo: '',
+            category: '1',
+            storageLocation: warehouseOptions.length > 0 ? warehouseOptions[0].key : '',
+            locationNo: '',
+            remark: '',
+        });
+        setDetails([]);
+        setFormKey((key) => key + 1);
     };
 
     return (
@@ -160,6 +283,7 @@ const SP303: React.FC = () => {
                             structure="top-bottom"
                             sx={spFormInputSx}
                             choices={CATEGORY_CHOICES}
+                            onChange={handleCategoryChange}
                         />
                         <FormInput
                             type={'filter-select'}
@@ -167,7 +291,8 @@ const SP303: React.FC = () => {
                             label="保管倉庫"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={STORAGE_CHOICES}
+                            choices={warehouseOptions}
+                            onChange={(value) => handleSelectChange('storageLocation', value)}
                         />
                         <FormInput
                             type={'filter-select'}
@@ -175,7 +300,8 @@ const SP303: React.FC = () => {
                             label="保管エリア（ロケ番）"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={LOCATION_CHOICES}
+                            choices={locationOptions}
+                            onChange={(value) => handleSelectChange('locationNo', value)}
                         />
                         <FormInput
                             type={'text'}
@@ -184,7 +310,11 @@ const SP303: React.FC = () => {
                             structure="top-bottom"
                             sx={spFormInputSx}
                             multiline
+                            inputHeight={80}
                             placeholder="入力してください"
+                            onChange={(value) =>
+                                setPallet((prev) => ({ ...prev, remark: value ?? '' }))
+                            }
                         />
                     </div>
                 </SimpleForm>
@@ -248,21 +378,7 @@ const SP303: React.FC = () => {
 
             {/* 操作ボタン */}
             <Box sx={spSx.buttonBar}>
-                <button
-                    style={spSx.secondaryButton}
-                    type="button"
-                    onClick={() => {
-                        setPallet({
-                            palletNo: '',
-                            category: '1',
-                            storageLocation: '1',
-                            locationNo: 'A-01-03-02',
-                            remark: '',
-                        });
-                        setDetails([]);
-                        setFormKey((key) => key + 1);
-                    }}
-                >
+                <button style={spSx.secondaryButton} type="button" onClick={handleReset}>
                     リセット
                 </button>
                 <button style={spSx.primaryButton} type="submit" form="sp303-form">

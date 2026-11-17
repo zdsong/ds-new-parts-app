@@ -14,7 +14,7 @@ import FormInput from '../compontent/FormInput';
 import DataGrid from '../compontent/DataGrid';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
-import type { PalletNumberSheetLabel } from '../utils/palletNumberSheet';
+import { buildPalletLabels } from '../utils/palletData';
 
 /**
  * パレット番号一覧画面（P304）
@@ -425,22 +425,20 @@ const P304: React.FC = () => {
         });
     };
 
-    /** 選択したパレットの番号表を印刷する（明細 1 件につき 1 枚） */
+    /** 選択したパレットの番号表を印刷する（パレット 1 件につき 1 枚） */
     const handlePrintLabels = () => {
         if (selectedPallets.length === 0) {
             notify('番号表を印刷するパレットを選択してください。', { type: 'warning' });
             return;
         }
 
-        const labels: PalletNumberSheetLabel[] = selectedPallets.flatMap((pallet) =>
-            pallet.details.map((detail) => ({
-                category: pallet.category,
+        const labels = buildPalletLabels(
+            selectedPallets.map((pallet) => ({
                 palletNo: pallet.palletNo,
-                itemCode: detail.itemCode,
-                itemName: detail.itemName,
-                quantity: detail.quantity,
-                remark1: STORAGE_LABELS[pallet.storageLocation] || '',
-                remark2: detail.remark || '',
+                category: pallet.category,
+                storageLocation: pallet.storageLocation,
+                storageLocationName: STORAGE_LABELS[pallet.storageLocation] || '',
+                details: pallet.details,
             }))
         );
 

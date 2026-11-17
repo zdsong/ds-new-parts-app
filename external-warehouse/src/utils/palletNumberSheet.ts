@@ -6,25 +6,26 @@
  *  ・②仕掛品… 見出しが黒地・白文字
  * 上記以外のレイアウトは共通で、区分によって見出しの配色だけが変わる。
  *
- * 帳票は A4 縦 1 枚 = 1 ラベルで出力する（明細の件数だけページが増える）。
+ * 帳票は「パレット番号 1 件 = A4 縦 1 枚」で出力する（積載明細が複数あっても 1 枚にまとめる）。
+ * 明細が複数ある場合は、品番・品名・備考２を改行で並べ、数量は合計を印字する。
  * ブラウザの印刷ダイアログをそのまま使うため、専用ウィンドウに HTML を書き出して印刷する。
  */
 
 /** パレット番号表 1 枚分の印字内容 */
 export interface PalletNumberSheetLabel {
-    /** 区分（1:製品 / 2:仕掛品） */
+    /** 区分（1:製品 / 3:仕掛品） */
     category: string;
     /** パレット番号 */
     palletNo: string;
-    /** 品番 */
+    /** 品番（積載明細が複数ある場合は改行区切り） */
     itemCode: string;
-    /** 数量 */
+    /** 数量（積載明細が複数ある場合は合計） */
     quantity: string | number;
-    /** 品名 */
+    /** 品名（積載明細が複数ある場合は改行区切り） */
     itemName: string;
     /** 備考１ */
     remark1?: string;
-    /** 備考２ */
+    /** 備考２（積載明細が複数ある場合は改行区切り） */
     remark2?: string;
     /**
      * バーコードに変換する値。
@@ -36,6 +37,66 @@ export interface PalletNumberSheetLabel {
 
 /** 見出し行の高さの比率（設計書の図から採取したピクセル比） */
 const ROW_RATIOS = [60, 101, 112, 62, 62, 61, 59, 62];
+
+/** 帳票 1 枚の高さ（mm）。比率から各行の高さを求めるのに使う */
+const SHEET_HEIGHT_MM = 277;
+
+/** 比率の合計（各行の高さ＝SHEET_HEIGHT_MM × 比率 ÷ 合計） */
+const ROW_RATIO_TOTAL = ROW_RATIOS.reduce((total, ratio) => total + ratio, 0);
+
+/** 行の高さ（mm） */
+const getRowHeightMm = (rowIndex: number): number =>
+    (SHEET_HEIGHT_MM * ROW_RATIOS[rowIndex]) / ROW_RATIO_TOTAL;
+
+/** 値の欄の幅（mm）。190mm のうち項目名が 22.6% を占める */
+const VALUE_WIDTH_MM = 190 * (1 - 0.226);
+
+/** 品番・数量・品名・備考の基準文字サイズ（mm） */
+const VALUE_FONT_SIZE_MM = 10;
+
+/** 値を印字するときの最小文字サイズ（mm）。これ以上は小さくしない */
+const MIN_FONT_SIZE_MM = 4;
+
+/**
+ * 値の欄に印字できる最大行数（最小文字サイズで割り付けた行数）。
+ * これを超える明細は「ほか N 件」にまとめて、読めない大きさになるのを防ぐ。
+ */
+const getMaxLines = (rowIndex: number): number =>
+    Math.max(1, Math.floor((getRowHeightMm(rowIndex) * 0.88) / (MIN_FONT_SIZE_MM * 1.2)));
+
+/**
+ * 値を指定の行数に収める。超えた場合は末尾の行を「ほか N 件」に置き換える。
+ */
+const clampLines = (value: string, maxLines: number): string => {
+    const lines = value.split('\n');
+    if (lines.length <= maxLines) return value;
+    const keep = Math.max(1, maxLines - 1);
+    return [...lines.slice(0, keep), `ほか ${lines.length - keep} 件`].join('\n');
+};
+
+/**
+ * 値の行数を見積もる。
+ * 改行で指定された行に加え、1 行に収まらない長い文字列は折り返し分も数える。
+ */
+const estimateLines = (value: string, fontSizeMm: number): number =>
+    value
+        .split('\n')
+        .reduce((total, segment) => {
+            // 英数字は約 0.6em、日本語は約 1em の幅として 1 行あたりの文字数を求める
+            const charsPerLine = Math.max(1, Math.floor(VALUE_WIDTH_MM / (fontSizeMm * 0.8)));
+            return total + Math.max(1, Math.ceil(segment.length / charsPerLine));
+        }, 0)
+    || 1;
+
+/**
+ * 行に収まる文字サイズを求める（行数が多いほど小さくする）。
+ * 収まる場合は基準サイズをそのまま返す。
+ */
+const fitFontSize = (rowIndex: number, value: string, base = VALUE_FONT_SIZE_MM): string => {
+    const lines = estimateLines(value, base);
+    const fitted = Math.min(base, (getRowHeightMm(rowIndex) * 0.88) / (lines * 1.2));
+    return `${fitted.toFixed(1)}mm`;
+};
 
 /** 区分ごとの見出し文言 */
 const CATEGORY_LABELS: Record<string, string> = {
@@ -50,6 +111,13 @@ const escapeHtml = (value: unknown): string =>
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+
+/**
+ * 改行を <br> に変換してエスケープする。
+ * 積載明細が複数あるとき、品番・品名・備考を 1 枚の中に並べて印字するために使う。
+ */
+const escapeMultiline = (value: unknown): string =>
+    escapeHtml(value).replace(/\r\n|\r|\n/g, '<br />');
 
 /**
  * EAN-13 のモジュール列（バー＝1、スペース＝0 の 95 桁）を作る。
@@ -184,6 +252,13 @@ const buildLabelHtml = (label: PalletNumberSheetLabel): string => {
     const palletNoLength = Math.max((label.palletNo || '').length, 1);
     const palletNoFontSize = `${Math.min(17, 141 / palletNoLength / 0.75).toFixed(1)}mm`;
 
+    // 明細が複数ある場合は改行で並べ、行数に応じて文字を詰めて 1 枚に収める
+    // （行が多すぎると読めなくなるため、上限を超えた分は「ほか N 件」にまとめる）
+    const itemCode = clampLines(label.itemCode ?? '', getMaxLines(3));
+    const itemName = clampLines(label.itemName ?? '', getMaxLines(5));
+    const remark1 = clampLines(label.remark1 ?? '', getMaxLines(6));
+    const remark2 = clampLines(label.remark2 ?? '', getMaxLines(7));
+
     return `
     <section class="ps">
       <div class="${headClass}" style="flex: ${ROW_RATIOS[0]} 1 0">${escapeHtml(categoryLabel)}</div>
@@ -197,23 +272,23 @@ const buildLabelHtml = (label: PalletNumberSheetLabel): string => {
       </div>
       <div class="ps-row" style="flex: ${ROW_RATIOS[3]} 1 0">
         <div class="ps-key"><span>品番</span></div>
-        <div class="ps-value">${escapeHtml(label.itemCode)}</div>
+        <div class="ps-value ps-value--multi" style="font-size: ${fitFontSize(3, itemCode)}">${escapeMultiline(itemCode)}</div>
       </div>
       <div class="ps-row" style="flex: ${ROW_RATIOS[4]} 1 0">
         <div class="ps-key"><span>数量</span></div>
-        <div class="ps-value">${escapeHtml(quantity)}</div>
+        <div class="ps-value ps-value--multi" style="font-size: ${fitFontSize(4, quantity)}">${escapeMultiline(quantity)}</div>
       </div>
       <div class="ps-row" style="flex: ${ROW_RATIOS[5]} 1 0">
         <div class="ps-key"><span>品名</span></div>
-        <div class="ps-value">${escapeHtml(label.itemName)}</div>
+        <div class="ps-value ps-value--multi" style="font-size: ${fitFontSize(5, itemName)}">${escapeMultiline(itemName)}</div>
       </div>
       <div class="ps-row" style="flex: ${ROW_RATIOS[6]} 1 0">
         <div class="ps-key"><span>備考１</span></div>
-        <div class="ps-value">${escapeHtml(label.remark1 ?? '')}</div>
+        <div class="ps-value ps-value--multi" style="font-size: ${fitFontSize(6, remark1)}">${escapeMultiline(remark1)}</div>
       </div>
       <div class="ps-row" style="flex: ${ROW_RATIOS[7]} 1 0">
         <div class="ps-key"><span>備考２</span></div>
-        <div class="ps-value">${escapeHtml(label.remark2 ?? '')}</div>
+        <div class="ps-value ps-value--multi" style="font-size: ${fitFontSize(7, remark2)}">${escapeMultiline(remark2)}</div>
       </div>
     </section>`;
 };
@@ -328,6 +403,19 @@ const SHEET_STYLE = `
       white-space: nowrap;
       word-break: keep-all;
     }
+    /*
+     * 積載明細が複数ある場合の値（品番・数量・品名・備考）。
+     * 改行で並べるため、flex ではなく通常のブロックとして縦方向に中央寄せする。
+     * 文字サイズは行数に応じて HTML 側で詰めている。
+     */
+    .ps-value--multi {
+      display: block;
+      align-self: center;
+      max-height: 100%;
+      overflow: hidden;
+      white-space: normal;
+      word-break: break-all;
+    }
 `;
 
 /**
@@ -355,11 +443,22 @@ ${body}
  * パレット番号表を印刷する。
  * 別ウィンドウに書き出してから印刷ダイアログを開くため、画面のレイアウトの影響を受けない。
  */
-export const printPalletNumberSheet = (labels: PalletNumberSheetLabel[]): boolean => {
+export const printPalletNumberSheet = (
+    labels: PalletNumberSheetLabel[],
+    targetWindow?: Window | null
+): boolean => {
     const html = buildPalletNumberSheetHtml(labels);
-    if (!html) return false;
+    if (!html) {
+        targetWindow?.close();
+        return false;
+    }
 
-    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    // 呼び出し側で開いたウィンドウがあれば再利用する
+    // （更新などの非同期処理を待ってから開くとポップアップがブロックされるため）
+    const printWindow =
+        targetWindow && !targetWindow.closed
+            ? targetWindow
+            : window.open('', '_blank', 'width=900,height=1200');
     if (!printWindow) {
         // ポップアップがブロックされた場合
         return false;

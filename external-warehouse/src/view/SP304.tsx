@@ -1,26 +1,20 @@
-import React, { useMemo, useState } from 'react';
-import { Box, Checkbox, Typography } from '@mui/material';
-import { SimpleForm, useNotify } from 'react-admin';
+import React, { useEffect, useState } from 'react';
+import { Box } from '@mui/material';
+import { SimpleForm } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
+import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
-import {
-    CATEGORY_LABELS,
-    LOCATION_CHOICES,
-    PALLETS,
-    STORAGE_CHOICES,
-    STORAGE_LABELS,
-    normalizeChoiceValue,
-    printPalletLabels,
-} from '../utils/palletData';
-import type { PalletRow } from '../utils/palletData';
+import { CATEGORY_LABELS, fromApiPallet, normalizeChoiceValue } from '../utils/palletData';
+import type { ApiPallet, OptionItem, PalletRow } from '../utils/palletData';
 
 /**
  * パレット番号一覧画面（SP304）
  *
  * 設計書：①パレット番号管理 3.4 パレット番号一覧
  *   検索条件でパレットを絞り込み、パレット番号をタップすると情報詳細（SP305）へ遷移する。
- *   チェックしたパレットは番号表印刷の対象となる。
+ *   一覧は GET /api/pallet/list から取得する（ページングはサーバ側で行う）。
+ *   番号表の印刷はパレット情報詳細（SP305）で行うため、この画面には印刷ボタンを置かない。
  */
 interface SearchCondition {
     storageLocation: string;
@@ -43,7 +37,7 @@ const PAGE_SIZE = 5;
 
 const SP304: React.FC = () => {
     const navigate = useNavigate();
-    const notify = useNotify();
+    const { request } = useApiRequest();
 
     // 検索条件（確定値）
     const [condition, setCondition] = useState<SearchCondition>(INITIAL_CONDITION);
@@ -51,34 +45,82 @@ const SP304: React.FC = () => {
     const [formKey, setFormKey] = useState(0);
     // 現在のページ
     const [page, setPage] = useState(1);
-    // 番号表印刷の対象として選択したパレット
-    const [selected, setSelected] = useState<string[]>([]);
 
-    /** 検索条件で絞り込んだ一覧 */
-    const filtered = useMemo(() => {
-        const palletNo = condition.palletNo.trim();
-        const itemCode = condition.itemCode.trim().toLowerCase();
-        const itemName = condition.itemName.trim();
+    // 一覧（API から取得する）
+    const [rows, setRows] = useState<PalletRow[]>([]);
+    // 総件数
+    const [total, setTotal] = useState(0);
 
-        return PALLETS.filter((pallet) => {
-            if (condition.storageLocation && pallet.storageLocation !== condition.storageLocation) return false;
-            if (condition.locationNo && pallet.locationNo !== condition.locationNo) return false;
-            if (palletNo && !pallet.palletNo.includes(palletNo)) return false;
-            if (itemCode && !pallet.details.some((detail) => detail.itemCode.toLowerCase().includes(itemCode))) {
-                return false;
+    // 倉庫・ロケ番の選択肢
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+    // 検索条件で選択中の倉庫（ロケ番の選択肢の絞り込みに使用する）
+    const [formWhCd, setFormWhCd] = useState('');
+
+    /** 保管倉庫の選択肢を取得する */
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+                setWarehouseOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
             }
-            if (itemName && !pallet.details.some((detail) => detail.itemName.includes(itemName))) {
-                return false;
-            }
-            return true;
-        });
-    }, [condition]);
+        };
+        fetchWarehouses();
+    }, []);
 
-    /** 現在ページの表示行 */
-    const pageRows = useMemo(
-        () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-        [filtered, page]
-    );
+    /** 保管倉庫に紐づくロケ番の選択肢を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!formWhCd) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request(
+                    'get',
+                    `api/common/${formWhCd}/location/options`,
+                    {},
+                    {},
+                    false,
+                    false
+                );
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [formWhCd]);
+
+    /** 検索条件に一致するパレット一覧を取得する */
+    useEffect(() => {
+        const fetchPallets = async () => {
+            try {
+                const result = await request(
+                    'get',
+                    'api/pallet/list',
+                    {
+                        whCd: condition.storageLocation,
+                        locCd: condition.locationNo,
+                        palletNo: condition.palletNo,
+                        itemCode: condition.itemCode,
+                        itemName: condition.itemName,
+                    },
+                    { current: page, pageSize: PAGE_SIZE },
+                    false,
+                    false
+                );
+                const apiRows: ApiPallet[] = result?.rows || [];
+                setRows(apiRows.map((row) => fromApiPallet(row).row));
+                setTotal(result?.total || 0);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchPallets();
+    }, [condition, page]);
 
     /** 検索を実行する */
     const handleSearch = (values: any) => {
@@ -90,67 +132,30 @@ const SP304: React.FC = () => {
             itemName: values?.itemName || '',
         });
         setPage(1);
-        setSelected([]);
     };
 
     /** 検索条件をクリアする */
     const handleClear = () => {
         setCondition(INITIAL_CONDITION);
         setFormKey((key) => key + 1);
+        setFormWhCd('');
         setPage(1);
-        setSelected([]);
     };
 
     /** パレット情報詳細（SP305）へ遷移する */
     const handleOpenDetail = (pallet: PalletRow) => {
-        navigate('/SP305', {
-            state: {
-                pallet: {
-                    palletNo: pallet.palletNo,
-                    category: pallet.category,
-                    storageLocation: pallet.storageLocation,
-                    locationNo: pallet.locationNo,
-                    remark: pallet.remark,
-                },
-                details: pallet.details,
-            },
-        });
+        navigate('/SP305', { state: { palletNo: pallet.palletNo } });
     };
 
-    /** チェックの切り替え */
-    const handleToggle = (id: string) => {
-        setSelected((prev) => (prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]));
-    };
-
-    /** 選択したパレットの番号表を印刷する */
-    const handlePrint = () => {
-        const targets = filtered.filter((pallet) => selected.includes(pallet.id));
-        if (targets.length === 0) {
-            notify('番号表を印刷するパレットを選択してください。', { type: 'warning' });
-            return;
-        }
-        const count = printPalletLabels(targets);
-        if (count === 0) {
-            notify('印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。', {
-                type: 'warning',
-            });
-        } else {
-            notify(`${count} 枚のパレット番号表を印刷します。`, { type: 'success' });
-        }
-    };
-
-    const totalPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const startNo = filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
-    const endNo = Math.min(page * PAGE_SIZE, filtered.length);
+    const totalPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const startNo = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+    const endNo = Math.min(page * PAGE_SIZE, total);
 
     return (
         <Box sx={spSx.page}>
-            {/* タイトルバー（右：番号表印刷） */}
+            {/* タイトルバー */}
             <Box sx={spSx.titleBar}>
                 <label style={spSx.title}>パレット番号一覧</label>
-                <Typography sx={spSx.actionLink} component="span" onClick={handlePrint}>
-                    番号表印刷
-                </Typography>
             </Box>
 
             {/* 検索条件 */}
@@ -170,7 +175,8 @@ const SP304: React.FC = () => {
                             label="倉庫"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={STORAGE_CHOICES}
+                            choices={warehouseOptions}
+                            onChange={(value) => setFormWhCd(normalizeChoiceValue(value))}
                         />
                         <FormInput
                             type={'filter-select'}
@@ -178,7 +184,7 @@ const SP304: React.FC = () => {
                             label="ロケーション番号"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={LOCATION_CHOICES}
+                            choices={locationOptions}
                         />
                         <FormInput
                             type={'text'}
@@ -218,26 +224,20 @@ const SP304: React.FC = () => {
 
             {/* 検索結果 */}
             <Box sx={{ ...spSx.sectionTitle, justifyContent: 'space-between' }}>
-                <span>{`■検索結果：${filtered.length}件`}</span>
+                <span>{`■検索結果：${total}件`}</span>
                 <span style={{ color: '#5f5f5f', fontSize: '12px' }}>
                     {`${startNo} - ${endNo} 件を表示`}
                 </span>
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {pageRows.length === 0 ? (
+                {rows.length === 0 ? (
                     <div style={spSx.empty}>該当するパレットがありません。</div>
                 ) : (
-                    pageRows.map((pallet) => (
-                        <div key={pallet.id} style={spSx.itemCard}>
+                    rows.map((pallet) => (
+                        <div key={pallet.palletNo} style={spSx.itemCard}>
                             <div style={spSx.itemHeader}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-                                    <Checkbox
-                                        size="small"
-                                        checked={selected.includes(pallet.id)}
-                                        onChange={() => handleToggle(pallet.id)}
-                                        sx={{ padding: '2px' }}
-                                    />
                                     <span
                                         style={{
                                             ...spSx.itemTitle,
@@ -258,7 +258,7 @@ const SP304: React.FC = () => {
                             <div style={spSx.row}>
                                 <span style={spSx.rowLabel}>保管場所</span>
                                 <span style={spSx.rowValue}>
-                                    {`${STORAGE_LABELS[pallet.storageLocation] || '－'} / ${pallet.locationNo}`}
+                                    {`${pallet.storageLocationName || '－'} / ${pallet.locationNo}`}
                                 </span>
                             </div>
 

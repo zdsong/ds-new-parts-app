@@ -16,7 +16,7 @@ import CustomModal from '../compontent/CustomModal';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
-import type { PalletNumberSheetLabel } from '../utils/palletNumberSheet';
+import { buildPalletLabels } from '../utils/palletData';
 
 /**
  * パレット情報詳細画面（P305）
@@ -469,7 +469,8 @@ const P305: React.FC = () => {
 
     /**
      * 番号表印刷処理
-     * 積載明細 1 件につきパレット番号表 1 枚を出力する（A4 縦・区分で見出しが変わる）。
+     * パレット 1 件につきパレット番号表 1 枚を出力する（A4 縦・区分で見出しが変わる）。
+     * 積載明細が複数ある場合は 1 枚にまとめて印字する。
      */
     const handlePrint = () => {
         if (!formData.palletNo) {
@@ -485,15 +486,14 @@ const P305: React.FC = () => {
         const storageLocationLabel =
             warehouseOptions.find((choice) => choice.key === formData.storageLocation)?.value ?? '';
 
-        const labels: PalletNumberSheetLabel[] = details.map((detail) => ({
-            category: formData.category,
-            palletNo: formData.palletNo,
-            itemCode: detail.itemCode,
-            quantity: detail.quantity,
-            itemName: detail.itemName,
-            remark1: storageLocationLabel,
-            remark2: detail.remark,
-        }));
+        const labels = buildPalletLabels([
+            {
+                palletNo: formData.palletNo,
+                category: formData.category,
+                storageLocationName: storageLocationLabel,
+                details,
+            },
+        ]);
 
         if (!printPalletNumberSheet(labels)) {
             notify('印刷ウィンドウを開けませんでした。ポップアップのブロックを解除してください。', {

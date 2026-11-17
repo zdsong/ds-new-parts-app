@@ -1,11 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
+import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
-import { CATEGORY_CHOICES, createDetailFromItem, searchItems } from '../utils/palletData';
+import {
+    CATEGORY_CHOICES,
+    DEFAULT_QUANTITY,
+    createDetailFromItem,
+} from '../utils/palletData';
 import type { ItemMaster, PalletDetailItem, PalletFormData } from '../utils/palletData';
 
 /**
@@ -19,7 +24,7 @@ import type { ItemMaster, PalletDetailItem, PalletFormData } from '../utils/pall
  *   右上の「確認」でパレット番号発番（SP303）へ進む。
  */
 interface Sp302State {
-    /** 区分（1:製品 / 2:部品） */
+    /** 区分（1:製品 / 3:部品） */
     category?: string;
     /** 既に追加済みの積載明細 */
     details?: PalletDetailItem[];
@@ -36,8 +41,8 @@ interface Sp302State {
  */
 const FIXED_FIELD_VALUE = '－';
 
-/** 検索結果の数量入力の初期値（設計書の画面イメージに合わせて 10） */
-const DEFAULT_QUANTITY = 10;
+/** 1 ページあたりの検索結果件数（スマートフォンで見やすい件数にする） */
+const PAGE_SIZE = 5;
 
 /** カード内の縦積みレイアウト */
 const formColumn: React.CSSProperties = {
@@ -52,6 +57,7 @@ const SP302: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const notify = useNotify();
+    const { request } = useApiRequest();
 
     const state = (location.state || {}) as Sp302State;
 
@@ -68,17 +74,45 @@ const SP302: React.FC = () => {
     // 検索結果ごとの数量（品目コード → 入力値）
     const [quantities, setQuantities] = useState<Record<string, number>>({});
 
-    // 検索結果（区分・品目コード・品目名で絞り込む）
-    const results = useMemo(
-        () => searchItems(category, condition.itemCode, condition.itemName),
-        [category, condition]
-    );
+    // 検索結果（API から取得する）
+    const [results, setResults] = useState<ItemMaster[]>([]);
+    // 検索結果の総件数
+    const [total, setTotal] = useState(0);
+    // 現在のページ
+    const [page, setPage] = useState(1);
 
     // 既に追加済みの品目コード
     const addedItemCodes = useMemo(() => details.map((detail) => detail.itemCode), [details]);
 
+    /** 品目を検索する（区分は品目区分 1:製品 / 3:部品 で絞り込む） */
+    useEffect(() => {
+        const fetchItems = async () => {
+            try {
+                const result = await request(
+                    'get',
+                    'api/item/list',
+                    {
+                        itemCode: condition.itemCode,
+                        itemName: condition.itemName,
+                        // 品目区分（1:製品 / 3:部品）で絞り込む
+                        prhnmx: category,
+                    },
+                    { current: page, pageSize: PAGE_SIZE },
+                    false,
+                    false
+                );
+                setResults(result?.rows || []);
+                setTotal(result?.total || 0);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchItems();
+    }, [category, condition, page]);
+
     /** 検索を実行する */
     const handleSearch = (values: any) => {
+        setPage(1);
         setCondition({
             itemCode: values?.itemCode || '',
             itemName: values?.itemName || '',
@@ -88,6 +122,7 @@ const SP302: React.FC = () => {
     /** 検索条件をクリアする */
     const handleClear = () => {
         setCondition({ itemCode: '', itemName: '' });
+        setPage(1);
         setFormKey((key) => key + 1);
     };
 
@@ -120,6 +155,10 @@ const SP302: React.FC = () => {
         const nextState = { category, details, pallet: state.pallet };
         navigate(state.returnTo || '/SP303', { state: nextState });
     };
+
+    const totalPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const startNo = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+    const endNo = Math.min(page * PAGE_SIZE, total);
 
     return (
         <Box sx={spSx.page}>
@@ -167,17 +206,6 @@ const SP302: React.FC = () => {
                             sx={spFormInputSx}
                             disabled
                         />
-
-                        {/* 追加した品目（開閉可） */}
-                        <div
-                            style={{ ...spSx.sectionTitle, cursor: 'pointer' }}
-                            onClick={() => setAddedOpen((open) => !open)}
-                        >
-                            <span>{`■追加した品目（${details.length}件）`}</span>
-                            <span style={{ marginLeft: 'auto', color: '#5f5f5f', fontSize: '12px' }}>
-                                {addedOpen ? '▲' : '▼'}
-                            </span>
-                        </div>
                         {addedOpen && (
                             <>
                                 {details.length === 0 ? (
@@ -251,7 +279,12 @@ const SP302: React.FC = () => {
             </Box>
 
             {/* 検索結果（品目コード・品目名・数量の 3 項目のみ） */}
-            <Box sx={spSx.sectionTitle}>{`■検索結果：${results.length}件`}</Box>
+            <Box sx={{ ...spSx.sectionTitle, justifyContent: 'space-between' }}>
+                <span>{`■検索結果：${total}件`}</span>
+                <span style={{ color: '#5f5f5f', fontSize: '12px' }}>
+                    {`${startNo} - ${endNo} 件を表示`}
+                </span>
+            </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {results.length === 0 ? (
                     <div style={spSx.empty}>該当する品目がありません。</div>
@@ -259,10 +292,10 @@ const SP302: React.FC = () => {
                     results.map((item) => {
                         const added = addedItemCodes.includes(item.itemCode);
                         return (
-                            <div key={item.id} style={spSx.itemCard}>
+                            <div key={item.itemCode} style={spSx.itemCard}>
                                 {/* 数量は FormInput を使うため、カードごとにフォームを持つ */}
                                 <SimpleForm
-                                    id={`sp302-item-${item.id}`}
+                                    id={`sp302-item-${item.itemCode}`}
                                     sx={{ width: '100%', padding: '0' }}
                                     onSubmit={() => {}}
                                     toolbar={false}
@@ -326,6 +359,29 @@ const SP302: React.FC = () => {
                     })
                 )}
             </Box>
+
+            {/* ページ送り */}
+            {totalPage > 1 && (
+                <Box sx={spSx.buttonBar}>
+                    <button
+                        style={page === 1 ? { ...spSx.secondaryButton, opacity: 0.5 } : spSx.secondaryButton}
+                        type="button"
+                        disabled={page === 1}
+                        onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    >
+                        前へ
+                    </button>
+                    <span style={{ fontSize: '13px', color: '#5f5f5f' }}>{`${page} / ${totalPage}`}</span>
+                    <button
+                        style={page === totalPage ? { ...spSx.secondaryButton, opacity: 0.5 } : spSx.secondaryButton}
+                        type="button"
+                        disabled={page === totalPage}
+                        onClick={() => setPage((current) => Math.min(totalPage, current + 1))}
+                    >
+                        次へ
+                    </button>
+                </Box>
+            )}
         </Box>
     );
 };
