@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { AppBar, AppBarProps } from 'react-admin';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, useMediaQuery } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { CustomAppBarMenu } from './Menu';
 import { MessageChatAppBar } from './MessageChat'
 
 import { AppBarSx } from '../styles/layoutSx';
 import customIcon from '../assets/icons/logo-icon.png';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Notice } from './Notice';
 import ThemeToggle from './ThemeToggel';
 import LoginUserInfoBar from './LoginUserInfo';
@@ -75,6 +75,7 @@ const AVAILABLE_ROUTES = [
   'SP303',
   'SP304',
   'SP305',
+  'SP401',
   'P601',
   'appVersion',
 ];
@@ -259,6 +260,41 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
 }) => {
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // スマートフォン表示かどうかを判定する
+  const isMobile = useMediaQuery('(max-width:599.9px)');
+  // メニュー名のマップ（ルート名 → メニュー名）
+  const [menuTitleMap, setMenuTitleMap] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    let active = true;
+    loadMenuItems().then((items) => {
+      if (!active) return;
+      const titleMap: Record<string, string> = {};
+      const walk = (list: MenuItem[]) => {
+        list.forEach((item) => {
+          if (item.meta?.title) {
+            titleMap[item.name] = item.meta.title;
+          }
+          if (item.children) {
+            walk(item.children);
+          }
+        });
+      };
+      walk(items);
+      setMenuTitleMap(titleMap);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // 現在表示中の画面に対応するメニュー名を取得する
+  const routeName = location.pathname.replace(/^\/+/, '').split('/')[0];
+  const currentMenuTitle = menuTitleMap[routeName];
+  // スマートフォンではシステム名ではなく表示中のメニュー名を表示する
+  const appTitle = isMobile && currentMenuTitle ? currentMenuTitle : '新部品管理システム｜外部倉庫管理';
 
   const navigateS050 = () =>{
     navigate('/S050')
@@ -300,7 +336,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
                 minWidth: 0,
               }}
           >
-              新部品管理システム｜外部倉庫管理
+              {appTitle}
           </Typography>
         </LeftSection>
 

@@ -63,6 +63,7 @@ import SP302 from './view/SP302';
 import SP303 from './view/SP303';
 import SP304 from './view/SP304';
 import SP305 from './view/SP305';
+import SP401 from './view/SP401';
 import P406 from './view/P406';
 import P601 from './view/P601';
 import P602 from './view/P602';
@@ -202,6 +203,9 @@ const App = () => {
               <Route path="/SP303" element={<SP303 />} />
               <Route path="/SP304" element={<SP304 />} />
               <Route path="/SP305" element={<SP305 />} />
+
+              {/* 移動管理：バーコード読み取り */}
+              <Route path="/SP401" element={<SP401 />} />
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
