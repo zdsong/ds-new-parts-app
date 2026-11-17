@@ -27,6 +27,7 @@ import N002 from './view/N002';
 import N003 from './view/N003';
 import N004 from './view/N004';
 import N008 from './view/N008';
+import N010 from './view/N010';
 
 import AppVersionPage from './view/AppVersionPage';
 import C005 from './view/C005';
@@ -214,6 +215,9 @@ const App = () => {
               <Route path="/P601" element={<P601 />} />
               <Route path="/P602" element={<P602 />} />
               <Route path="/P603" element={<P603 />} />
+
+              {/* 部品マスタ：詳細 */}
+              <Route path="/N010/:cd" element={<N010 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
