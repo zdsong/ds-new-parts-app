@@ -41,6 +41,7 @@ const ROW_RATIOS = [60, 101, 112, 62, 62, 61, 59, 62];
 const CATEGORY_LABELS: Record<string, string> = {
     '1': '製品',
     '2': '仕掛品',
+    '3': '仕掛品',
 };
 
 const escapeHtml = (value: unknown): string =>
@@ -171,7 +172,7 @@ const buildBarcodeSvg = (value: string): string => {
 /** 1 枚分のラベル HTML */
 const buildLabelHtml = (label: PalletNumberSheetLabel): string => {
     const categoryLabel = CATEGORY_LABELS[label.category] ?? '';
-    const headClass = label.category === '2' ? 'ps-head ps-head--work' : 'ps-head ps-head--product';
+    const headClass = label.category === '2' || label.category === '3' ? 'ps-head ps-head--work' : 'ps-head ps-head--product';
     const barcodeValue = label.barcodeValue || label.palletNo || '';
     const quantity =
         label.quantity === undefined || label.quantity === null || label.quantity === ''
