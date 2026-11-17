@@ -250,7 +250,21 @@ const P601: React.FC = () => {
 
     const columnDefs: ColDef<LocationRow>[] = [
         { headerName: '倉庫', field: 'whNm', flex: 1, minWidth: 140 },
-        { headerName: 'ロケ番', field: 'locCd', flex: 1, minWidth: 160 },
+        {
+            headerName: 'ロケ番',
+            field: 'locCd',
+            flex: 1,
+            minWidth: 160,
+            // 一覧のロケ番リンクから更新画面へ遷移する
+            cellRenderer: (params: any) => (
+                <span
+                    style={tableSx.linkFontColumn as React.CSSProperties}
+                    onClick={() => navigate('/P603', { state: { id: params.data.id } })}
+                >
+                    {params.value}
+                </span>
+            ),
+        },
         { headerName: 'コメント', field: 'memo', flex: 2, minWidth: 200 },
         {
             headerName: '操作',
