@@ -1,8 +1,8 @@
-import React, { useMemo, useRef, useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ColDef } from 'ag-grid-community';
 import { SimpleForm, useNotify, useTranslate } from 'react-admin';
-import SearchCard from '../compontent/SearchCard';
 import { useNavigate } from 'react-router-dom';
+import SearchCard from '../compontent/SearchCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
@@ -11,130 +11,96 @@ import DataGrid, { DataGridRef } from '../compontent/DataGrid';
 import useApiRequest from '../adapters/apiUtil';
 import deleteIcon from '../assets/icons/delete-icon.png';
 
-interface NokaSearch {
-  itemId: string;
-  itemName: string;
-  janCode: string;
-  dlvdeliveryFlg: string;
-  sumarejiItemId: string;
-  category1: string;
-  category2: string;
-  salesFlg: number;
-  confirmFlg: number;
-  salesPrice: number;
-  reqCropYield: string;
+interface ItemRow {
   id: string;
+  itemCode: string;
+  itemName: string;
+  prprkn: string;
+  prprkj: string;
+  prkku: string;
+  prhnmx: string;
+  prbiko: string;
 }
 
-// 検索フォームのプロパティインターフェース（无需 onSubmit，内部处理）
 interface SearchFormProps { }
 
-// 農家管理画面コンポーネント 
 const N008: React.FC<SearchFormProps> = () => {
-  const mockData: NokaSearch[] = [
-  ];
-  //初期化設定
-  const [data, setData] = useState(mockData)
-  // const pageSize = 20
-  const [total, setTotal] = useState(0)
-  const [pageNum, setPageNum] = useState(1)
-  const [searchForm, setSearchForm] = useState<any>({})
+  const [data, setData] = useState<ItemRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageNum, setPageNum] = useState(1);
+  const [searchForm, setSearchForm] = useState<any>({});
   const { request } = useApiRequest();
   const [formKey, setFormKey] = useState(0);
   const [filePath, setFilePath] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const newGridRef = useRef<DataGridRef<NokaSearch> | null>(null);
+  const newGridRef = useRef<DataGridRef<ItemRow> | null>(null);
   // エラー情報表示用の状態
   const [errorList, setErrorList] = useState<any[]>([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  // ページ遷移フック
+  // 品目区分の選択肢（辞書：bss_classification）
+  const [classificationOptions, setClassificationOptions] = useState<any[]>([]);
   const navigate = useNavigate();
-  // React-Adminの通知機能を使用
   const notify = useNotify();
   const translate = useTranslate();
 
   /**
-   * 商品IDクリック時の処理 
+   * 品目名クリック時の処理
    */
-  const handleIdClick = (id: string) => {
-    navigate(`/N010/${id}`);
+  const handleItemClick = (itemCode: string) => {
+    navigate(`/N010/${itemCode}`);
   };
+
   /**
-   * 商品ID列のカスタムレンダラー 
+   * 品目コード列のカスタムレンダラー
    */
-  const IdLinkRenderer = (props: { data: NokaSearch; value: string }) => {
-    // propsタイプを明確にし、anyを避ける
-    const handleClick = () => {
-      handleIdClick(props.value);
-    };
+  const ItemCodeRenderer = (props: { data: ItemRow; value: string }) => {
     return (
-      <div onClick={handleClick} style={tableSx.linkFontColumn}>
+      <div style={tableSx.linkFontColumn} onClick={() => handleItemClick(props.value)}>
         {props.value}
       </div>
     );
   };
-  /**
-   * 金額列のカスタムレンダラー（￥記号とカンマ区切り）
-   */
-  const CurrencyRenderer = (props: { value: number }) => {
-    // 金額書式設定：￥記号と千桁カンマを追加
-    const formattedValue = props.value ? `￥${props.value.toLocaleString('ja-JP')}` : '￥0';
-    return <div>{formattedValue}</div>;
-  };
 
   /**
-   * 状態列のカスタムレンダラー（0: -, 1: ✓）
+   * 品目区分列のカスタムレンダラー
    */
-  const StatusRenderer = (props: { value: number }) => {
-    if (props.value == 1) {
-      return (
-        <div style={{
-          textAlign: 'center',
-          justifyContent: 'center',
-          display: 'flex',
-          width: '100%',
-          height: '100%',
-          alignItems: 'center',
-          color: '#00b441',
-          fontWeight: 'bold'
-        }}>
-          ✓
-        </div>
-      );
-    } else {
-      return (
-        <div style={{
-          textAlign: 'left',
-        }}>
-          -
-        </div>
-      );
-    }
+  const ClassificationRenderer = (props: { value: string }) => {
+    const option = classificationOptions.find((item: any) => item.key === props.value);
+    return <div>{option?.value || props.value || ''}</div>;
   };
-  // 5. テーブル列定義
-  const columnDefs = useMemo<ColDef<NokaSearch>[]>(
+
+  // 一覧列定義
+  const columnDefs = useMemo<ColDef<ItemRow>[]>(
     () => [
-      { headerName: '商品ID', field: 'itemId', cellRenderer: IdLinkRenderer, width: 150 },
-      { headerName: '商品名', field: 'itemName', width: 295 },
-      { headerName: '必要収穫量', field: 'reqCropYield', width: 150, cellStyle: { textAlign: 'right' } },
-      { headerName: '金額', field: 'salesPrice', width: 150, cellStyle: { textAlign: 'right' }, cellRenderer: CurrencyRenderer },
-      { headerName: 'JANコード', field: 'janCode', width: 150 },
-      { headerName: 'スマレジ商品ID', field: 'sumarejiItemId', width: 150 },
-      { headerName: '配送方法', field: 'dlvdeliveryFlg',},
-      { headerName: '販売停止', field: 'salesFlg', width: 100, cellRenderer: StatusRenderer },
-      { headerName: '要確認', field: 'confirmFlg', width: 100, cellRenderer: StatusRenderer },
+      { headerName: '品目コード', field: 'itemCode', flex: 1, minWidth: 150, cellRenderer: ItemCodeRenderer },
+      { headerName: '品目名', field: 'itemName', flex: 2, minWidth: 200 },
+      { headerName: '品目名カナ', field: 'prprkn', flex: 1, minWidth: 150 },
+      { headerName: '品名（伝票用）', field: 'prprkj', flex: 2, minWidth: 200 },
+      { headerName: '規格', field: 'prkku', flex: 1, minWidth: 120 },
+      { headerName: '品目区分', field: 'prhnmx', flex: 1, minWidth: 100, cellRenderer: ClassificationRenderer },
+      { headerName: '備考', field: 'prbiko', flex: 2, minWidth: 180 },
     ],
-    []
+    [classificationOptions]
   );
 
   const searchData = async (searchData: Record<string, any>, pagination: Record<string, any>) => {
-    const result = await request('get', 'api/item/list', searchData, pagination)
-    setData(result.rows)
+    // チェックボックスの選択値をカンマ区切りに変換する
+    const params = { ...searchData };
+    if (Array.isArray(params.prhnmx)) {
+      const classification = params.prhnmx.filter((value: string) => !!value).join(',');
+      if (classification) {
+        params.prhnmx = classification;
+      } else {
+        delete params.prhnmx;
+      }
+    }
+    const result = await request('get', 'api/item/list', params, pagination)
+    // 一覧の行識別子として品目コードを設定する
+    setData((result.rows || []).map((row: ItemRow) => ({ ...row, id: row.itemCode })))
     setTotal(result.total)
   }
 
   const handleSearch = async (searchForm: Record<string, any>) => {
-    // 4. 子コンポーネントの検索方法を呼び出す（親コンポーネントの手動要求ロジックの除去）
     setSearchForm(searchForm)
     setPageNum(1)
     searchData(searchForm, { current: 1, pageSize: newGridRef.current?.getPageSize() })
@@ -151,7 +117,7 @@ const N008: React.FC<SearchFormProps> = () => {
    */
   const handleClear = async () => {
     setSearchForm({});
-    setFormKey(prevKey => prevKey + 1);
+    setFormKey((prevKey: number) => prevKey + 1);
     setData([]);
     setTotal(0);
     setPageNum(1);
@@ -167,43 +133,50 @@ const N008: React.FC<SearchFormProps> = () => {
     }
     const file = fileInputRef.current.files[0];
     try {
-      // ファイルをAPIに送信
       const formData = new FormData();
       formData.append('file', file);
       const result = await request('post', 'api/item/import', formData, {}, true, false);
 
-      // レスポンス処理
       const isSuccess = (!result.code || result.code >= 200 && result.code < 300) && !result.error;
 
       if (isSuccess) {
-        // エラーリストがある場合はエラーモーダルとエラー通知を表示
         if (result.errorList && result.errorList.length > 0) {
           setErrorList(result.errorList);
           setShowErrorModal(true);
           notify(translate('ra.message.import_failed'), { type: 'error'});
         } else {
-          // 成功時にデータを再読み込み
           handleClear()
         }
-      } else {
-        // エラー通知を表示
-        console.error('インポートエラー:', result);
       }
-      // ファイルパスをクリア
       setFilePath('');
-      // ファイル入力をリセット
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     } catch (error) {
-      console.error('インポートエラー:', error);
+      // エラー通知は API 呼び出し側で表示する
     }
   };
+
+  // 品目区分の辞書データを取得する
+  const fetchClassificationOptions = async () => {
+    const result = await request(
+      'post',
+      'api/common/options',
+      { cmdOptionName: 'bss_classification' },
+      {},
+      false,
+      false
+    );
+    setClassificationOptions(result?.data || []);
+  };
+
   useEffect(() => {
+    fetchClassificationOptions();
     searchData({}, { current: 1, pageSize: newGridRef.current?.getPageSize() });
   }, [])
+
   return (
-    <PageContainer title={'商品マスタ'}>
+    <PageContainer title={'品目マスタ'}>
       {/* 検索条件カード */}
       <SearchCard
         sx={{ width: '100%', marginBottom: '20px', }}
@@ -213,18 +186,24 @@ const N008: React.FC<SearchFormProps> = () => {
         <SimpleForm
           key={formKey}
           sx={formSx.formContainer}
-          onSubmit={handleSearch} // バインド修正後の検索方法
+          onSubmit={handleSearch}
           toolbar={false}
-          defaultValues={searchForm} // 安定したデフォルト値の使用
+          defaultValues={searchForm}
         >
           <div style={formSx.form1}>
             <FormInput
               type={'text'}
+              source="itemCode"
+              label="品目コード"
+              onBlur={(value)=>{setSearchForm((prev: any) => ({
+                ...prev,
+                itemCode: value,
+            }));}}
+            />
+            <FormInput
+              type={'text'}
               source="itemName"
-              label="商品名"
-              sx={{
-                gridColumn: "1 / 3"
-              }}
+              label="品目名"
               onBlur={(value)=>{setSearchForm((prev: any) => ({
                 ...prev,
                 itemName: value,
@@ -232,31 +211,18 @@ const N008: React.FC<SearchFormProps> = () => {
             />
             <FormInput
               type={'text'}
-              source="itemId"
-              label="商品ID"
+              source="prprkn"
+              label="品目名カナ"
               onBlur={(value)=>{setSearchForm((prev: any) => ({
                 ...prev,
-                itemId: value,
-            }));}}
-            />
-            <div></div>
-            <FormInput
-              type={'text'}
-              source="janCode"
-              label="JANコード"
-              onBlur={(value)=>{setSearchForm((prev: any) => ({
-                ...prev,
-                janCode: value,
+                prprkn: value,
             }));}}
             />
             <FormInput
-              type={'text'}
-              source="sumarejiItemId"
-              label="スマレジ商品ID"
-              onBlur={(value)=>{setSearchForm((prev: any) => ({
-                ...prev,
-                sumarejiItemId: value,
-            }));}}
+              type={'multiple-choice'}
+              source="prhnmx"
+              label="品目区分"
+              choices={classificationOptions}
             />
           </div>
           <div
@@ -302,7 +268,6 @@ const N008: React.FC<SearchFormProps> = () => {
           disabled = {!filePath}
           onClick={() => {
             setFilePath('');
-            // ファイル入力をリセット
             if (fileInputRef.current) {
               fileInputRef.current.value = '';
             }
@@ -329,7 +294,6 @@ const N008: React.FC<SearchFormProps> = () => {
             const file = e.target.files?.[0];
             if(!file) return
               const fileName = file.name.toLowerCase();
-              // ファイルタイプと名前を検証
               if (fileName.endsWith('.csv') && fileName.includes('item')) {
                 setFilePath(file.name);
               } else {
@@ -339,9 +303,8 @@ const N008: React.FC<SearchFormProps> = () => {
         />
       </div>
 
-      {/* 7. 転送汎型<NokaSearch>、型が完全に一致 */}
       <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-        <DataGrid<NokaSearch>
+        <DataGrid<ItemRow>
           ref={newGridRef}
           columnDefs={columnDefs}
           rowData={data}
@@ -374,7 +337,7 @@ const N008: React.FC<SearchFormProps> = () => {
           }}
         >
           <Typography id="error-modal-title" variant="h6" component="h2" sx={{ mb: 2, textAlign: 'center' }}>
-            {'インポートエラー情報（' + errorList.length + '）'} 
+            {'インポートエラー情報（' + errorList.length + '）'}
           </Typography>
           <TableContainer component={Paper}>
             <Table sx={{
@@ -394,7 +357,7 @@ const N008: React.FC<SearchFormProps> = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {errorList.map((error, index) => (
+                {errorList.map((error: any, index: number) => (
                   <TableRow
                     key={index}
                     sx={{
