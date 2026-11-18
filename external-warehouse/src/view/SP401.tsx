@@ -460,19 +460,21 @@ const SP401: React.FC = () => {
                     </button>
                 </Box>
 
-                {/* 検索リンク */}
+                {/* 検索リンク（設計書 ③移動管理 1-1 の「別画面を起動」） */}
                 <Box
                     sx={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '8px',
                         padding: '12px 18px',
                         backgroundColor: '#f7f7f7',
                     }}
                 >
                     <Box
                         component="span"
-                        onClick={() => navigate('/P403')}
+                        onClick={() => navigate('/SP402')}
                         sx={{
                             color: '#0b5cab',
                             fontSize: 'clamp(12px, 3.4vw, 14px)',
@@ -480,11 +482,11 @@ const SP401: React.FC = () => {
                             cursor: 'pointer',
                         }}
                     >
-                        移動依頼検索
+                        移動依頼を確認する
                     </Box>
                     <Box
                         component="span"
-                        onClick={() => navigate('/P303')}
+                        onClick={() => navigate('/SP403')}
                         sx={{
                             color: '#0b5cab',
                             fontSize: 'clamp(12px, 3.4vw, 14px)',
@@ -492,7 +494,7 @@ const SP401: React.FC = () => {
                             cursor: 'pointer',
                         }}
                     >
-                        品目検索
+                        在庫を確認する
                     </Box>
                 </Box>
 

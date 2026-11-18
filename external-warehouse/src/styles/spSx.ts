@@ -374,6 +374,108 @@ export const spSx = {
                 'color-mix(in srgb, var(--mui-page-header-color) 85%, black 15%)',
         },
     },
+    /**
+     * 検索結果のカード（SP402／SP403）
+     *
+     * 設計書（③移動管理／④在庫管理）では、白地・細い枠線のカードに
+     * 「項目名（小・グレー）＋値」を縦に積んで表示する。
+     * 既存の itemCard（#fafafa 地）より情報量が多いため、こちらは白地にする。
+     */
+    listCard: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        padding: '10px 12px',
+        border: '1px solid #bdbdbd',
+        borderRadius: '4px',
+        backgroundColor: 'white',
+        width: '100%',
+        boxSizing: 'border-box' as const,
+    },
+    /** カード内のリンク（移動依頼番号） */
+    cardLink: {
+        color: 'var(--mui-page-header-color)',
+        fontSize: '14px',
+        lineHeight: 1.5,
+        textDecoration: 'underline',
+        cursor: 'pointer',
+        wordBreak: 'break-all' as const,
+    },
+    /** カード内の小見出し付きブロック（品目一覧） */
+    subSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        border: '1px solid #d0d0d0',
+        borderRadius: '3px',
+        overflow: 'hidden',
+        backgroundColor: 'white',
+        width: '100%',
+    },
+    /** 小見出しブロックの見出し行（タップで開閉する） */
+    subSectionHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '8px',
+        padding: '4px 8px',
+        backgroundColor: '#ececec',
+        color: '#212121',
+        fontSize: '12px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        userSelect: 'none' as const,
+    },
+    /** 小見出しブロック内の 1 件分（上に区切り線） */
+    subItem: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '3px',
+        padding: '6px 8px',
+        borderTop: '1px solid #e0e0e0',
+    },
+    /** 小見出しブロック内の項目名 */
+    subItemLabel: {
+        color: '#5f5f5f',
+        fontSize: '11px',
+        lineHeight: 1.4,
+    },
+    /** 小見出しブロック内の値 */
+    subItemValue: {
+        color: '#212121',
+        fontSize: '13px',
+        lineHeight: 1.5,
+        wordBreak: 'break-all' as const,
+    },
+    /** 日付範囲（開始 ～ 終了）の行 */
+    dateRangeRow: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        width: '100%',
+        minWidth: 0,
+    },
+    /**
+     * 別画面を閉じるボタン
+     * 設計書（③移動管理 1-1／④在庫管理）では、ページ番号の下に
+     * 淡い青地・白文字の横長ボタンとして示されている。
+     */
+    closeButton: {
+        width: 'clamp(120px, 45%, 170px)',
+        height: '44px',
+        flexShrink: 0,
+        border: 'none',
+        borderRadius: '5px',
+        backgroundColor: '#6f9fd0',
+        color: 'white',
+        fontSize: '15px',
+        fontWeight: 600,
+        fontFamily: 'inherit',
+        lineHeight: 1,
+        cursor: 'pointer',
+        '&:hover': {
+            backgroundColor: '#5b8dc1',
+        },
+    },
     /** 空メッセージ */
     empty: {
         color: '#757575',
