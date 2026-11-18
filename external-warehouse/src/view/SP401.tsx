@@ -1,8 +1,36 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import jsQR from 'jsqr';
-import QRCode from 'qrcode';
+import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
+
+import { buildBarcodeSvg } from '../utils/palletNumberSheet';
+
+/** 読み取りライブラリ（ZXing）のモジュール型 */
+type ZxingModule = typeof import('@zxing/library');
+
+/**
+ * ZXing はサイズが大きいため、画面を開いた時点では読み込まず
+ * 「バーコードを読み取る」を押したときに遅延読み込みする。
+ */
+let zxingPromise: Promise<ZxingModule> | null = null;
+const loadZxing = (): Promise<ZxingModule> => {
+    if (!zxingPromise) {
+        zxingPromise = import('@zxing/library').catch((error) => {
+            // 失敗した Promise を保持すると再試行できないため、次回のために捨てる
+            zxingPromise = null;
+            throw error;
+        });
+    }
+    return zxingPromise;
+};
+
+/** 読み取りを試す間隔（ミリ秒）。毎フレーム解析すると端末が重くなる */
+const SCAN_INTERVAL_MS = 150;
+/** 解析に使う画像の最大幅（ピクセル）。大きすぎると 1 コマの解析が重くなる */
+const MAX_DECODE_WIDTH = 1024;
+/** ガイド枠（画面に対する割合）。1 回目で読めないときにこの範囲を等倍で解析し直す */
+const CROP_WIDTH_RATIO = 0.86;
+const CROP_HEIGHT_RATIO = 0.26;
 
 /**
  * カメラを利用できない理由を、利用者に分かる言葉で返す
@@ -46,7 +74,8 @@ const getCameraErrorMessage = (error?: unknown): string => {
  *
  * スマートフォンでの利用を前提とした画面。
  * 「バーコードを読み取る」ボタンからカメラを起動し、
- * 読み取った二次元コードの内容を画面のコード領域へ再表示する。
+ * パレット番号表に印字された一次元コード（CODE128／EAN-13）を読み取る。
+ * 読み取った内容は画面のコード領域へ同じ規格のバーコードとして再表示する。
  */
 const SP401: React.FC = () => {
     const navigate = useNavigate();
@@ -55,11 +84,14 @@ const SP401: React.FC = () => {
     const streamRef = useRef<MediaStream | null>(null);
     const frameRef = useRef<number | null>(null);
     const scanningRef = useRef(false);
+    const lastScanAtRef = useRef(0);
+    const zxingRef = useRef<ZxingModule | null>(null);
+    const readerRef = useRef<MultiFormatReader | null>(null);
 
-    // 読み取り結果（二次元コードの内容）
+    // 読み取り結果（バーコードの内容）
     const [scannedValue, setScannedValue] = useState('');
-    // 読み取り結果から生成した二次元コード画像
-    const [codeImage, setCodeImage] = useState('');
+    // 読み取り結果から再生成したバーコードの SVG
+    const [codeSvg, setCodeSvg] = useState('');
     // カメラ起動状態
     const [cameraOpen, setCameraOpen] = useState(false);
     // エラーメッセージ
@@ -96,49 +128,114 @@ const SP401: React.FC = () => {
     /**
      * 読み取り結果を画面へ反映する
      */
-    const applyScanResult = async (value: string) => {
+    const applyScanResult = (value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed) return;
         stopCamera();
         setCameraOpen(false);
         setErrorMessage('');
-        setScannedValue(value);
+        setScannedValue(trimmed);
+        // 読み取った内容を、印刷時と同じ規格（13 桁は EAN-13、それ以外は CODE128）で再描画する
+        setCodeSvg(buildBarcodeSvg(trimmed));
+    };
+
+    /**
+     * canvas に描かれた画像から一次元コードを解析する
+     */
+    const decodeCanvas = (
+        zxing: ZxingModule,
+        reader: MultiFormatReader,
+        canvas: HTMLCanvasElement,
+        context: CanvasRenderingContext2D
+    ): string => {
+        const { width, height } = canvas;
+        if (!width || !height) return '';
+
+        let imageData: ImageData;
         try {
-            // 読み取った内容を二次元コードとして再生成する
-            const image = await QRCode.toDataURL(value, {
-                width: 512,
-                margin: 1,
-                errorCorrectionLevel: 'M',
-            });
-            setCodeImage(image);
+            imageData = context.getImageData(0, 0, width, height);
         } catch {
-            setCodeImage('');
-            setErrorMessage('二次元コードの生成に失敗しました。');
+            return '';
+        }
+
+        // ZXing には 1 画素 1 バイトの輝度データを渡す（緑を重視した係数）
+        const luminances = new Uint8ClampedArray(width * height);
+        const { data } = imageData;
+        for (let src = 0, dst = 0; dst < luminances.length; src += 4, dst += 1) {
+            luminances[dst] = (data[src] * 0.299 + data[src + 1] * 0.587 + data[src + 2] * 0.114) | 0;
+        }
+
+        try {
+            const source = new zxing.RGBLuminanceSource(luminances, width, height);
+            const bitmap = new zxing.BinaryBitmap(new zxing.HybridBinarizer(source));
+            return reader.decodeWithState(bitmap)?.getText() ?? '';
+        } catch {
+            // 見つからない場合（NotFoundException）は次のコマで再挑戦する
+            return '';
         }
     };
 
     /**
-     * カメラ映像を走査して二次元コードを検出する
+     * 現在の映像から 1 回だけ読み取りを試す
+     *
+     * 1 回目は画面全体を縮小して解析し、読めなかった場合は
+     * ガイド枠の範囲を等倍で解析し直す（バーコードが小さい場合に効く）。
+     */
+    const scanOnce = (): string => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const zxing = zxingRef.current;
+        const reader = readerRef.current;
+        if (!video || !canvas || !zxing || !reader || video.readyState < 2) return '';
+
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        if (!videoWidth || !videoHeight) return '';
+
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) return '';
+
+        // 1 回目：画面全体
+        const fullScale = Math.min(1, MAX_DECODE_WIDTH / videoWidth);
+        canvas.width = Math.max(1, Math.round(videoWidth * fullScale));
+        canvas.height = Math.max(1, Math.round(videoHeight * fullScale));
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const fullResult = decodeCanvas(zxing, reader, canvas, context);
+        if (fullResult) return fullResult;
+
+        // 2 回目：ガイド枠の範囲（中央）を等倍で
+        const cropWidth = Math.round(videoWidth * CROP_WIDTH_RATIO);
+        const cropHeight = Math.round(videoHeight * CROP_HEIGHT_RATIO);
+        const cropScale = Math.min(1, MAX_DECODE_WIDTH / cropWidth);
+        canvas.width = Math.max(1, Math.round(cropWidth * cropScale));
+        canvas.height = Math.max(1, Math.round(cropHeight * cropScale));
+        context.drawImage(
+            video,
+            Math.round((videoWidth - cropWidth) / 2),
+            Math.round((videoHeight - cropHeight) / 2),
+            cropWidth,
+            cropHeight,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+        return decodeCanvas(zxing, reader, canvas, context);
+    };
+
+    /**
+     * カメラ映像を繰り返し走査してバーコードを検出する
      */
     const scanFrame = () => {
         if (!scanningRef.current) return;
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const context = canvas.getContext('2d', { willReadFrequently: true });
-            if (context) {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const result = jsQR(imageData.data, imageData.width, imageData.height, {
-                    inversionAttempts: 'dontInvert',
-                });
-                if (result && result.data) {
-                    applyScanResult(result.data);
-                    return;
-                }
-            }
-        }
         frameRef.current = requestAnimationFrame(scanFrame);
+
+        const now = Date.now();
+        if (now - lastScanAtRef.current < SCAN_INTERVAL_MS) return;
+        lastScanAtRef.current = now;
+
+        const value = scanOnce();
+        if (value) applyScanResult(value);
     };
 
     // カメラ起動・停止の制御
@@ -153,6 +250,36 @@ const SP401: React.FC = () => {
                 setCameraOpen(false);
                 return;
             }
+
+            // 読み取りライブラリを先に用意する（読み込めない場合はカメラを開かない）
+            let zxing: ZxingModule;
+            try {
+                zxing = await loadZxing();
+            } catch {
+                if (!cancelled) {
+                    setErrorMessage('バーコード読取機能の読み込みに失敗しました。通信環境を確認して、もう一度お試しください。');
+                    setCameraOpen(false);
+                }
+                return;
+            }
+            if (cancelled) return;
+
+            const reader = new zxing.MultiFormatReader();
+            const hints = new Map<DecodeHintType, unknown>();
+            // パレット番号表は CODE128 か EAN-13。周辺の規格も一応読めるようにする
+            hints.set(zxing.DecodeHintType.POSSIBLE_FORMATS, [
+                zxing.BarcodeFormat.CODE_128,
+                zxing.BarcodeFormat.EAN_13,
+                zxing.BarcodeFormat.CODE_39,
+                zxing.BarcodeFormat.ITF,
+                zxing.BarcodeFormat.EAN_8,
+            ]);
+            // 精度優先（横持ちでなくても読めるよう 90 度回転も試す）
+            hints.set(zxing.DecodeHintType.TRY_HARDER, true);
+            reader.setHints(hints);
+            zxingRef.current = zxing;
+            readerRef.current = reader;
+
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: { ideal: 'environment' } },
@@ -171,9 +298,11 @@ const SP401: React.FC = () => {
                         // iOS では自動再生が拒否されることがあるが、
                         // autoPlay 属性とユーザー操作後の再開で再生できるため停止しない
                     }
-                    scanningRef.current = true;
-                    scanFrame();
                 }
+
+                lastScanAtRef.current = 0;
+                scanningRef.current = true;
+                scanFrame();
             } catch (error) {
                 if (!cancelled) {
                     setErrorMessage(getCameraErrorMessage(error));
@@ -276,12 +405,12 @@ const SP401: React.FC = () => {
                             boxSizing: 'border-box',
                         }}
                     >
-                        {codeImage ? (
+                        {codeSvg ? (
                             <Box
-                                component="img"
-                                src={codeImage}
-                                alt="読み取り結果の二次元コード"
-                                sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                // 印刷時と同じ SVG をそのまま表示する
+                                dangerouslySetInnerHTML={{ __html: codeSvg }}
+                                sx={{ width: '100%', height: '100%', '& svg': { width: '100%', height: '100%', display: 'block' } }}
+                                aria-label="読み取り結果のバーコード"
                             />
                         ) : (
                             // 読み取り前のバーコードイメージ
@@ -514,20 +643,33 @@ const SP401: React.FC = () => {
                             autoPlay
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
-                        {/* 読み取りガイド枠 */}
+                        {/* 読み取りガイド枠（バーコードは横長のため、横に広い枠にする） */}
                         <Box
                             sx={{
                                 position: 'absolute',
-                                width: '70%',
-                                aspectRatio: '1 / 1',
-                                maxWidth: '320px',
-                                maxHeight: '320px',
+                                width: `${CROP_WIDTH_RATIO * 100}%`,
+                                height: `${CROP_HEIGHT_RATIO * 100}%`,
+                                maxWidth: '420px',
+                                maxHeight: '150px',
                                 border: '3px solid white',
                                 borderRadius: '8px',
                                 boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.35)',
                                 pointerEvents: 'none',
                             }}
-                        />
+                        >
+                            {/* 中央の狙い線 */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '8px',
+                                    right: '8px',
+                                    height: '2px',
+                                    backgroundColor: 'rgba(255, 82, 82, 0.9)',
+                                    transform: 'translateY(-50%)',
+                                }}
+                            />
+                        </Box>
                         <canvas ref={canvasRef} style={{ display: 'none' }} />
                     </Box>
                     <Box sx={{ padding: '14px', color: 'white', textAlign: 'center', fontSize: '13px' }}>
@@ -536,7 +678,7 @@ const SP401: React.FC = () => {
                                 {errorMessage}
                             </Box>
                         ) : (
-                            '枠内に二次元コードを合わせてください'
+                            '枠内にバーコードを横に合わせてください'
                         )}
                     </Box>
                 </Box>

@@ -23,6 +23,7 @@ import type { ItemMaster, PalletDetailItem, PalletFormData } from '../utils/pall
  *   - 検索条件の「製品／部品」は前画面（SP301）で選んだ区分で固定し、変更できない。
  *   - 検索結果は 品目コード・品目名・数量 の 3 項目のみ。数量は入力欄で直接変更できる。
  *   右上の「確認」でパレット番号発番（SP303）へ進む。
+ *   ページ番号の下の「戻る」で、遷移元（SP301／SP303／SP305）へ戻る。
  */
 interface Sp302State {
     /** 区分（1:製品 / 3:部品） */
@@ -155,6 +156,19 @@ const SP302: React.FC = () => {
         }
         const nextState = { category, details, pallet: state.pallet };
         navigate(state.returnTo || '/SP303', { state: nextState });
+    };
+
+    /**
+     * 戻る：ひとつ前の画面へ戻る
+     *
+     * SP303／SP305 から「品目追加」で来た場合は、その画面へ編集途中の内容を
+     * 引き継いで戻る（戻り先は遷移元が渡す returnTo）。SP301 から来た場合は
+     * 製品・部品の選択に戻る。
+     */
+    const handleBack = () => {
+        navigate(state.returnTo || '/SP301', {
+            state: { category, details, pallet: state.pallet },
+        });
     };
 
     const totalPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -372,6 +386,13 @@ const SP302: React.FC = () => {
 
             {/* ページ送り（設計書 3.1 のページ番号の枠） */}
             <SpPagination page={page} totalPage={totalPage} onChange={setPage} />
+
+            {/* ページ送りの下に置く戻るボタン（設計書 ①パレット番号管理 の画面下部） */}
+            <Box sx={spSx.bottomActionBar}>
+                <Box component="button" type="button" sx={spSx.backButton} onClick={handleBack}>
+                    戻る
+                </Box>
+            </Box>
         </Box>
     );
 };

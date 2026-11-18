@@ -340,6 +340,40 @@ export const spSx = {
         lineHeight: 1,
         textAlign: 'center' as const,
     },
+    /**
+     * 画面下部の操作行
+     * ページ送りの下に「戻る」を左寄せで置く（設計書 ①パレット番号管理 の画面下部）。
+     */
+    bottomActionBar: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        width: '100%',
+        marginTop: '4px',
+    },
+    /**
+     * 画面下部の戻るボタン
+     * 設計書ではページ番号の下に青地・白文字の横長ボタンとして示されている。
+     * 幅は画面幅に追従させつつ、PC 幅でも間延びしないよう上限を設ける。
+     */
+    backButton: {
+        width: 'clamp(120px, 45%, 170px)',
+        height: '44px',
+        flexShrink: 0,
+        border: 'none',
+        borderRadius: '5px',
+        backgroundColor: 'var(--mui-page-header-color)',
+        color: 'white',
+        fontSize: '15px',
+        fontWeight: 600,
+        fontFamily: 'inherit',
+        lineHeight: 1,
+        cursor: 'pointer',
+        '&:hover': {
+            backgroundColor:
+                'color-mix(in srgb, var(--mui-page-header-color) 85%, black 15%)',
+        },
+    },
     /** 空メッセージ */
     empty: {
         color: '#757575',

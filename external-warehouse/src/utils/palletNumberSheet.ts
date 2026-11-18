@@ -207,8 +207,11 @@ const buildCode128Modules = (value: string): string => {
 /**
  * バーコードの SVG を生成する。
  * EAN-13 は両端にクワイエットゾーンを取るため、左右に余白を入れている。
+ *
+ * パレット番号表の印刷だけでなく、SP401（バーコード読み取り）の
+ * 読み取り結果プレビューでも同じ見た目になるよう外部公開している。
  */
-const buildBarcodeSvg = (value: string): string => {
+export const buildBarcodeSvg = (value: string): string => {
     const raw = (value || '').trim();
     if (!raw) {
         // 値が無い場合はバーを描かず、高さだけ確保する

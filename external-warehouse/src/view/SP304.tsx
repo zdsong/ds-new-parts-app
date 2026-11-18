@@ -6,7 +6,7 @@ import FormInput from '../compontent/FormInput';
 import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
-import { CATEGORY_LABELS, fromApiPallet, normalizeChoiceValue } from '../utils/palletData';
+import { CATEGORY_CHOICES, CATEGORY_LABELS, fromApiPallet, normalizeChoiceValue } from '../utils/palletData';
 import type { ApiPallet, OptionItem, PalletRow } from '../utils/palletData';
 
 /**
@@ -16,21 +16,44 @@ import type { ApiPallet, OptionItem, PalletRow } from '../utils/palletData';
  *   検索条件でパレットを絞り込み、パレット番号をタップすると情報詳細（SP305）へ遷移する。
  *   一覧は GET /api/pallet/list から取得する（ページングはサーバ側で行う）。
  *   番号表の印刷はパレット情報詳細（SP305）で行うため、この画面には印刷ボタンを置かない。
+ *
+ * 検索条件は PC 版（P304）と揃える（備考は除く）。
+ *   パレット番号／保管期間／区分／入庫日／保管場所／ロケ番
  */
 interface SearchCondition {
+    palletNo: string;
+    storagePeriod: string;
+    category: string;
+    inboundDate: string;
     storageLocation: string;
     locationNo: string;
-    palletNo: string;
-    itemCode: string;
-    itemName: string;
 }
 
 const INITIAL_CONDITION: SearchCondition = {
+    palletNo: '',
+    storagePeriod: '',
+    category: '',
+    inboundDate: '',
     storageLocation: '',
     locationNo: '',
-    palletNo: '',
-    itemCode: '',
-    itemName: '',
+};
+
+/**
+ * 日付項目を API に渡せる文字列（YYYY-MM-DD）へ変換する
+ * 日付入力コンポーネントは「yyyy/MM/dd」の文字列を返すため、区切り文字を揃える。
+ */
+const toDateText = (value: unknown): string => {
+    if (!value) return '';
+    if (value instanceof Date) {
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, '0');
+        const day = String(value.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    if (typeof value === 'object' && value !== null && 'key' in value) {
+        return String((value as { key?: unknown }).key ?? '').replace(/\//g, '-');
+    }
+    return String(value).replace(/\//g, '-');
 };
 
 // 1 ページあたりの表示件数（スマートフォンで見やすい件数にする）
@@ -103,11 +126,12 @@ const SP304: React.FC = () => {
                     'get',
                     'api/pallet/list',
                     {
+                        palletNo: condition.palletNo,
+                        storagePeriod: condition.storagePeriod,
+                        classification: condition.category,
+                        inboundDate: condition.inboundDate,
                         whCd: condition.storageLocation,
                         locCd: condition.locationNo,
-                        palletNo: condition.palletNo,
-                        itemCode: condition.itemCode,
-                        itemName: condition.itemName,
                     },
                     { current: page, pageSize: PAGE_SIZE },
                     false,
@@ -126,11 +150,12 @@ const SP304: React.FC = () => {
     /** 検索を実行する */
     const handleSearch = (values: any) => {
         setCondition({
+            palletNo: values?.palletNo || '',
+            storagePeriod: values?.storagePeriod || '',
+            category: normalizeChoiceValue(values?.category),
+            inboundDate: toDateText(values?.inboundDate),
             storageLocation: normalizeChoiceValue(values?.storageLocation),
             locationNo: normalizeChoiceValue(values?.locationNo),
-            palletNo: values?.palletNo || '',
-            itemCode: values?.itemCode || '',
-            itemName: values?.itemName || '',
         });
         setPage(1);
     };
@@ -171,23 +196,6 @@ const SP304: React.FC = () => {
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                         <FormInput
-                            type={'filter-select'}
-                            source="storageLocation"
-                            label="倉庫"
-                            structure="top-bottom"
-                            sx={spFormInputSx}
-                            choices={warehouseOptions}
-                            onChange={(value) => setFormWhCd(normalizeChoiceValue(value))}
-                        />
-                        <FormInput
-                            type={'filter-select'}
-                            source="locationNo"
-                            label="ロケーション番号"
-                            structure="top-bottom"
-                            sx={spFormInputSx}
-                            choices={locationOptions}
-                        />
-                        <FormInput
                             type={'text'}
                             source="palletNo"
                             label="パレット番号"
@@ -197,19 +205,43 @@ const SP304: React.FC = () => {
                         />
                         <FormInput
                             type={'text'}
-                            source="itemCode"
-                            label="品目コード"
+                            source="storagePeriod"
+                            label="保管期間"
                             structure="top-bottom"
                             sx={spFormInputSx}
                             placeholder="入力してください"
                         />
                         <FormInput
-                            type={'text'}
-                            source="itemName"
-                            label="品目名"
+                            type={'filter-select'}
+                            source="category"
+                            label="区分"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            placeholder="入力してください"
+                            choices={CATEGORY_CHOICES}
+                        />
+                        <FormInput
+                            type={'input-date'}
+                            source="inboundDate"
+                            label="入庫日"
+                            structure="top-bottom"
+                            sx={spFormInputSx}
+                        />
+                        <FormInput
+                            type={'filter-select'}
+                            source="storageLocation"
+                            label="保管場所"
+                            structure="top-bottom"
+                            sx={spFormInputSx}
+                            choices={warehouseOptions}
+                            onChange={(value) => setFormWhCd(normalizeChoiceValue(value))}
+                        />
+                        <FormInput
+                            type={'filter-select'}
+                            source="locationNo"
+                            label="ロケ番"
+                            structure="top-bottom"
+                            sx={spFormInputSx}
+                            choices={locationOptions}
                         />
                     </div>
                     <div style={spSx.buttonBar}>

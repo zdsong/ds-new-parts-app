@@ -7,6 +7,7 @@
         "@mui/icons-material": "^7.0.0",
         "@mui/material": "^7.0.0",
         "@mui/x-tree-view": "8.23.0",
+        "@zxing/library": "^0.23.0",
         "ag-grid-community": "^35.0.0",
         "ag-grid-react": "^35.0.0",
         "clsx": "^2.1.1",
