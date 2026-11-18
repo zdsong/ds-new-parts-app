@@ -33,6 +33,9 @@ const FLUID = {
   logoHeight: 'clamp(28px, calc(22.2px + 1.48vw), 40px)',
   // タイトル文字：13px → 20px
   titleFont: 'clamp(15px, calc(9.6px + 0.86vw), 20px)',
+  // スマートフォンの副題（親メニュー名）：17px → 22px
+  // 画面上部の見出しとして目立たせるため、PC のシステム名より少し大きめにする
+  mobileTitleFont: 'clamp(17px, calc(11.2px + 0.86vw), 22px)',
 };
 
 /**
@@ -350,7 +353,13 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
                 color: 'black',
                 cursor: 'pointer',
                 // 文字は折り返さず、幅に応じて少しずつ縮める（極端に狭い場合のみ省略記号）
-                fontSize: FLUID.titleFont,
+                fontSize: isMobile ? FLUID.mobileTitleFont : FLUID.titleFont,
+                // スマートフォンの副題は太字にし、下寄りに置いて画面名と揃える
+                fontWeight: isMobile ? 700 : undefined,
+                lineHeight: isMobile ? 1.1 : undefined,
+                marginBottom: isMobile ? '0px' : undefined,
+                position: isMobile ? 'relative' : undefined,
+                top: isMobile ? '3px' : undefined,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',

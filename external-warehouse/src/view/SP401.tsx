@@ -5,6 +5,43 @@ import jsQR from 'jsqr';
 import QRCode from 'qrcode';
 
 /**
+ * カメラを利用できない理由を、利用者に分かる言葉で返す
+ *
+ * スマートフォンのブラウザは「安全なコンテキスト（HTTPS または localhost）」でしか
+ * カメラを公開しない。開発中に http://192.168.x.x:8001 のような URL で開くと
+ * navigator.mediaDevices 自体が存在せず、ボタンを押しても何も起きないように見える。
+ */
+const getCameraErrorMessage = (error?: unknown): string => {
+    const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+    // アプリ内ブラウザ（微信・LINE 等）はカメラ API を持たない、または制限される
+    const isInAppBrowser = /MicroMessenger|Line\/|FBAN|FBAV|Instagram/i.test(ua);
+
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+        return 'HTTPS でないためカメラを利用できません。https:// または localhost で開いてください。';
+    }
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        return isInAppBrowser
+            ? 'このアプリ内ブラウザではカメラを利用できません。Safari または Chrome で開いてください。'
+            : 'このブラウザではカメラを利用できません。Safari または Chrome で開いてください。';
+    }
+
+    // getUserMedia が返したエラーの種類ごとに案内を変える
+    const name = (error as { name?: string } | undefined)?.name ?? '';
+    switch (name) {
+        case 'NotAllowedError':
+        case 'SecurityError':
+            return 'カメラの使用が許可されていません。ブラウザの設定でカメラを許可してください。';
+        case 'NotFoundError':
+        case 'OverconstrainedError':
+            return '利用できるカメラが見つかりませんでした。';
+        case 'NotReadableError':
+            return 'カメラが他のアプリで使用中です。他のアプリを閉じてから再度お試しください。';
+        default:
+            return 'カメラを起動できませんでした。カメラの使用を許可してください。';
+    }
+};
+
+/**
  * バーコード読み取り（移動）画面（SP401）
  *
  * スマートフォンでの利用を前提とした画面。
@@ -111,7 +148,9 @@ const SP401: React.FC = () => {
 
         const startCamera = async () => {
             if (!navigator.mediaDevices?.getUserMedia) {
-                setErrorMessage('この端末ではカメラを利用できません。HTTPS で接続してください。');
+                // カメラが使えない環境では真っ黒な画面を出さず、理由を画面に残す
+                setErrorMessage(getCameraErrorMessage());
+                setCameraOpen(false);
                 return;
             }
             try {
@@ -126,13 +165,19 @@ const SP401: React.FC = () => {
                 streamRef.current = stream;
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    await videoRef.current.play();
+                    try {
+                        await videoRef.current.play();
+                    } catch {
+                        // iOS では自動再生が拒否されることがあるが、
+                        // autoPlay 属性とユーザー操作後の再開で再生できるため停止しない
+                    }
                     scanningRef.current = true;
                     scanFrame();
                 }
-            } catch {
+            } catch (error) {
                 if (!cancelled) {
-                    setErrorMessage('カメラを起動できませんでした。カメラの使用を許可してください。');
+                    setErrorMessage(getCameraErrorMessage(error));
+                    setCameraOpen(false);
                 }
             }
         };
@@ -486,7 +531,13 @@ const SP401: React.FC = () => {
                         <canvas ref={canvasRef} style={{ display: 'none' }} />
                     </Box>
                     <Box sx={{ padding: '14px', color: 'white', textAlign: 'center', fontSize: '13px' }}>
-                        枠内に二次元コードを合わせてください
+                        {errorMessage ? (
+                            <Box component="span" sx={{ color: '#ff8a80' }}>
+                                {errorMessage}
+                            </Box>
+                        ) : (
+                            '枠内に二次元コードを合わせてください'
+                        )}
                     </Box>
                 </Box>
             ) : null}
