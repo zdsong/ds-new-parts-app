@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AppBar, AppBarProps } from 'react-admin';
-import { Box, Typography, useMediaQuery } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { CustomAppBarMenu } from './Menu';
 import { MessageChatAppBar } from './MessageChat'
@@ -12,6 +12,7 @@ import { Notice } from './Notice';
 import ThemeToggle from './ThemeToggel';
 import LoginUserInfoBar from './LoginUserInfo';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
+import { useIsMobile } from '../utils/deviceUtil';
 
 import SIcon from '../assets/icons/S.png';
 import DIcon from '../assets/icons/D.png';
@@ -41,6 +42,9 @@ const FLUID = {
 const hideUserInfoSx = { display: { xs: 'none', md: 'flex' } };
 const hideLogoBelowSmSx = { display: { xs: 'none', sm: 'block' } };
 
+// システム名（PC 表示時のタイトル）
+const APP_TITLE = '新部品管理システム｜外部倉庫管理';
+
 interface MenuItem {
   name: string,
   hidden?: boolean,
@@ -48,6 +52,17 @@ interface MenuItem {
   path?: string,
   meta: any,
   children?: MenuItem[],
+}
+
+/**
+ * ルート名ごとのメニュー名
+ * ・current：画面自身のメニュー名
+ * ・parent ：直上の親メニュー名（親が無い場合は自身のメニュー名）
+ * モバイル表示では画面幅が狭くメニュー階層が見えないため、親メニュー名をタイトルに使う。
+ */
+interface MenuTitleMaps {
+  current: Record<string, string>;
+  parent: Record<string, string>;
 }
 
 // 既存画面が存在するルート名の一覧
@@ -262,28 +277,31 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // スマートフォン表示かどうかを判定する
-  const isMobile = useMediaQuery('(max-width:599.9px)');
-  // メニュー名のマップ（ルート名 → メニュー名）
-  const [menuTitleMap, setMenuTitleMap] = React.useState<Record<string, string>>({});
+  // スマートフォン表示かどうかを判定する（utils/deviceUtil の共通判定）
+  const isMobile = useIsMobile();
+  // メニュー名のマップ（ルート名 → 自身／親のメニュー名）
+  const [menuTitles, setMenuTitles] = React.useState<MenuTitleMaps>({ current: {}, parent: {} });
 
   React.useEffect(() => {
     let active = true;
     loadMenuItems().then((items) => {
       if (!active) return;
-      const titleMap: Record<string, string> = {};
-      const walk = (list: MenuItem[]) => {
+      const titleMaps: MenuTitleMaps = { current: {}, parent: {} };
+      // parentTitle には「直上の親メニュー名」を引き継ぐ（親が無ければ自身の名前を使う）
+      const walk = (list: MenuItem[], parentTitle?: string) => {
         list.forEach((item) => {
-          if (item.meta?.title) {
-            titleMap[item.name] = item.meta.title;
+          const ownTitle = item.meta?.title;
+          if (ownTitle) {
+            titleMaps.current[item.name] = ownTitle;
+            titleMaps.parent[item.name] = parentTitle || ownTitle;
           }
           if (item.children) {
-            walk(item.children);
+            walk(item.children, ownTitle || parentTitle);
           }
         });
       };
       walk(items);
-      setMenuTitleMap(titleMap);
+      setMenuTitles(titleMaps);
     });
     return () => {
       active = false;
@@ -292,9 +310,10 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
 
   // 現在表示中の画面に対応するメニュー名を取得する
   const routeName = location.pathname.replace(/^\/+/, '').split('/')[0];
-  const currentMenuTitle = menuTitleMap[routeName];
-  // スマートフォンではシステム名ではなく表示中のメニュー名を表示する
-  const appTitle = isMobile && currentMenuTitle ? currentMenuTitle : '新部品管理システム｜外部倉庫管理';
+  const currentMenuTitle = menuTitles.current[routeName];
+  // スマートフォンではシステム名ではなく、表示中の画面が属する親メニュー名を表示する
+  const mobileMenuTitle = menuTitles.parent[routeName] || currentMenuTitle;
+  const appTitle = isMobile && mobileMenuTitle ? mobileMenuTitle : APP_TITLE;
 
   const navigateS050 = () =>{
     navigate('/S050')
