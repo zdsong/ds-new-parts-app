@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
@@ -162,12 +162,21 @@ const SP302: React.FC = () => {
 
     return (
         <Box sx={spSx.page}>
-            {/* タイトルバー（右：確認） */}
+            {/* タイトルバー（画面名のみ） */}
             <Box sx={spSx.titleBar}>
                 <label style={spSx.title}>品目検索</label>
-                <Typography sx={spSx.actionLink} component="span" onClick={handleConfirm}>
+            </Box>
+
+            {/* タイトル直下の操作行（確認） */}
+            <Box sx={spSx.titleActionBar}>
+                <Box
+                    component="button"
+                    type="button"
+                    sx={spSx.actionButton}
+                    onClick={handleConfirm}
+                >
                     確認
-                </Typography>
+                </Box>
             </Box>
 
             {/* 基本情報と検索条件を 1 枚のカードにまとめる */}

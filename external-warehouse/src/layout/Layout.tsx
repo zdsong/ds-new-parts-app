@@ -10,12 +10,16 @@ import { GlobalLoadingOverlay } from './GlobalLoadingOverlay';
 import { PopupMutexProvider } from './usePopupMutex';
 import { authProvider } from '../adapters/authProvider';
 import { Error } from './ErrorPage'
+import useAutoSwitchDeviceRoute from './useAutoSwitchDeviceRoute';
 
 
 export default ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
 
   const navigate = useNavigate()
+
+  // 端末（PC／SP）の切り替えに合わせて、対応する画面へ自動で切り替える
+  useAutoSwitchDeviceRoute();
     
   const isLoginRoute = location.pathname.startsWith('/login');
   

@@ -19,7 +19,7 @@ export const spSx = {
         // 将来 position: sticky を使う要素を置いても影響しない）
         overflowX: 'clip' as const,
     },
-    /** タイトルバー（左：画面名、右：操作リンク） */
+    /** タイトルバー（画面名のみ。操作ボタンは titleActionBar に置く） */
     titleBar: {
         display: 'flex',
         alignItems: 'center',
@@ -38,22 +38,63 @@ export const spSx = {
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const,
     },
-    /** タイトルバー右側の操作（確認・番号表印刷など） */
-    actionLink: {
-        color: 'var(--mui-page-header-color)',
+    /**
+     * タイトル直下の操作行（番号表印刷・確認などの主操作を置く）
+     * タイトルバーには画面名だけを残し、操作ボタンはこの行に右寄せでまとめる。
+     * スマートフォンでは指で押しやすいよう、ボタン自体を縦 36px にしている。
+     */
+    titleActionBar: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        gap: '8px',
+        width: '100%',
+        marginTop: '-4px',
+    },
+    /**
+     * 主操作ボタン（番号表印刷・確認）
+     * 設計書では「番号表印刷」が青地・白文字のボタンとして示されているため、
+     * リンク風の文字ではなくボタンとして表示する。色はテーマ色（既定は青）に追従する。
+     */
+    actionButton: {
+        flexShrink: 0,
+        height: '36px',
+        padding: '0 16px',
+        border: 'none',
+        borderRadius: '5px',
+        backgroundColor: 'var(--mui-page-header-color)',
+        color: 'white',
         fontSize: '14px',
         fontWeight: 600,
+        fontFamily: 'inherit',
+        lineHeight: 1,
         cursor: 'pointer',
         whiteSpace: 'nowrap' as const,
-        '&:hover': { textDecoration: 'underline' },
+        '&:hover': {
+            backgroundColor:
+                'color-mix(in srgb, var(--mui-page-header-color) 85%, black 15%)',
+        },
+        // 印刷中など、一時的に操作できない状態
+        '&:disabled': {
+            cursor: 'not-allowed',
+            opacity: 0.6,
+        },
     },
-    /** 操作できない状態のリンク */
-    actionLinkDisabled: {
-        color: '#9e9e9e',
+    /** 操作できない状態の主操作ボタン（未発番など） */
+    actionButtonDisabled: {
+        flexShrink: 0,
+        height: '36px',
+        padding: '0 16px',
+        border: 'none',
+        borderRadius: '5px',
+        backgroundColor: '#cccccc',
+        color: '#666666',
         fontSize: '14px',
         fontWeight: 600,
-        whiteSpace: 'nowrap' as const,
+        fontFamily: 'inherit',
+        lineHeight: 1,
         cursor: 'not-allowed',
+        whiteSpace: 'nowrap' as const,
     },
     /** セクション見出し（■基本情報 など） */
     sectionTitle: {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
@@ -242,16 +242,21 @@ const SP303: React.FC = () => {
 
     return (
         <Box sx={spSx.page}>
-            {/* タイトルバー（右：番号表印刷） */}
+            {/* タイトルバー（画面名のみ） */}
             <Box sx={spSx.titleBar}>
                 <label style={spSx.title}>パレット番号発番</label>
-                <Typography
-                    sx={pallet.palletNo ? spSx.actionLink : spSx.actionLinkDisabled}
-                    component="span"
+            </Box>
+
+            {/* タイトル直下の操作行（番号表印刷） */}
+            <Box sx={spSx.titleActionBar}>
+                <Box
+                    component="button"
+                    type="button"
+                    sx={pallet.palletNo ? spSx.actionButton : spSx.actionButtonDisabled}
                     onClick={handlePrint}
                 >
                     番号表印刷
-                </Typography>
+                </Box>
             </Box>
 
             {/* 基本情報（SP302 と同じく、見出しもカード内に置く） */}

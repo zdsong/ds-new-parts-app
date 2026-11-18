@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
@@ -450,12 +450,22 @@ const SP305: React.FC = () => {
 
     return (
         <Box sx={spSx.page}>
-            {/* タイトルバー（右：番号表印刷。印刷の前に自動で更新する） */}
+            {/* タイトルバー（画面名のみ） */}
             <Box sx={spSx.titleBar}>
                 <label style={spSx.title}>パレット情報詳細</label>
-                <Typography sx={spSx.actionLink} component="span" onClick={handlePrint}>
+            </Box>
+
+            {/* タイトル直下の操作行（番号表印刷。印刷の前に自動で更新する） */}
+            <Box sx={spSx.titleActionBar}>
+                <Box
+                    component="button"
+                    type="button"
+                    sx={spSx.actionButton}
+                    disabled={printing}
+                    onClick={handlePrint}
+                >
                     {printing ? '印刷中…' : '番号表印刷'}
-                </Typography>
+                </Box>
             </Box>
 
             {/* 印刷済みの場合は変更できないことを明示する */}
