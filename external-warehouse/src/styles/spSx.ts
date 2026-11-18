@@ -4,6 +4,16 @@
  * 参考：external-warehouse-sp の pageSx / cardSx を、本プロジェクト（ew）の
  * 画面でも使えるようにまとめたもの。PC 画面（P3xx）と違い、1 列・縦積みを前提とする。
  */
+
+/**
+ * SP 画面の入力欄の高さ
+ *
+ * FormInput の既定（検索欄・基本情報カードの入力欄）と同じ 25.56px に統一する。
+ * 明細カードだけ高さが違うと、非活性時のグレー背景が枠全体を覆えず、
+ * 枠の上下に白い帯が残って見えるため、すべての入力欄でこの値を使う。
+ */
+export const SP_INPUT_HEIGHT = '25.56px';
+
 export const spSx = {
     /** 画面全体（タイトルバー＋内容を縦に積む） */
     page: {
@@ -300,7 +310,7 @@ export const spSx = {
     },
     stepperButton: {
         width: '34px',
-        height: '34px',
+        height: SP_INPUT_HEIGHT,
         flexShrink: 0,
         border: '1px solid #c4c4c4',
         borderRadius: '5px',
@@ -348,7 +358,7 @@ export const spSx = {
     /** 明細カード内の小型ボタン（追加） */
     smallButton: {
         marginLeft: 'auto',
-        height: '34px',
+        height: SP_INPUT_HEIGHT,
         padding: '0 16px',
         border: 'none',
         borderRadius: '5px',
@@ -377,13 +387,14 @@ export const spFormInputSx = {
 /**
  * 明細カード内の FormInput 用スタイル
  *
- * カード内の他の行（品目コード・品目名）と同じ「ラベル 4.5rem ＋ 値」の並びにし、
- * 入力枠の高さも 34px に揃える。数量・保管区分・使用可否で共通に使う。
+ * カード内の他の行（品目コード・品目名）と同じ「ラベル 4.5rem ＋ 値」の並びにする。
+ * 入力枠の高さは基本情報カード・検索欄と同じ SP_INPUT_HEIGHT に揃える。
+ * 数量・保管区分・使用可否で共通に使う。
  */
 export const spItemFieldSx = {
     gap: '8px',
     marginTop: 0,
-    height: '34px',
+    height: SP_INPUT_HEIGHT,
     justifyContent: 'flex-start',
     label: {
         width: '4.5rem',
@@ -395,15 +406,29 @@ export const spItemFieldSx = {
     },
     input: {
         '& .MuiInputBase-root': {
-            height: '34px',
+            height: SP_INPUT_HEIGHT,
+            paddingTop: '2px',
+            paddingBottom: '2px',
             borderRadius: '5px',
             backgroundColor: 'white',
+        },
+        // 非活性時は入力枠全体をグレーで塗る
+        // （上の backgroundColor: white と詳細度を変えないと打ち消されるため、
+        //   MuiInputBase-root と Mui-disabled を併記して詳細度を上げる）
+        '& .MuiInputBase-root.Mui-disabled': {
+            backgroundColor: 'gainsboro',
         },
         // カード（#fafafa）上でも枠が分かるよう、枠線色を他項目と同じ灰色にする
         '& .MuiOutlinedInput-notchedOutline': {
             borderColor: '#c4c4c4',
         },
         '& .MuiInputBase-input': {
+            paddingTop: 0,
+            paddingBottom: 0,
+        },
+        // プルダウンは既定の上下パディング（16.5px）のままだと文字が枠の外へ出るため、
+        // 基本情報カードの入力欄と同じ「上下 0」にして枠内で中央に置く
+        '& .MuiSelect-select': {
             paddingTop: 0,
             paddingBottom: 0,
         },
@@ -426,6 +451,6 @@ export const spQuantityInputSx = {
     minWidth: 0,
     gap: 0,
     marginTop: 0,
-    height: '34px',
+    height: SP_INPUT_HEIGHT,
     input: spItemFieldSx.input,
 };
