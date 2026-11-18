@@ -295,6 +295,7 @@ export const buildPalletLabels = (
  *
  * @param pallets 印刷対象のパレット
  * @param targetWindow 呼び出し側で開いておいた印刷用ウィンドウ（省略時は内部で開く）
+ * @param onUnsupported モバイル端末で印刷ダイアログを開けなかった場合の通知
  */
 export const printPalletLabels = (
     pallets: {
@@ -304,13 +305,14 @@ export const printPalletLabels = (
         storageLocationName?: string;
         details: PalletDetailItem[];
     }[],
-    targetWindow?: Window | null
+    targetWindow?: Window | null,
+    onUnsupported?: () => void
 ): number => {
     const labels = buildPalletLabels(pallets);
     if (labels.length === 0) {
         targetWindow?.close();
         return 0;
     }
-    const printed = printPalletNumberSheet(labels, targetWindow);
+    const printed = printPalletNumberSheet(labels, targetWindow, onUnsupported);
     return printed ? labels.length : 0;
 };

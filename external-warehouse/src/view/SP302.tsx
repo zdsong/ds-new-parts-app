@@ -4,6 +4,7 @@ import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
+import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import {
@@ -369,28 +370,8 @@ const SP302: React.FC = () => {
                 )}
             </Box>
 
-            {/* ページ送り */}
-            {totalPage > 1 && (
-                <Box sx={spSx.buttonBar}>
-                    <button
-                        style={page === 1 ? { ...spSx.secondaryButton, opacity: 0.5 } : spSx.secondaryButton}
-                        type="button"
-                        disabled={page === 1}
-                        onClick={() => setPage((current) => Math.max(1, current - 1))}
-                    >
-                        前へ
-                    </button>
-                    <span style={{ fontSize: '13px', color: '#5f5f5f' }}>{`${page} / ${totalPage}`}</span>
-                    <button
-                        style={page === totalPage ? { ...spSx.secondaryButton, opacity: 0.5 } : spSx.secondaryButton}
-                        type="button"
-                        disabled={page === totalPage}
-                        onClick={() => setPage((current) => Math.min(totalPage, current + 1))}
-                    >
-                        次へ
-                    </button>
-                </Box>
-            )}
+            {/* ページ送り（設計書 3.1 のページ番号の枠） */}
+            <SpPagination page={page} totalPage={totalPage} onChange={setPage} />
         </Box>
     );
 };

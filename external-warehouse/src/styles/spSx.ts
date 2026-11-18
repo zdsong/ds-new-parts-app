@@ -290,6 +290,54 @@ export const spSx = {
         lineHeight: 1.5,
         marginTop: '2px',
     },
+    /**
+     * ページ送り（設計書「①パレット番号管理 3.1 積載部品の登録」のページ番号）
+     *
+     * 設計書では各ページが 26×26 の枠で示され、現在のページだけが青地・白文字、
+     * それ以外は白地・青枠・濃いグレー文字になる。間隔は 8px。
+     */
+    pagination: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexWrap: 'wrap' as const,
+        gap: '8px',
+        width: '100%',
+        marginTop: '4px',
+    },
+    /** ページ番号の枠（現在のページ以外） */
+    paginationButton: {
+        width: '26px',
+        height: '26px',
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        border: '1px solid var(--mui-page-header-color)',
+        borderRadius: '4px',
+        backgroundColor: 'white',
+        color: '#404040',
+        fontSize: '13px',
+        fontWeight: 600,
+        fontFamily: 'inherit',
+        lineHeight: 1,
+        cursor: 'pointer',
+    },
+    /** 現在のページ（青地・白文字） */
+    paginationButtonActive: {
+        backgroundColor: 'var(--mui-page-header-color)',
+        color: 'white',
+        cursor: 'default',
+    },
+    /** ページ番号の省略記号（・・・） */
+    paginationEllipsis: {
+        minWidth: '26px',
+        color: '#404040',
+        fontSize: '13px',
+        lineHeight: 1,
+        textAlign: 'center' as const,
+    },
     /** 空メッセージ */
     empty: {
         color: '#757575',

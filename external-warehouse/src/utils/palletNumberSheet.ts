@@ -9,7 +9,14 @@
  * 帳票は「パレット番号 1 件 = A4 縦 1 枚」で出力する（積載明細が複数あっても 1 枚にまとめる）。
  * 明細が複数ある場合は、品番・品名・備考２を改行で並べ、数量は合計を印字する。
  * ブラウザの印刷ダイアログをそのまま使うため、専用ウィンドウに HTML を書き出して印刷する。
+ *
+ * ただしモバイル端末では、別ウィンドウを開いても印刷ダイアログが開かず
+ * プレビュー画面が表示されたままになる（iOS Safari / iOS Chrome の制限）。
+ * そのためモバイル端末では、現在の画面に印刷用の要素を差し込んでから
+ * window.print() を呼び、そのまま印刷ダイアログを開く（printInCurrentPage）。
  */
+
+import { isMobileViewport } from './deviceUtil';
 
 /** パレット番号表 1 枚分の印字内容 */
 export interface PalletNumberSheetLabel {
@@ -293,8 +300,8 @@ const buildLabelHtml = (label: PalletNumberSheetLabel): string => {
     </section>`;
 };
 
-/** 印刷用スタイル（A4 縦・1 枚 1 ラベル） */
-const SHEET_STYLE = `
+/** 印刷用スタイル（A4 縦・1 枚 1 ラベル / 印刷時のみ有効な指定） */
+const SHEET_PRINT_STYLE = `
     @page {
       size: A4 portrait;
       margin: 10mm;
@@ -309,16 +316,12 @@ const SHEET_STYLE = `
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    /* 画面で確認するときは用紙を並べて表示する */
-    @media screen {
-      body { background: #e8e8e8; padding: 10mm 0; }
-      .ps { margin: 0 auto 10mm; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); background: #ffffff; }
-    }
     .ps {
       width: 190mm;
       height: 277mm;
       display: flex;
       flex-direction: column;
+      background: #ffffff;
       border: 0.4mm solid #000000;
       page-break-after: always;
       break-after: page;
@@ -418,13 +421,27 @@ const SHEET_STYLE = `
     }
 `;
 
+/** 画面で確認するときのスタイル（別ウィンドウで開いた場合のみ有効） */
+const SHEET_SCREEN_STYLE = `
+    @media screen {
+      body { background: #e8e8e8; padding: 10mm 0; }
+      .ps { margin: 0 auto 10mm; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); background: #ffffff; }
+    }
+`;
+
+/** 別ウィンドウに書き出すときのスタイル一式（印刷用＋画面確認用） */
+const SHEET_STYLE = SHEET_PRINT_STYLE + SHEET_SCREEN_STYLE;
+
+/** 印字内容（ラベル）を HTML 断片に変換する（呼び出し側でコンテナに差し込む） */
+const buildLabelsHtml = (labels: PalletNumberSheetLabel[]): string => labels.map(buildLabelHtml).join('\n');
+
 /**
  * 印刷用 HTML 一式を組み立てる。
  * ラベルが空の場合は白紙 1 枚にならないよう、空文字を返す。
  */
 export const buildPalletNumberSheetHtml = (labels: PalletNumberSheetLabel[]): string => {
     if (!labels || labels.length === 0) return '';
-    const body = labels.map(buildLabelHtml).join('\n');
+    const body = buildLabelsHtml(labels);
 
     return `<!DOCTYPE html>
 <html lang="ja">
@@ -439,14 +456,118 @@ ${body}
 </html>`;
 };
 
+/** 現在の画面に差し込む印刷用要素の ID */
+const PRINT_ROOT_ID = 'pallet-print-root';
+const PRINT_STYLE_ID = 'pallet-print-style';
+
+/** 現在の画面に差し込んだ印刷用の要素を片付ける */
+const removeInPlacePrintNodes = () => {
+    document.getElementById(PRINT_ROOT_ID)?.remove();
+    document.getElementById(PRINT_STYLE_ID)?.remove();
+};
+
+/**
+ * 現在の画面に印刷用の用紙を差し込み、そのまま印刷ダイアログを開く（モバイル端末用）
+ *
+ * モバイル端末（iOS Safari / iOS Chrome など）では window.open() で開いた別ウィンドウの
+ * print() が動作せず、プレビュー画面が表示されたままになる。
+ * 一方 window.print() は表示中の画面に対しては動作するため、印刷したい内容を
+ * 同じ画面に隠し持たせ、印刷時だけアプリの画面を CSS で隠して印刷する。
+ *
+ * print() は「クリックと同じ処理の流れ（同期）」で呼ぶ必要がある。
+ * await や setTimeout / requestAnimationFrame を挟むとユーザー操作の扱いが切れ、
+ * 端末によってはダイアログが開かず何も起きない（＝無反応に見える）。
+ *
+ * 印刷後は afterprint で片付けるため、入力内容や画面の状態は変化しない。
+ *
+ * @param labelsHtml 用紙 1 枚分の HTML を連結したもの
+ * @param onUnsupported 印刷ダイアログが開けなかった場合の通知（アプリ内ブラウザなど）
+ */
+const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boolean => {
+    if (typeof window === 'undefined' || typeof window.print !== 'function') return false;
+
+    removeInPlacePrintNodes();
+
+    const style = document.createElement('style');
+    style.id = PRINT_STYLE_ID;
+    style.textContent = `
+    #${PRINT_ROOT_ID} { display: none; }
+    @media print {
+      /* アプリの画面は印刷せず、印刷用の用紙だけを出力する */
+      html, body { height: auto !important; overflow: visible !important; }
+      body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
+      #${PRINT_ROOT_ID} { display: block !important; }
+      ${SHEET_PRINT_STYLE}
+    }`;
+
+    const root = document.createElement('div');
+    root.id = PRINT_ROOT_ID;
+    root.innerHTML = labelsHtml;
+
+    document.head.appendChild(style);
+    document.body.appendChild(root);
+
+    // 印刷プレビューを閉じたあとに片付ける
+    const cleanup = () => {
+        window.removeEventListener('afterprint', cleanup);
+        removeInPlacePrintNodes();
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    // 印刷ダイアログが開いたか（beforeprint / afterprint が来たか）を判定するための目印
+    let printStarted = false;
+    const markStarted = () => {
+        printStarted = true;
+    };
+    window.addEventListener('beforeprint', markStarted);
+    window.addEventListener('afterprint', markStarted);
+
+    try {
+        // 差し込んだ内容をレイアウトさせてから、クリックと同じ処理の流れで印刷する
+        void document.body.offsetHeight;
+        window.print();
+    } catch (error) {
+        console.error(error);
+        window.removeEventListener('beforeprint', markStarted);
+        window.removeEventListener('afterprint', markStarted);
+        cleanup();
+        return false;
+    }
+
+    // ダイアログが開かなかった端末（アプリ内ブラウザ等）は、あとから知らせる。
+    // 印刷用の要素は画面には表示されないため、ここでは片付けずに知らせるだけにする
+    // （片付けると、開くのが遅い端末で印刷内容が消えてしまう）。
+    window.setTimeout(() => {
+        window.removeEventListener('beforeprint', markStarted);
+        window.removeEventListener('afterprint', markStarted);
+        if (printStarted) return;
+        onUnsupported?.();
+    }, 1500);
+
+    return true;
+};
+
 /**
  * パレット番号表を印刷する。
- * 別ウィンドウに書き出してから印刷ダイアログを開くため、画面のレイアウトの影響を受けない。
+ * PC では別ウィンドウに書き出してから印刷ダイアログを開くため、画面のレイアウトの影響を受けない。
+ * モバイル端末では別ウィンドウの print() が動作しないため、現在の画面のまま印刷する。
  */
 export const printPalletNumberSheet = (
     labels: PalletNumberSheetLabel[],
-    targetWindow?: Window | null
+    targetWindow?: Window | null,
+    onUnsupported?: () => void
 ): boolean => {
+    if (!labels || labels.length === 0) {
+        targetWindow?.close();
+        return false;
+    }
+
+    // モバイル端末は現在の画面で印刷する（呼び出し側が開いたウィンドウは閉じる）
+    if (isMobileViewport()) {
+        targetWindow?.close();
+        return printInCurrentPage(buildLabelsHtml(labels), onUnsupported);
+    }
+
     const html = buildPalletNumberSheetHtml(labels);
     if (!html) {
         targetWindow?.close();

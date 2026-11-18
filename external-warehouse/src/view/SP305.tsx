@@ -345,15 +345,35 @@ const SP305: React.FC = () => {
         applyApiPallet(refreshed?.data || null);
     };
 
+    /** 印刷後の保存（更新 → 印刷済みにする） */
+    const saveAfterPrint = async () => {
+        setPrinting(true);
+        try {
+            const apiPallet = await submitPallet(undefined, { silent: true });
+            if (!apiPallet) {
+                notify('印刷は行いましたが、パレット情報の更新に失敗しました。', { type: 'error' });
+                return;
+            }
+            await markPrinted();
+        } catch (error) {
+            console.error(error);
+            notify('印刷後の更新に失敗しました。', { type: 'error' });
+        } finally {
+            setPrinting(false);
+        }
+    };
+
     /**
      * 番号表を印刷する
      *
-     * 未印刷の場合は、印刷の前に必ず更新を行い、更新が成功した場合のみ印刷する
-     * （画面で編集した数量・保管区分などを番号表に反映するため）。
+     * 印刷ダイアログは「クリックと同じ処理の流れ」で開く必要があるため、
+     * 更新などの非同期処理を待たずに、画面の内容をそのまま印刷する
+     * （待つと端末によってはダイアログが開かず、何も起きていないように見える）。
+     * 未印刷の場合は、印刷のあとに更新と印刷済みの更新を行う。
      * 印刷できた場合は印刷済み（printed_flg=1）にし、以降は印刷以外の操作をできなくする。
      * 印刷済みの場合はデータを変更できないため、そのまま印刷する。
      */
-    const handlePrint = async () => {
+    const handlePrint = () => {
         if (printing) return;
         if (!palletNo) {
             notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
@@ -366,60 +386,33 @@ const SP305: React.FC = () => {
             return;
         }
 
-        // 更新を待ってから開くとポップアップがブロックされるため、先に印刷用ウィンドウを開いておく
-        const printWindow = window.open('', '_blank', 'width=900,height=1200');
-        if (!printWindow) {
-            notify('印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。', {
+        const count = printPalletLabels(
+            [
+                {
+                    ...pallet,
+                    storageLocationName: getWarehouseName(pallet.storageLocation),
+                    details,
+                },
+            ],
+            undefined,
+            () => {
+                notify(
+                    'この端末では印刷画面を開けませんでした。ブラウザ（Safari / Chrome）で開いてください。',
+                    { type: 'warning' }
+                );
+            }
+        );
+        if (count === 0) {
+            notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
                 type: 'warning',
             });
             return;
         }
+        notify(`${count} 枚のパレット番号表を印刷します。`, { type: 'success' });
 
-        setPrinting(true);
-        try {
-            // 印刷する内容（未印刷の場合は更新後の内容を使う）
-            let target: { form: PalletFormData; details: PalletDetailItem[] } = { form: pallet, details };
-            if (!printed) {
-                const apiPallet = await submitPallet(undefined, { silent: true });
-                // 更新に失敗した場合は印刷しない
-                if (!apiPallet) {
-                    printWindow.close();
-                    return;
-                }
-                const refreshed = fromApiPallet(apiPallet);
-                target = { form: refreshed.form, details: refreshed.details };
-            }
-
-            const count = printPalletLabels(
-                [
-                    {
-                        ...target.form,
-                        storageLocationName: getWarehouseName(target.form.storageLocation),
-                        details: target.details,
-                    },
-                ],
-                printWindow
-            );
-            if (count === 0) {
-                notify(
-                    '印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。',
-                    { type: 'warning' }
-                );
-                return;
-            }
-            notify(`${count} 枚のパレット番号表を印刷します。`, { type: 'success' });
-
-            // 印刷できたので印刷済みにする（以降は変更不可）
-            if (!printed) {
-                await markPrinted();
-            }
-        } catch (error) {
-            // 想定外のエラー時は、開いたままの印刷用ウィンドウを閉じる
-            console.error(error);
-            if (!printWindow.closed) printWindow.close();
-            notify('番号表の印刷に失敗しました。', { type: 'error' });
-        } finally {
-            setPrinting(false);
+        // 印刷のあとに保存する（印刷ダイアログを開く前に待つと、端末によっては開かなくなるため）
+        if (!printed) {
+            void saveAfterPrint();
         }
     };
 

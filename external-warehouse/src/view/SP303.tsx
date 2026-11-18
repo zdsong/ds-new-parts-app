@@ -209,19 +209,28 @@ const SP303: React.FC = () => {
             notify('発番後に番号表を印刷できます。', { type: 'warning' });
             return;
         }
-        const count = printPalletLabels([
-            {
-                palletNo: pallet.palletNo,
-                category: pallet.category,
-                storageLocation: pallet.storageLocation,
-                // 備考１には保管倉庫の名称を印字する
-                storageLocationName:
-                    warehouseOptions.find((option) => option.key === pallet.storageLocation)?.value ?? '',
-                details,
-            },
-        ]);
+        const count = printPalletLabels(
+            [
+                {
+                    palletNo: pallet.palletNo,
+                    category: pallet.category,
+                    storageLocation: pallet.storageLocation,
+                    // 備考１には保管倉庫の名称を印字する
+                    storageLocationName:
+                        warehouseOptions.find((option) => option.key === pallet.storageLocation)?.value ?? '',
+                    details,
+                },
+            ],
+            undefined,
+            () => {
+                notify(
+                    'この端末では印刷画面を開けませんでした。ブラウザ（Safari / Chrome）で開いてください。',
+                    { type: 'warning' }
+                );
+            }
+        );
         if (count === 0) {
-            notify('印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。', {
+            notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
                 type: 'warning',
             });
         }
