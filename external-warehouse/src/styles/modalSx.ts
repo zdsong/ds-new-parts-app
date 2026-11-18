@@ -60,12 +60,14 @@ export const modalStyles = {
     minHeight: '100px',
     overflow: 'auto',
     overflowX: 'hidden',
+    // 高さは --app-vh（モバイルでは dvh）を基準にする。
+    // 100vh だとブラウザの下部ツールバー分だけはみ出して操作ボタンが隠れる。
     '&.mobile': {
-      maxHeight: 'calc(100vh - 200px)',
+      maxHeight: 'calc(var(--app-vh) - 200px)',
     },
     
     '&.desktop': {
-      maxHeight: 'calc(90vh - 200px)',
+      maxHeight: 'calc(var(--app-vh) * 0.9 - 200px)',
     }
   },
 

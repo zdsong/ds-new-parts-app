@@ -157,7 +157,8 @@ const CustomModal: React.FC<CustomModalProps> = ({
                     sx={{ 
                         minHeight: '100px',
                         overflow: 'auto',
-                        maxHeight: isMobile ? 'calc(100vh - 200px)' : 'calc(90vh - 200px)'
+                        // --app-vh（モバイルでは dvh）基準にして、下部ツールバーに隠れないようにする
+                        maxHeight: isMobile ? 'calc(var(--app-vh) - 200px)' : 'calc(var(--app-vh) * 0.9 - 200px)'
                     }}
                 >
                     {renderChildren()}

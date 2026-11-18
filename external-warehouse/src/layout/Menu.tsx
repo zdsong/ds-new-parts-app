@@ -24,7 +24,8 @@ const sxStyles = {
     flex: 1,
     marginTop: '50px',
     minWidth: 250,
-    maxHeight: '90vh',
+    // ブラウザの下部ツールバーに隠れないよう、--app-vh（モバイルでは dvh）を基準にする
+    maxHeight: 'calc(var(--app-vh) * 0.9)',
     overflow: 'hidden',
     boxShadow: 3,
     display: 'flex',
@@ -220,7 +221,7 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'end',
-            maxHeight: 'calc(90vh - 30px)',
+            maxHeight: 'calc(var(--app-vh) - 30px)',
             minHeight: 0
           }}
         >

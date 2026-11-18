@@ -79,9 +79,12 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        html: { height: '100%', overflow: 'hidden' },
-        body: { height: '100%', margin: 0, padding: 0, overflow: 'hidden' },
-        '#root': { height: '100%', overflow: 'hidden' }
+        // 高さは index.html の --app-vh（dvh 相当）に合わせる。
+        // ここで 100% を指定すると、モバイルでブラウザ下部ツールバーに
+        // 画面下端が隠れるため使わない。
+        html: { height: 'var(--app-vh)', overflow: 'hidden' },
+        body: { height: 'var(--app-vh)', margin: 0, padding: 0, overflow: 'hidden' },
+        '#root': { height: 'var(--app-vh)', overflow: 'hidden' }
       }
     }
   }

@@ -136,7 +136,8 @@ const CustomModal: React.FC<CustomModalProps> = ({
             slotProps={{
                 paper: {
                     sx: {
-                        maxHeight: isMobile ? '90vh' : '80vh',
+                        // モバイルは --app-vh（dvh）基準。100vh だと下部ツールバー分はみ出す
+                        maxHeight: isMobile ? 'calc(var(--app-vh) * 0.9)' : '80vh',
                         minHeight: isMobile ? '300px' : '30vh'
                     }
                 }

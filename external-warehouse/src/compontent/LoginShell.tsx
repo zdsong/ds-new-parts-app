@@ -101,6 +101,9 @@ const LoginShell: React.FC<LoginShellProps> = ({ subtitle, children }) => {
     return (
         <Box sx={{
             padding: `${FLUID.paddingY} ${FLUID.paddingX}`,
+            // iPhone のホームインジケーター（画面下端の横棒）に
+            // フッターの著作権表示が重ならないよう、下端だけ安全領域を足す
+            paddingBottom: `calc(${FLUID.paddingY} + env(safe-area-inset-bottom))`,
             display: 'flex',
             alignItems: 'center',
             height: '100%',

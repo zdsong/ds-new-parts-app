@@ -46,9 +46,14 @@ export default ({ children }: { children: React.ReactNode }) => {
   return ( 
     <LoadingProvider>
       <PopupMutexProvider>
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+            {/* 高さは --app-vh（モバイルでは dvh）に合わせる。
+                100vh だとブラウザ下部ツールバー分だけ画面が下にはみ出し、
+                画面下端のボタンや入力欄が隠れる。 */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: 'var(--app-vh)' }}>
                 {!isLoginRoute && !n004Page?<CustomAppBar />:''}
-                <Box component="main" sx={{ flex: 1, overflow: 'auto', p: 2 ,paddingTop: 0, paddingBottom: 0}}>
+                <Box component="main" sx={{ flex: 1, overflow: 'auto', p: 2 ,paddingTop: 0,
+                    // iPhone のホームインジケーター（画面下端の横棒）に内容が重ならないようにする
+                    paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <ErrorBoundary FallbackComponent={Error}>
                         <Suspense fallback={<Loading />}>{children}</Suspense>
                 </ErrorBoundary>

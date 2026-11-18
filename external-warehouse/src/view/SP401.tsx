@@ -197,7 +197,7 @@ const SP401: React.FC = () => {
                     flexDirection: 'column',
                     width: '100%',
                     maxWidth: '520px',
-                    minHeight: 'calc(100vh - 140px)',
+                    minHeight: 'calc(var(--app-vh) - 140px)',
                     backgroundColor: 'white',
                     border: '1px solid #d0d0d0',
                     boxSizing: 'border-box',
@@ -422,7 +422,11 @@ const SP401: React.FC = () => {
                 <Box
                     sx={{
                         position: 'fixed',
-                        inset: 0,
+                        // ブラウザの下部ツールバーまで覆わないよう、--app-vh（dvh）で高さを決める
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 'var(--app-vh)',
                         zIndex: 2000,
                         display: 'flex',
                         flexDirection: 'column',

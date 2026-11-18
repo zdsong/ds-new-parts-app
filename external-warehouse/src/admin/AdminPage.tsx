@@ -105,7 +105,7 @@ const AdminPage: React.FC = () => {
   const singleObject = data && !Array.isArray(data) && typeof data === 'object' ? data : null;
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ display: 'flex', height: 'var(--app-vh)', bgcolor: 'background.default' }}>
       <Paper square sx={{ width: 260, height: '100%', overflow: 'auto' }}>
         <Box sx={{ p: 2 }}>
           <Typography variant="h6">管理メニュー</Typography>
