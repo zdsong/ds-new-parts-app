@@ -56,7 +56,7 @@ const P001: React.FC = () => (
     <Box sx={p001Sx.page}>
         <Box component="img" src={logoIcon} alt="新部品管理システム" sx={p001Sx.logo} />
         <Box component="div" sx={p001Sx.title}>
-            外部倉庫管理
+            新部品管理システム｜外部倉庫管理システム（仮称）
         </Box>
     </Box>
 );

@@ -47,7 +47,7 @@ const hideUserInfoSx = { display: { xs: 'none', md: 'flex' } };
 const hideLogoBelowSmSx = { display: { xs: 'none', sm: 'block' } };
 
 // システム名（PC 表示時のタイトル）
-const APP_TITLE = '新部品管理システム｜外部倉庫管理';
+const APP_TITLE = '外部倉庫管理システム（仮称）';
 
 interface MenuItem {
   name: string,

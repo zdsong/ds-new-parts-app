@@ -135,7 +135,7 @@ const LoginShell: React.FC<LoginShellProps> = ({ subtitle, children }) => {
                     lineHeight: 1.4,
                 }}
             >
-                新部品管理システム｜外部倉庫管理
+                外部倉庫管理システム（仮称）
             </Typography>
             {subtitle && (
                 <Typography

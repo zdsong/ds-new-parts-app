@@ -8,10 +8,11 @@
  *
  * 帳票は「パレット番号 1 件 = A4 縦 1 枚」で出力する（積載明細が複数あっても 1 枚にまとめる）。
  * 明細が複数ある場合は、品番・品名・備考２を改行で並べ、数量は合計を印字する。
- * ブラウザの印刷ダイアログをそのまま使うため、専用ウィンドウに HTML を書き出して印刷する。
+ * ブラウザの印刷ダイアログをそのまま使うため、画面に表示しない iframe に
+ * HTML を書き出して印刷する（別ウィンドウを開くと、印刷プレビュー以外に用紙が見えてしまう）。
  *
- * ただしモバイル端末では、別ウィンドウを開いても印刷ダイアログが開かず
- * プレビュー画面が表示されたままになる（iOS Safari / iOS Chrome の制限）。
+ * ただしモバイル端末では、iframe の print() が動作しない場合がある
+ * （iOS Safari / iOS Chrome の制限）。
  * そのためモバイル端末では、現在の画面に印刷用の要素を差し込んでから
  * window.print() を呼び、そのまま印刷ダイアログを開く（printInCurrentPage）。
  */
@@ -550,9 +551,60 @@ const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boo
     return true;
 };
 
+/** 画面に表示しない印刷用 iframe の ID */
+const PRINT_FRAME_ID = 'pallet-print-frame';
+
+/**
+ * 画面に表示しない iframe に帳票を書き出し、そのまま印刷ダイアログを開く。
+ *
+ * 別ウィンドウを開くと、印刷プレビューの背面に用紙（帳票）が表示されてしまい、
+ * 余分なページがあるように見えるため、PC では非表示の iframe で印刷する。
+ */
+const printInHiddenFrame = (html: string): boolean => {
+    document.getElementById(PRINT_FRAME_ID)?.remove();
+
+    const frame = document.createElement('iframe');
+    frame.id = PRINT_FRAME_ID;
+    frame.setAttribute('aria-hidden', 'true');
+    frame.setAttribute('tabindex', '-1');
+    // 画面には表示せず、印刷処理のみに使用する
+    frame.style.cssText = 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
+    document.body.appendChild(frame);
+
+    const frameWindow = frame.contentWindow;
+    const frameDocument = frameWindow?.document;
+    if (!frameWindow || !frameDocument) {
+        frame.remove();
+        return false;
+    }
+
+    const cleanup = () => {
+        window.setTimeout(() => frame.remove(), 1000);
+    };
+    frameWindow.addEventListener('afterprint', cleanup);
+
+    frameDocument.open();
+    frameDocument.write(html);
+    frameDocument.close();
+
+    // フォントと SVG の描画が終わってから印刷ダイアログを開く
+    const triggerPrint = () => {
+        try {
+            frameWindow.focus();
+            frameWindow.print();
+        } catch (error) {
+            console.error(error);
+            frame.remove();
+        }
+    };
+    window.setTimeout(triggerPrint, 200);
+    return true;
+};
+
 /**
  * パレット番号表を印刷する。
- * PC では別ウィンドウに書き出してから印刷ダイアログを開くため、画面のレイアウトの影響を受けない。
+ * PC では画面に表示しない iframe に書き出してから印刷ダイアログを開くため、
+ * 印刷プレビュー以外に用紙が表示されることはない。
  * モバイル端末では別ウィンドウの print() が動作しないため、現在の画面のまま印刷する。
  */
 export const printPalletNumberSheet = (
@@ -577,32 +629,28 @@ export const printPalletNumberSheet = (
         return false;
     }
 
-    // 呼び出し側で開いたウィンドウがあれば再利用する
+    // 呼び出し側で開いたウィンドウがある場合のみ、そのウィンドウを再利用する
     // （更新などの非同期処理を待ってから開くとポップアップがブロックされるため）
-    const printWindow =
-        targetWindow && !targetWindow.closed
-            ? targetWindow
-            : window.open('', '_blank', 'width=900,height=1200');
-    if (!printWindow) {
-        // ポップアップがブロックされた場合
-        return false;
+    if (targetWindow && !targetWindow.closed) {
+        targetWindow.document.open();
+        targetWindow.document.write(html);
+        targetWindow.document.close();
+
+        // フォントと SVG の描画が終わってから印刷ダイアログを開く
+        const triggerWindowPrint = () => {
+            targetWindow.focus();
+            targetWindow.print();
+        };
+        if (targetWindow.document.readyState === 'complete') {
+            window.setTimeout(triggerWindowPrint, 200);
+        } else {
+            targetWindow.addEventListener('load', () => window.setTimeout(triggerWindowPrint, 200), { once: true });
+        }
+        return true;
     }
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-
-    // フォントと SVG の描画が終わってから印刷ダイアログを開く
-    const triggerPrint = () => {
-        printWindow.focus();
-        printWindow.print();
-    };
-    if (printWindow.document.readyState === 'complete') {
-        window.setTimeout(triggerPrint, 200);
-    } else {
-        printWindow.addEventListener('load', () => window.setTimeout(triggerPrint, 200), { once: true });
-    }
-    return true;
+    // 呼び出し側がウィンドウを開いていない場合は、画面に表示されない iframe で印刷する
+    return printInHiddenFrame(html);
 };
 
 /**
