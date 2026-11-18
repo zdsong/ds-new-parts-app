@@ -43,7 +43,9 @@ export const spSx = {
         minWidth: 0,
         color: 'black',
         fontSize: 'clamp(16px, calc(14.6px + 0.37vw), 18px)',
-        fontWeight: 600,
+        // 画面上部の副題（画面名）は太字にしない。
+        // 太字はヘッダー（AppBar）側の見出しにだけ使い、階層を分かりやすくする。
+        fontWeight: 400,
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap' as const,
