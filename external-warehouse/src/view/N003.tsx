@@ -10,6 +10,7 @@ import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../componte
 import { useNavigate, useParams } from 'react-router';
 import { authProvider } from '../adapters/authProvider';
 import { font } from '../styles/commonSX';
+import { HOME_ROUTE } from '../utils/appRoutes';
 
 
 const N003 = () => {
@@ -26,7 +27,7 @@ const N003 = () => {
         const tempToken = sessionStorage.getItem('externalWarehouseToken')
 
         if(tempToken){
-            navigate('/S050')
+            navigate(HOME_ROUTE)
         }
     }, []);
 
@@ -36,7 +37,7 @@ const N003 = () => {
            const response = await authProvider.login(values)
             if(type === 'login'){
                 await authProvider.checkAuth(response.data)
-                navigateS050()
+                navigateHome()
             }else if(type === 'reset-password'){
                 navigateN004()
             }
@@ -61,8 +62,8 @@ const N003 = () => {
         setLoading(false)
     };
 
-    const navigateS050 = () =>{
-        navigate('/S050')
+    const navigateHome = () =>{
+        navigate(HOME_ROUTE)
     }
 
     const navigateN004 = () =>{

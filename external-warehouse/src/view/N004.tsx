@@ -10,6 +10,7 @@ import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../componte
 import { authProvider } from '../adapters/authProvider';
 import { useNavigate } from 'react-router';
 import useApiRequest from '../adapters/apiUtil';
+import { HOME_ROUTE } from '../utils/appRoutes';
 
 const PasswordRuleTip = styled(Box)(({ }) => ({
     position: 'relative',
@@ -54,14 +55,14 @@ const N004 = () => {
                    notify(e.message, { type: 'error' })
                }
            }
-            navigateS050()
+            navigateHome()
         }
         setLoading(false)
 
     };
 
-    const navigateS050 = () =>{
-        navigate('/S050')
+    const navigateHome = () =>{
+        navigate(HOME_ROUTE)
     }
 
     return (

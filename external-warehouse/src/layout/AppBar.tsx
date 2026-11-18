@@ -13,6 +13,7 @@ import ThemeToggle from './ThemeToggel';
 import LoginUserInfoBar from './LoginUserInfo';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
 import { useIsMobile } from '../utils/deviceUtil';
+import { HOME_ROUTE } from '../utils/appRoutes';
 
 import SIcon from '../assets/icons/S.png';
 import DIcon from '../assets/icons/D.png';
@@ -315,8 +316,9 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
   const mobileMenuTitle = menuTitles.parent[routeName] || currentMenuTitle;
   const appTitle = isMobile && mobileMenuTitle ? mobileMenuTitle : APP_TITLE;
 
-  const navigateS050 = () =>{
-    navigate('/S050')
+  // システム名（ロゴ）をクリックしたときは初期表示画面へ戻る
+  const navigateHome = () =>{
+    navigate(HOME_ROUTE)
   }
 
   const icon = themeIcon === 'S' ? SIcon : themeIcon === 'D' ? DIcon : customIcon
@@ -343,7 +345,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
               variant='h6'
               component="h3"
               gutterBottom
-              onClick={()=> navigateS050()}
+              onClick={()=> navigateHome()}
               sx={{
                 color: 'black',
                 cursor: 'pointer',

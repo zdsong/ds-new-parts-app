@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 import {authProvider} from '../adapters/authProvider'
 import { font } from '../styles/commonSX'
+import { HOME_ROUTE } from '../utils/appRoutes'
 
 interface LoginPageDatas {
 
@@ -26,7 +27,7 @@ const N001: React.FC<LoginPageDatas> = () => {
         const tempToken = sessionStorage.getItem('externalWarehouseToken')
 
         if(tempToken){
-            navigate('/S050')
+            navigate(HOME_ROUTE)
         }
     }, []);
 
@@ -57,7 +58,7 @@ const N001: React.FC<LoginPageDatas> = () => {
         setLoading(true)
         try{
             await authProvider.directLogin(values)
-            navigate('/S050')
+            navigate(HOME_ROUTE)
         }catch(e){
             if(e instanceof Error){
                 notify(e.message, { type: 'error' })

@@ -11,6 +11,7 @@ import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../componte
 import { useNavigate } from 'react-router-dom';
 import { authProvider } from '../adapters/authProvider';
 import { font } from '../styles/commonSX';
+import { HOME_ROUTE } from '../utils/appRoutes';
 
 
 const N002 = () => {
@@ -25,7 +26,7 @@ const N002 = () => {
         const tempToken = sessionStorage.getItem('externalWarehouseToken')
 
         if(tempToken){
-            navigate('/S050')
+            navigate(HOME_ROUTE)
         }
     }, []);
 

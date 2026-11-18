@@ -30,6 +30,7 @@ import N008 from './view/N008';
 import N010 from './view/N010';
 
 import AppVersionPage from './view/AppVersionPage';
+import { HOME_ROUTE } from './utils/appRoutes';
 import C005 from './view/C005';
 import C006 from './view/C006';
 import C013 from './view/C013';
@@ -68,6 +69,7 @@ import P406 from './view/P406';
 import P601 from './view/P601';
 import P602 from './view/P602';
 import P603 from './view/P603';
+import P001 from './view/P001';
 
 
 const i18nProvider = polyglotI18nProvider(() => japaneseMessages, 'jp');
@@ -143,7 +145,9 @@ const App = () => {
             </Route>
 
             <Route element={<RequireAuth />}>
-              <Route path="/" element={<Navigate to="/S050" replace />} />
+              {/* ログイン後の初期表示（ホーム） */}
+              <Route path="/" element={<Navigate to={HOME_ROUTE} replace />} />
+              <Route path="/P001" element={<P001 />} />
 
               <Route path="/C013">
                 <Route index element={<C013 />} />
