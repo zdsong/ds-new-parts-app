@@ -183,7 +183,7 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                                                 )
                                             }
                                         />
-                                        <span style={spSx.fieldValue}>{`/ ${line.storageQty}`}</span>
+                                        <span style={{ ...spSx.fieldValue, paddingLeft: 0 }}>{`/ ${line.storageQty}`}</span>
                                     </div>
                                 </SimpleForm>
                             </div>

@@ -14,6 +14,12 @@
  */
 export const SP_INPUT_HEIGHT = '25.56px';
 
+/**
+ * 上下配置の入力枠・カードの値に付ける字下げ。
+ * 設計書では項目名を左端に置き、その下の値と入力枠だけ一段下げる。
+ */
+export const SP_VALUE_INDENT = '12px';
+
 export const spSx = {
     /** 画面全体（タイトルバー＋内容を縦に積む） */
     page: {
@@ -148,6 +154,7 @@ export const spSx = {
         fontSize: '14px',
         lineHeight: 1.5,
         wordBreak: 'break-all' as const,
+        paddingLeft: SP_VALUE_INDENT,
     },
     /** 明細カード（追加した品目など） */
     itemCard: {
@@ -242,6 +249,7 @@ export const spSx = {
         color: '#212121',
         fontSize: '14px',
         wordBreak: 'break-all' as const,
+        paddingLeft: SP_VALUE_INDENT,
     },
     /**
      * 明細カード内のラベル（幅を固定する版）
@@ -400,6 +408,7 @@ export const spSx = {
         textDecoration: 'underline',
         cursor: 'pointer',
         wordBreak: 'break-all' as const,
+        paddingLeft: SP_VALUE_INDENT,
     },
     /** カード内の小見出し付きブロック（品目一覧） */
     subSection: {
@@ -445,6 +454,7 @@ export const spSx = {
         fontSize: '13px',
         lineHeight: 1.5,
         wordBreak: 'break-all' as const,
+        paddingLeft: SP_VALUE_INDENT,
     },
     /** 日付範囲（開始 ～ 終了）の行 */
     dateRangeRow: {
@@ -493,6 +503,7 @@ export const spSx = {
         flex: 1,
         minWidth: 0,
         maxWidth: '220px',
+        marginLeft: SP_VALUE_INDENT,
     },
     stepperButton: {
         width: '34px',
@@ -567,6 +578,13 @@ export const spFormInputSx = {
         color: '#5f5f5f',
         marginLeft: 0,
         marginBottom: '2px',
+    },
+    // ラベルは左端のまま、入力枠だけ設計書どおり一段下げる
+    input: {
+        marginLeft: SP_VALUE_INDENT,
+        width: `calc(100% - ${SP_VALUE_INDENT})`,
+        maxWidth: `calc(100% - ${SP_VALUE_INDENT})`,
+        boxSizing: 'border-box' as const,
     },
 };
 
