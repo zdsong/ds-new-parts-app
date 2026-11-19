@@ -16,7 +16,7 @@ import CustomModal from '../compontent/CustomModal';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
-import { buildPalletLabels } from '../utils/palletData';
+import { buildPalletLabels, hasNonPositiveQuantity, QUANTITY_MUST_BE_POSITIVE } from '../utils/palletData';
 
 /**
  * パレット情報詳細画面（P305）
@@ -432,6 +432,10 @@ const P305: React.FC = () => {
         }
         if (!locationCd) {
             notify('ロケ番を選択してください。', { type: 'warning' });
+            return;
+        }
+        if (hasNonPositiveQuantity(details)) {
+            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
             return;
         }
 

@@ -177,6 +177,18 @@ export const createDetailFromItem = (item: ItemMaster): PalletDetailItem => {
     };
 };
 
+/**
+ * 数量が 0 以下、または数値でない明細があるか
+ *
+ * @param details 積載明細
+ * @return 不正な数量がある場合は true
+ */
+export const hasNonPositiveQuantity = (details: { quantity: number }[]): boolean =>
+    details.some((detail) => !Number.isFinite(Number(detail.quantity)) || Number(detail.quantity) <= 0);
+
+/** 数量が 0 以下のときに画面へ出すメッセージ */
+export const QUANTITY_MUST_BE_POSITIVE = '数量は0より大きい値を入力してください。';
+
 /** 画面の積載明細を API の形式に変換する */
 export const toApiDetail = (detail: PalletDetailItem) => ({
     itemCode: detail.itemCode,
