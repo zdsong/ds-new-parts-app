@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -44,6 +44,14 @@ interface Sp305State {
     pallet?: PalletFormData;
 }
 
+/** 文字リンクと同じ見た目のボタン（Chrome / Safari の既定ボタン枠を出さない） */
+const textButton: React.CSSProperties = {
+    border: 'none',
+    background: 'none',
+    padding: 0,
+    font: 'inherit',
+};
+
 /** カード内の縦積みレイアウト（SP302／SP303 と同じ並びに揃える） */
 const formColumn: React.CSSProperties = {
     display: 'flex',
@@ -76,6 +84,11 @@ const SP305: React.FC = () => {
     const [pallet, setPallet] = useState<PalletFormData>(state.pallet || EMPTY_PALLET);
     // 積載明細（数量・保管区分・使用可否を編集できる）
     const [details, setDetails] = useState<PalletDetailItem[]>(state.details || []);
+    // 更新ボタンはフォームの submit から呼ばれるため、描画時点の明細ではなく最新の明細を送る
+    const detailsRef = useRef<PalletDetailItem[]>(details);
+    detailsRef.current = details;
+    // 利用者が明細を編集したあとに、取得中の応答で明細を戻さない
+    const detailsEditedRef = useRef(false);
     // フォームを初期値で再描画するための世代番号
     const [formKey, setFormKey] = useState(0);
     // 楽観ロック用のバージョン
@@ -178,6 +191,7 @@ const SP305: React.FC = () => {
             });
             return;
         }
+        let cancelled = false;
         const fetchPallet = async () => {
             try {
                 const result = await request(
@@ -188,18 +202,25 @@ const SP305: React.FC = () => {
                     false,
                     false
                 );
+                if (cancelled) return;
                 const apiPallet: ApiPallet | null = result?.data || null;
                 if (!apiPallet) {
                     notify('パレット情報を取得できませんでした。', { type: 'error' });
                     return;
                 }
-                // 品目検索から戻った場合は編集途中の明細を優先する
-                applyApiPallet(apiPallet, (state.details?.length ?? 0) > 0);
+                // 品目検索から戻った明細、または画面で削除・変更した明細をサーバの古い応答で上書きしない
+                applyApiPallet(
+                    apiPallet,
+                    (state.details?.length ?? 0) > 0 || detailsEditedRef.current
+                );
             } catch (error) {
                 console.error(error);
             }
         };
         fetchPallet();
+        return () => {
+            cancelled = true;
+        };
     }, [palletNo]);
 
     /** 倉庫コードから倉庫名を取得する */
@@ -228,18 +249,28 @@ const SP305: React.FC = () => {
         });
     };
 
-    /** 積載明細を削除する */
+    /** 積載明細を画面から外す。更新時にこの結果を保存する */
     const handleRemove = (id: string) => {
         if (printed) return;
-        setDetails((prev) => prev.filter((detail) => detail.id !== id));
+        detailsEditedRef.current = true;
+        setDetails((prev) => {
+            const next = prev.filter((detail) => detail.id !== id);
+            detailsRef.current = next;
+            return next;
+        });
     };
 
     /** 数量を更新する（± の増減・直接入力のどちらもここに集約する） */
     const handleQuantityChange = (id: string, value: number) => {
         if (printed) return;
-        setDetails((prev) =>
-            prev.map((detail) => (detail.id === id ? { ...detail, quantity: value } : detail))
-        );
+        detailsEditedRef.current = true;
+        setDetails((prev) => {
+            const next = prev.map((detail) =>
+                detail.id === id ? { ...detail, quantity: value } : detail
+            );
+            detailsRef.current = next;
+            return next;
+        });
     };
 
     /** 保管区分・使用可否を更新する */
@@ -249,10 +280,15 @@ const SP305: React.FC = () => {
         value: unknown
     ) => {
         if (printed) return;
+        detailsEditedRef.current = true;
         const next = typeof value === 'string' ? value : String(value ?? '');
-        setDetails((prev) =>
-            prev.map((detail) => (detail.id === id ? { ...detail, [field]: next } : detail))
-        );
+        setDetails((prev) => {
+            const nextDetails = prev.map((detail) =>
+                detail.id === id ? { ...detail, [field]: next } : detail
+            );
+            detailsRef.current = nextDetails;
+            return nextDetails;
+        });
     };
 
     /**
@@ -291,8 +327,9 @@ const SP305: React.FC = () => {
             notify('保管エリア（ロケ番）は必須入力項目です。', { type: 'warning' });
             return null;
         }
-        // 更新と印刷時の保存は、数量が 1 以上の明細だけを受け付ける
-        if (hasNonPositiveQuantity(details)) {
+        // 削除した明細を含めず、いま画面にある明細だけを保存する
+        const currentDetails = detailsRef.current;
+        if (hasNonPositiveQuantity(currentDetails)) {
             notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
             return null;
         }
@@ -310,7 +347,7 @@ const SP305: React.FC = () => {
                     storagePeriod,
                     inboundDate,
                     memo1: values?.remark || pallet.remark || '',
-                    details: details.map(toApiDetail),
+                    details: currentDetails.map(toApiDetail),
                 },
                 {},
                 false,
@@ -328,6 +365,7 @@ const SP305: React.FC = () => {
             // 更新後のバージョン・日時を取得し直す
             const refreshed = await request('get', `api/pallet/${palletNo}`, {}, {}, false, false);
             const apiPallet: ApiPallet | null = refreshed?.data || null;
+            detailsEditedRef.current = false;
             applyApiPallet(apiPallet);
             return apiPallet;
         } catch (error) {
@@ -394,7 +432,7 @@ const SP305: React.FC = () => {
             return;
         }
         // 未印刷の印刷は保存を伴うため、数量が 0 以下のときは印刷も保存もしない
-        if (!printed && hasNonPositiveQuantity(details)) {
+        if (!printed && hasNonPositiveQuantity(detailsRef.current)) {
             notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
             return;
         }
@@ -404,7 +442,7 @@ const SP305: React.FC = () => {
                 {
                     ...pallet,
                     storageLocationName: getWarehouseName(pallet.storageLocation),
-                    details,
+                    details: detailsRef.current,
                 },
             ],
             undefined,
@@ -588,12 +626,17 @@ const SP305: React.FC = () => {
                                 <div style={{ ...formColumn, gap: '6px' }}>
                                     <div style={spSx.itemHeader}>
                                         <span style={spSx.itemTitle}>{`No.${index + 1}`}</span>
-                                        <span
-                                            style={printed ? spSx.linkDisabled : spSx.linkDanger}
-                                            onClick={printed ? undefined : () => handleRemove(detail.id)}
+                                        <button
+                                            type="button"
+                                            style={{
+                                                ...textButton,
+                                                ...(printed ? spSx.linkDisabled : spSx.linkDanger),
+                                            }}
+                                            disabled={printed}
+                                            onClick={() => handleRemove(detail.id)}
                                         >
                                             削除
-                                        </span>
+                                        </button>
                                     </div>
                                     <div style={spSx.row}>
                                         <span style={spSx.rowLabelFixed}>品目コード</span>
