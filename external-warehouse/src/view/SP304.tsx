@@ -189,7 +189,7 @@ const SP304: React.FC = () => {
             <Box sx={spSx.card}>
                 <SimpleForm
                     key={formKey}
-                    sx={{ width: '100%', padding: '0' }}
+                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                     onSubmit={handleSearch}
                     toolbar={false}
                     defaultValues={INITIAL_CONDITION}
@@ -288,23 +288,27 @@ const SP304: React.FC = () => {
                                 </span>
                             </div>
 
-                            <div style={spSx.row}>
-                                <span style={spSx.rowLabel}>保管場所</span>
-                                <span style={spSx.rowValue}>
+                            <div style={spSx.field}>
+                                <span style={spSx.fieldLabel}>保管場所</span>
+                                <span style={spSx.fieldValue}>
                                     {`${pallet.storageLocationName || '－'} / ${pallet.locationNo}`}
                                 </span>
                             </div>
 
-                            {/* 品目詳細（積載明細）: コードと品目名を 2 行に分けて読みやすくする */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {/* 積載明細は品目コード・品目名を上下に積む */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {pallet.details.map((detail) => (
-                                    <div key={detail.id} style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontSize: '13px', color: '#212121', wordBreak: 'break-all' }}>
-                                            {detail.itemCode}
-                                        </span>
-                                        <span style={{ fontSize: '12px', color: '#5f5f5f' }}>
-                                            {`${detail.itemName}（${detail.quantity}）`}
-                                        </span>
+                                    <div key={detail.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <div style={spSx.field}>
+                                            <span style={spSx.fieldLabel}>品目コード</span>
+                                            <span style={spSx.fieldValue}>{detail.itemCode}</span>
+                                        </div>
+                                        <div style={spSx.field}>
+                                            <span style={spSx.fieldLabel}>品目名</span>
+                                            <span style={spSx.fieldValue}>
+                                                {`${detail.itemName}（${detail.quantity}）`}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

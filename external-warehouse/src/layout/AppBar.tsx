@@ -99,6 +99,7 @@ const AVAILABLE_ROUTES = [
   'SP403',
   'SP404',
   'SP405',
+  'SP406',
   'P601',
   'appVersion',
 ];

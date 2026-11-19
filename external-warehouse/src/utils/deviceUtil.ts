@@ -33,6 +33,34 @@ export const isMobileViewport = (): boolean => {
 export const isPcViewport = (): boolean => !isMobileViewport();
 
 /**
+ * 印刷は「今の画面でダイアログを出す」方式にすべき端末か。
+ *
+ * 画面幅だけでは足りない。スマホを横にすると幅が 600px を超え、
+ * PC と同じ非表示 iframe で print() される。
+ * その経路は setTimeout 後に印刷するため、クリックの操作が途切れ、
+ * Android などではダイアログを出さずに既定のプリンタへ直接送ることがある。
+ * タッチ操作でホバーできない端末は、向きに関係なくダイアログ方式にする。
+ */
+export const prefersHandheldPrint = (): boolean => {
+  if (isMobileViewport()) return true;
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+};
+
+/**
+ * iOS かどうか（印刷 API の出し分け専用）。
+ * iOS は表示中の画面の print() でシステムプレビューが出る。
+ * Android は幅 0 の iframe を遅らせて print() すると、プレビューを出さず直接印刷する。
+ */
+export const isIosDevice = (): boolean => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+  const nav = navigator as Navigator & { platform?: string; maxTouchPoints?: number };
+  return nav.platform === 'MacIntel' && (nav.maxTouchPoints || 0) > 1;
+};
+
+/**
  * 画面幅の変化（ウィンドウのリサイズ・端末の回転）に追従するモバイル判定フック
  * コンポーネント内で使う場合はこちらを使う
  *

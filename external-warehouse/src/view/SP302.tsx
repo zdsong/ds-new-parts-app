@@ -198,7 +198,7 @@ const SP302: React.FC = () => {
             <Box sx={spSx.card}>
                 <SimpleForm
                     key={formKey}
-                    sx={{ width: '100%', padding: '0' }}
+                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                     onSubmit={handleSearch}
                     toolbar={false}
                     defaultValues={{
@@ -248,13 +248,13 @@ const SP302: React.FC = () => {
                                                     削除
                                                 </span>
                                             </div>
-                                            <div style={spSx.row}>
-                                                <span style={spSx.rowLabelFixed}>品目名</span>
-                                                <span style={spSx.rowValue}>{detail.itemName}</span>
+                                            <div style={spSx.field}>
+                                                <span style={spSx.fieldLabel}>品目名</span>
+                                                <span style={spSx.fieldValue}>{detail.itemName}</span>
                                             </div>
-                                            <div style={spSx.row}>
-                                                <span style={spSx.rowLabelFixed}>数量</span>
-                                                <span style={spSx.rowValue}>{detail.quantity}</span>
+                                            <div style={spSx.field}>
+                                                <span style={spSx.fieldLabel}>数量</span>
+                                                <span style={spSx.fieldValue}>{detail.quantity}</span>
                                             </div>
                                         </div>
                                     ))
@@ -320,7 +320,7 @@ const SP302: React.FC = () => {
                                 {/* 数量は FormInput を使うため、カードごとにフォームを持つ */}
                                 <SimpleForm
                                     id={`sp302-item-${item.itemCode}`}
-                                    sx={{ width: '100%', padding: '0' }}
+                                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                                     onSubmit={() => {}}
                                     toolbar={false}
                                     defaultValues={{
@@ -328,23 +328,25 @@ const SP302: React.FC = () => {
                                     }}
                                 >
                                     <div style={{ ...formColumn, gap: '6px' }}>
-                                        <div style={spSx.row}>
-                                            <span style={spSx.rowLabelFixed}>品目コード</span>
-                                            <span style={spSx.rowValue}>{item.itemCode}</span>
+                                        <div style={spSx.field}>
+                                            <span style={spSx.fieldLabel}>品目コード</span>
+                                            <span style={spSx.fieldValue}>{item.itemCode}</span>
                                         </div>
-                                        <div style={spSx.row}>
-                                            <span style={spSx.rowLabelFixed}>品目名</span>
-                                            <span style={spSx.rowValue}>{item.itemName}</span>
+                                        <div style={spSx.field}>
+                                            <span style={spSx.fieldLabel}>品目名</span>
+                                            <span style={spSx.fieldValue}>{item.itemName}</span>
                                         </div>
-                                        {/* 幅が狭いときは「追加」を次の行へ折り返す */}
-                                        <div
-                                            style={{
-                                                ...spSx.row,
-                                                alignItems: 'center',
-                                                flexWrap: 'wrap',
-                                            }}
-                                        >
-                                            <span style={spSx.rowLabelFixed}>数量</span>
+                                        {/* ラベルは上、数量入力と「追加」は下に並べる */}
+                                        <div style={spSx.field}>
+                                            <span style={spSx.fieldLabel}>数量</span>
+                                            <div
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    flexWrap: 'wrap',
+                                                }}
+                                            >
                                             {/* 数量は SP305 の明細カードと同じ入力枠（－ 入力 ＋） */}
                                             <SpQuantityInput
                                                 value={getQuantity(item.itemCode)}
@@ -375,6 +377,7 @@ const SP302: React.FC = () => {
                                                     追加
                                                 </button>
                                             )}
+                                            </div>
                                         </div>
                                     </div>
                                 </SimpleForm>

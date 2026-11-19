@@ -273,7 +273,7 @@ const SP303: React.FC = () => {
                 <SimpleForm
                     key={formKey}
                     id="sp303-form"
-                    sx={{ width: '100%', padding: '0' }}
+                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                     onSubmit={handleIssue}
                     toolbar={false}
                     defaultValues={pallet}
@@ -350,7 +350,7 @@ const SP303: React.FC = () => {
                             {/* 数量は FormInput を使うため、カードごとにフォームを持つ */}
                             <SimpleForm
                                 id={`sp303-item-${detail.id}`}
-                                sx={{ width: '100%', padding: '0' }}
+                                sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                                 onSubmit={() => {}}
                                 toolbar={false}
                                 defaultValues={detail}
@@ -365,17 +365,17 @@ const SP303: React.FC = () => {
                                             削除
                                         </span>
                                     </div>
-                                    <div style={spSx.row}>
-                                        <span style={spSx.rowLabelFixed}>品目コード</span>
-                                        <span style={spSx.rowValue}>{detail.itemCode}</span>
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>品目コード</span>
+                                        <span style={spSx.fieldValue}>{detail.itemCode}</span>
                                     </div>
-                                    <div style={spSx.row}>
-                                        <span style={spSx.rowLabelFixed}>品目名</span>
-                                        <span style={spSx.rowValue}>{detail.itemName}</span>
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>品目名</span>
+                                        <span style={spSx.fieldValue}>{detail.itemName}</span>
                                     </div>
-                                    {/* 数量は SP305 の明細カードと同じ入力枠（－ 入力 ＋）にする */}
-                                    <div style={{ ...spSx.row, alignItems: 'center' }}>
-                                        <span style={spSx.rowLabelFixed}>数量</span>
+                                    {/* 数量はラベルを上、増減入力を下に置く */}
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>数量</span>
                                         <SpQuantityInput
                                             value={detail.quantity}
                                             onChange={(value) =>

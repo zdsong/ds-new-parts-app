@@ -17,7 +17,8 @@ import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 /**
  * 移動依頼一覧画面（P403）
  *
- * 画面イメージ：②移動依頼管理 2. 移動依頼を確認する（生産管理）
+ * 検索条件は③移動管理 3. 移動登録情報を確認する に合わせる。
+ * 移動状況の選択肢だけは、この画面の 3 区分（移動依頼／移動予定／移動完了）のままにする。
  *
  * 生産管理の担当者が、登録済みの移動依頼（出庫・入庫）を検索して内容を確認する画面。
  * 上半分が検索条件、下半分が検索結果の一覧表。
@@ -44,17 +45,33 @@ interface MoveRequestRow {
     requester: string;
     /** 明細の品目（品目コード・品目名の検索用。一覧には表示しない） */
     items: { itemCode: string; itemName: string }[];
+    /** 移動番号（検索専用。一覧には出さない） */
+    moveNo: string;
+    /** 移動元（1:行田工場 / 2:外部倉庫。検索専用） */
+    sourceWarehouse: string;
+    /** 移動登録日（yyyy/mm/dd。検索専用） */
+    registeredDate: string;
+    /** 移動完了日（yyyy/mm/dd。未完了は空。検索専用） */
+    completedDate: string;
+    /** 移動登録者（検索専用） */
+    registrar: string;
+    /** 移動完了者（検索専用。未完了は空） */
+    completer: string;
 }
 
-/** 検索条件の型 */
+/** 検索条件の型（③移動管理 3. の検索画面） */
 interface SearchCondition {
-    requestNo: string;
-    destWarehouse: string;
+    moveNo: string;
     itemCode: string;
     itemName: string;
-    requester: string;
-    requestDateStart: string;
-    requestDateEnd: string;
+    sourceWarehouse: string;
+    destWarehouse: string;
+    registeredDateStart: string;
+    registeredDateEnd: string;
+    completedDateStart: string;
+    completedDateEnd: string;
+    registrar: string;
+    completer: string;
     statuses: string[];
 }
 
@@ -84,21 +101,38 @@ const PAGE_SIZE_CHOICES = [10, 20, 50];
 
 /** 検索条件の初期値 */
 const INITIAL_CONDITION: SearchCondition = {
-    requestNo: '',
-    destWarehouse: '',
+    moveNo: '',
     itemCode: '',
     itemName: '',
-    requester: '',
-    requestDateStart: '',
-    requestDateEnd: '',
+    sourceWarehouse: '',
+    destWarehouse: '',
+    registeredDateStart: '',
+    registeredDateEnd: '',
+    completedDateStart: '',
+    completedDateEnd: '',
+    registrar: '',
+    completer: '',
     statuses: [],
 };
+
+/** 一覧には出さない検索用の項目を仮データへ足す */
+const withSearchFields = (
+    row: Omit<MoveRequestRow, 'moveNo' | 'sourceWarehouse' | 'registeredDate' | 'completedDate' | 'registrar' | 'completer'>
+): MoveRequestRow => ({
+    ...row,
+    moveNo: `260001${row.id.padStart(3, '0')}`,
+    sourceWarehouse: row.destWarehouse === '1' ? '2' : '1',
+    registeredDate: row.requestDate.slice(0, 10),
+    completedDate: row.status === '3' ? row.desiredDate : '',
+    registrar: row.requester,
+    completer: row.status === '3' ? '佐藤 太郎（外部倉庫）' : '',
+});
 
 /**
  * 一覧の仮データ（設計書の画面イメージに合わせた内容＋ページング確認用の行）
  * 出庫（O-）は移動先が外部倉庫、入庫（I-）は移動先が行田工場になる。
  */
-const MOVE_REQUESTS: MoveRequestRow[] = [
+const MOVE_REQUESTS: MoveRequestRow[] = ([
     {
         id: '1',
         requestNo: 'I-260805-002',
@@ -222,7 +256,7 @@ const MOVE_REQUESTS: MoveRequestRow[] = [
         requester: '渡辺 由紀（生産管理）',
         items: [{ itemCode: 'V15FSM-110-00', itemName: '本体ASSY A' }],
     },
-];
+] as Omit<MoveRequestRow, 'moveNo' | 'sourceWarehouse' | 'registeredDate' | 'completedDate' | 'registrar' | 'completer'>[]).map(withSearchFields);
 
 /** 選択値を取り出す（選択コンポーネントは選択肢オブジェクトを返すため key に正規化する） */
 const normalizeChoiceValue = (value: any): string => {
@@ -232,6 +266,16 @@ const normalizeChoiceValue = (value: any): string => {
 
 /** 数字だけを取り出す（日付は「2026/10/01」と「2026-10-01」が混在するため比較用に使う） */
 const digitsOnly = (value: string): string => (value || '').replace(/[^0-9]/g, '');
+
+/** 日付範囲に入っているか。未入力の日付は、範囲が指定されていれば対象外にする */
+const matchesDateRange = (value: string, start: string, end: string): boolean => {
+    if (!start && !end) return true;
+    const date = digitsOnly(value);
+    if (!date) return false;
+    if (start && date < start) return false;
+    if (end && date > end) return false;
+    return true;
+};
 
 const P403: React.FC = () => {
     const notify = useNotify();
@@ -246,30 +290,41 @@ const P403: React.FC = () => {
     // 現在のページと 1 ページあたりの表示件数
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
-    // 移動依頼日（範囲）。日付範囲コンポーネントはフォーム値に載らないため個別に保持する。
-    const [dateRange, setDateRange] = useState<{ startDate: string; endDate: string }>({
+    // 日付範囲はフォーム値に載らないため個別に保持する
+    const [registeredRange, setRegisteredRange] = useState<{ startDate: string; endDate: string }>({
         startDate: '',
         endDate: '',
     });
-    const dateRangeRef = useRef<any>(null);
+    const [completedRange, setCompletedRange] = useState<{ startDate: string; endDate: string }>({
+        startDate: '',
+        endDate: '',
+    });
+    const registeredDateRef = useRef<any>(null);
+    const completedDateRef = useRef<any>(null);
 
     /** 検索条件で絞り込んだ一覧 */
     const filteredRequests = useMemo(() => {
-        const requestNo = (condition.requestNo || '').trim();
+        const moveNo = (condition.moveNo || '').trim();
         const itemCode = (condition.itemCode || '').trim();
         const itemName = (condition.itemName || '').trim();
-        const requester = (condition.requester || '').trim();
-        const startDate = digitsOnly(condition.requestDateStart);
-        const endDate = digitsOnly(condition.requestDateEnd);
+        const registrar = (condition.registrar || '').trim();
+        const completer = (condition.completer || '').trim();
+        const registeredStart = digitsOnly(condition.registeredDateStart);
+        const registeredEnd = digitsOnly(condition.registeredDateEnd);
+        const completedStart = digitsOnly(condition.completedDateStart);
+        const completedEnd = digitsOnly(condition.completedDateEnd);
 
         return MOVE_REQUESTS.filter((request) => {
-            if (requestNo && !request.requestNo.includes(requestNo)) {
+            if (moveNo && !request.moveNo.includes(moveNo)) {
                 return false;
             }
             if (
                 condition.statuses.length > 0 &&
                 !condition.statuses.includes(request.status)
             ) {
+                return false;
+            }
+            if (condition.sourceWarehouse && request.sourceWarehouse !== condition.sourceWarehouse) {
                 return false;
             }
             if (condition.destWarehouse && request.destWarehouse !== condition.destWarehouse) {
@@ -287,16 +342,16 @@ const P403: React.FC = () => {
             ) {
                 return false;
             }
-            if (requester && !request.requester.includes(requester)) {
+            if (registrar && !request.registrar.includes(registrar)) {
                 return false;
             }
-
-            // 移動依頼日は日付部分だけで範囲比較する
-            const requestDate = digitsOnly(request.requestDate.slice(0, 10));
-            if (startDate && requestDate < startDate) {
+            if (completer && !request.completer.includes(completer)) {
                 return false;
             }
-            if (endDate && requestDate > endDate) {
+            if (!matchesDateRange(request.registeredDate, registeredStart, registeredEnd)) {
+                return false;
+            }
+            if (!matchesDateRange(request.completedDate, completedStart, completedEnd)) {
                 return false;
             }
             return true;
@@ -325,24 +380,40 @@ const P403: React.FC = () => {
             ? values.statuses.map((value: any) => normalizeChoiceValue(value))
             : [];
 
-        // 移動依頼日は開始・終了の前後関係をチェックする
-        if (dateRange.startDate && dateRange.endDate) {
-            if (digitsOnly(dateRange.startDate) > digitsOnly(dateRange.endDate)) {
-                notify('移動依頼日の範囲が正しくありません。開始日と終了日を確認してください。', {
-                    type: 'warning',
-                });
-                return;
-            }
+        // 日付は開始・終了の前後関係をチェックする
+        if (
+            registeredRange.startDate &&
+            registeredRange.endDate &&
+            digitsOnly(registeredRange.startDate) > digitsOnly(registeredRange.endDate)
+        ) {
+            notify('移動登録日の範囲が正しくありません。開始日と終了日を確認してください。', {
+                type: 'warning',
+            });
+            return;
+        }
+        if (
+            completedRange.startDate &&
+            completedRange.endDate &&
+            digitsOnly(completedRange.startDate) > digitsOnly(completedRange.endDate)
+        ) {
+            notify('移動完了日の範囲が正しくありません。開始日と終了日を確認してください。', {
+                type: 'warning',
+            });
+            return;
         }
 
         setCondition({
-            requestNo: values?.requestNo || '',
+            moveNo: values?.moveNo || '',
+            sourceWarehouse: normalizeChoiceValue(values?.sourceWarehouse),
             destWarehouse: normalizeChoiceValue(values?.destWarehouse),
             itemCode: values?.itemCode || '',
             itemName: values?.itemName || '',
-            requester: values?.requester || '',
-            requestDateStart: normalizeChoiceValue(dateRange.startDate),
-            requestDateEnd: normalizeChoiceValue(dateRange.endDate),
+            registrar: values?.registrar || '',
+            completer: values?.completer || '',
+            registeredDateStart: normalizeChoiceValue(registeredRange.startDate),
+            registeredDateEnd: normalizeChoiceValue(registeredRange.endDate),
+            completedDateStart: normalizeChoiceValue(completedRange.startDate),
+            completedDateEnd: normalizeChoiceValue(completedRange.endDate),
             statuses,
         });
         // 検索時は 1 ページ目に戻す
@@ -354,8 +425,10 @@ const P403: React.FC = () => {
         setCondition(INITIAL_CONDITION);
         setFormValues(INITIAL_CONDITION);
         setFormVersion((version) => version + 1);
-        setDateRange({ startDate: '', endDate: '' });
-        (dateRangeRef.current as any)?.clear?.();
+        setRegisteredRange({ startDate: '', endDate: '' });
+        setCompletedRange({ startDate: '', endDate: '' });
+        (registeredDateRef.current as any)?.clear?.();
+        (completedDateRef.current as any)?.clear?.();
         setPage(1);
     };
 
@@ -419,16 +492,46 @@ const P403: React.FC = () => {
                     <div style={formSx.form2}>
                         <FormInput
                             type={'text'}
-                            source="requestNo"
-                            label="移動依頼番号"
+                            source="moveNo"
+                            label="移動番号"
                             placeholder="入力してください"
                         />
-                        <FormInput
-                            type={'filter-select'}
-                            source="destWarehouse"
-                            label="移動先"
-                            choices={DEST_CHOICES}
-                        />
+                        {/* 移動元のラベルは出さず、移動先と 1 つの欄に並べる（左が移動元、右が移動先） */}
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
+                                columnGap: '1rem',
+                                alignItems: 'center',
+                                width: '100%',
+                                minWidth: 0,
+                            }}
+                        >
+                            <FormInput
+                                type={'filter-select'}
+                                source="sourceWarehouse"
+                                label="移動先"
+                                choices={DEST_CHOICES}
+                                sx={{
+                                    display: 'contents',
+                                    label: { width: '150px', flexShrink: 0 },
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
+                            />
+                            <FormInput
+                                type={'filter-select'}
+                                source="destWarehouse"
+                                label={false}
+                                choices={DEST_CHOICES}
+                                sx={{
+                                    width: '100%',
+                                    minWidth: 0,
+                                    flex: 'none',
+                                    marginTop: 0,
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
+                            />
+                        </div>
                         <FormInput
                             type={'text'}
                             source="itemCode"
@@ -443,17 +546,35 @@ const P403: React.FC = () => {
                         />
                         <FormInput
                             type={'text'}
-                            source="requester"
-                            label="依頼者"
+                            source="registrar"
+                            label="移動登録者"
                             placeholder="入力してください"
                         />
                         <FormInput
-                            ref={dateRangeRef}
+                            ref={registeredDateRef}
                             type={'input-daterange'}
-                            source="requestDate"
-                            label="移動依頼日"
+                            source="registeredDate"
+                            label="移動登録日"
                             onChange={(value: any) =>
-                                setDateRange({
+                                setRegisteredRange({
+                                    startDate: value?.startDate || '',
+                                    endDate: value?.endDate || '',
+                                })
+                            }
+                        />
+                        <FormInput
+                            type={'text'}
+                            source="completer"
+                            label="移動完了者"
+                            placeholder="入力してください"
+                        />
+                        <FormInput
+                            ref={completedDateRef}
+                            type={'input-daterange'}
+                            source="completedDate"
+                            label="移動完了日"
+                            onChange={(value: any) =>
+                                setCompletedRange({
                                     startDate: value?.startDate || '',
                                     endDate: value?.endDate || '',
                                 })

@@ -307,7 +307,8 @@ export const buildPalletLabels = (
  *
  * @param pallets 印刷対象のパレット
  * @param targetWindow 呼び出し側で開いておいた印刷用ウィンドウ（省略時は内部で開く）
- * @param onUnsupported モバイル端末で印刷ダイアログを開けなかった場合の通知
+ * @param onUnsupported 印刷できなかった場合の通知（スマホの確認表示では使わない）
+ * @param onPrinted スマホで「印刷する」のあと、確認を閉じたときに呼ぶ
  */
 export const printPalletLabels = (
     pallets: {
@@ -318,13 +319,14 @@ export const printPalletLabels = (
         details: PalletDetailItem[];
     }[],
     targetWindow?: Window | null,
-    onUnsupported?: () => void
+    onUnsupported?: () => void,
+    onPrinted?: () => void
 ): number => {
     const labels = buildPalletLabels(pallets);
     if (labels.length === 0) {
         targetWindow?.close();
         return 0;
     }
-    const printed = printPalletNumberSheet(labels, targetWindow, onUnsupported);
+    const printed = printPalletNumberSheet(labels, targetWindow, onUnsupported, onPrinted);
     return printed ? labels.length : 0;
 };

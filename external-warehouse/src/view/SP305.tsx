@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
 import useApiRequest from '../adapters/apiUtil';
-import { spFormInputSx, spItemFieldSx, spSx } from '../styles/spSx';
+import { spFormInputSx, spSx } from '../styles/spSx';
 import {
     CATEGORY_CHOICES,
     fromApiPallet,
@@ -30,8 +30,10 @@ import type {
  *   パレット番号発番（SP303）／パレット番号一覧（SP304）からパレット番号を受け取り、
  *   GET /api/pallet/{palletNo} で内容を取得する。
  *   更新は PUT /api/pallet（version による楽観ロック）、削除は DELETE /api/pallet/{palletNo}。
- *   番号表印刷は、未印刷なら印刷の前に自動で更新（PUT /api/pallet）を行い、成功時のみ印刷し、
- *   印刷後は印刷済み（PUT /api/pallet/{palletNo}/printed）にする。
+ *   番号表印刷は、クリックと同じ処理の流れで印刷ダイアログを開く。
+ *   ダイアログを閉じたあと、未印刷なら更新（PUT /api/pallet）と印刷済み
+ *   （PUT /api/pallet/{palletNo}/printed）を行う。
+ *   ダイアログ表示中に画面を描き換えると、端末によってはダイアログが閉じ、直接印刷される。
  *   未印刷の印刷では、サーバが在庫情報詳細と在庫履歴を登録する。印刷済みの再印刷では在庫を登録しない。
  *   印刷済み（printed_flg=1）の場合は、印刷以外の操作（更新・削除・明細の増減など）をできないようにする。
  */
@@ -412,9 +414,7 @@ const SP305: React.FC = () => {
     /**
      * 番号表を印刷する
      *
-     * 印刷ダイアログは「クリックと同じ処理の流れ」で開く必要があるため、
-     * 更新などの非同期処理を待たずに、画面の内容をそのまま印刷する
-     * （待つと端末によってはダイアログが開かず、何も起きていないように見える）。
+     * スマホはシステムの印刷プレビューを開く。プレビューを閉じるまで画面は描き換えない。
      * 未印刷の場合は、印刷のあとに更新と印刷済みの更新を行う。
      * 印刷できた場合は印刷済み（printed_flg=1）にし、以降は印刷以外の操作をできなくする。
      * 印刷済みの場合はデータを変更できないため、そのまま印刷する。
@@ -437,6 +437,13 @@ const SP305: React.FC = () => {
             return;
         }
 
+        const afterPrint = () => {
+            notify('1 枚のパレット番号表を印刷します。', { type: 'success' });
+            if (!printed) {
+                void saveAfterPrint();
+            }
+        };
+
         const count = printPalletLabels(
             [
                 {
@@ -446,24 +453,13 @@ const SP305: React.FC = () => {
                 },
             ],
             undefined,
-            () => {
-                notify(
-                    'この端末では印刷画面を開けませんでした。ブラウザ（Safari / Chrome）で開いてください。',
-                    { type: 'warning' }
-                );
-            }
+            undefined,
+            afterPrint
         );
         if (count === 0) {
             notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
                 type: 'warning',
             });
-            return;
-        }
-        notify(`${count} 枚のパレット番号表を印刷します。`, { type: 'success' });
-
-        // 印刷のあとに保存する（印刷ダイアログを開く前に待つと、端末によっては開かなくなるため）
-        if (!printed) {
-            void saveAfterPrint();
         }
     };
 
@@ -524,7 +520,7 @@ const SP305: React.FC = () => {
                 <SimpleForm
                     key={formKey}
                     id="sp305-form"
-                    sx={{ width: '100%', padding: '0' }}
+                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                     onSubmit={handleUpdate}
                     toolbar={false}
                     defaultValues={pallet}
@@ -618,7 +614,7 @@ const SP305: React.FC = () => {
                             {/* 入力項目は FormInput を使うため、カードごとにフォームを持つ */}
                             <SimpleForm
                                 id={`sp305-item-${detail.id}`}
-                                sx={{ width: '100%', padding: '0' }}
+                                sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                                 onSubmit={() => {}}
                                 toolbar={false}
                                 defaultValues={detail}
@@ -638,17 +634,17 @@ const SP305: React.FC = () => {
                                             削除
                                         </button>
                                     </div>
-                                    <div style={spSx.row}>
-                                        <span style={spSx.rowLabelFixed}>品目コード</span>
-                                        <span style={spSx.rowValue}>{detail.itemCode}</span>
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>品目コード</span>
+                                        <span style={spSx.fieldValue}>{detail.itemCode}</span>
                                     </div>
-                                    <div style={spSx.row}>
-                                        <span style={spSx.rowLabelFixed}>品目名</span>
-                                        <span style={spSx.rowValue}>{detail.itemName}</span>
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>品目名</span>
+                                        <span style={spSx.fieldValue}>{detail.itemName}</span>
                                     </div>
-                                    {/* 数量：設計書どおり「－ 入力 ＋」の増減付き */}
-                                    <div style={{ ...spSx.row, alignItems: 'center' }}>
-                                        <span style={spSx.rowLabelFixed}>数量</span>
+                                    {/* 数量：ラベルを上、「－ 入力 ＋」を下に置く */}
+                                    <div style={spSx.field}>
+                                        <span style={spSx.fieldLabel}>数量</span>
                                         <SpQuantityInput
                                             disabled={printed}
                                             value={detail.quantity}
@@ -657,15 +653,15 @@ const SP305: React.FC = () => {
                                             }
                                         />
                                     </div>
-                                    {/* 保管区分・使用可否：FormInput のプルダウン */}
+                                    {/* 保管区分・使用可否：基本情報と同じ上下配置 */}
                                     <FormInput
                                         type={'select'}
                                         source="storageCategory"
                                         label="保管区分"
                                         choices={storageTypeOptions}
                                         disabled={printed}
-                                        structure="left-right"
-                                        sx={spItemFieldSx}
+                                        structure="top-bottom"
+                                        sx={spFormInputSx}
                                         onChange={(value) =>
                                             handleDetailSelect(detail.id, 'storageCategory', value)
                                         }
@@ -676,8 +672,8 @@ const SP305: React.FC = () => {
                                         label="使用可否"
                                         choices={usableFlagOptions}
                                         disabled={printed}
-                                        structure="left-right"
-                                        sx={spItemFieldSx}
+                                        structure="top-bottom"
+                                        sx={spFormInputSx}
                                         onChange={(value) =>
                                             handleDetailSelect(detail.id, 'usableFlag', value)
                                         }

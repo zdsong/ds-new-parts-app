@@ -11,13 +11,11 @@
  * ブラウザの印刷ダイアログをそのまま使うため、画面に表示しない iframe に
  * HTML を書き出して印刷する（別ウィンドウを開くと、印刷プレビュー以外に用紙が見えてしまう）。
  *
- * ただしモバイル端末では、iframe の print() が動作しない場合がある
- * （iOS Safari / iOS Chrome の制限）。
- * そのためモバイル端末では、現在の画面に印刷用の要素を差し込んでから
- * window.print() を呼び、そのまま印刷ダイアログを開く（printInCurrentPage）。
+ * スマホはクリックと同じ処理の流れで print() し、システムの印刷プレビューを出す。
+ * 遅延や画面の描き換えを挟むと、プレビューが出ずに直接印刷される。
  */
 
-import { isMobileViewport } from './deviceUtil';
+import { isIosDevice, prefersHandheldPrint } from './deviceUtil';
 
 /** パレット番号表 1 枚分の印字内容 */
 export interface PalletNumberSheetLabel {
@@ -471,23 +469,37 @@ const removeInPlacePrintNodes = () => {
 };
 
 /**
- * 現在の画面に印刷用の用紙を差し込み、そのまま印刷ダイアログを開く（モバイル端末用）
- *
- * モバイル端末（iOS Safari / iOS Chrome など）では window.open() で開いた別ウィンドウの
- * print() が動作せず、プレビュー画面が表示されたままになる。
- * 一方 window.print() は表示中の画面に対しては動作するため、印刷したい内容を
- * 同じ画面に隠し持たせ、印刷時だけアプリの画面を CSS で隠して印刷する。
- *
- * print() は「クリックと同じ処理の流れ（同期）」で呼ぶ必要がある。
- * await や setTimeout / requestAnimationFrame を挟むとユーザー操作の扱いが切れ、
- * 端末によってはダイアログが開かず何も起きない（＝無反応に見える）。
- *
- * 印刷後は afterprint で片付けるため、入力内容や画面の状態は変化しない。
- *
- * @param labelsHtml 用紙 1 枚分の HTML を連結したもの
- * @param onUnsupported 印刷ダイアログが開けなかった場合の通知（アプリ内ブラウザなど）
+ * システムの印刷プレビューを閉じたあとに呼ぶ。
+ * プレビュー表示中に画面を描き換えると、端末によってはプレビューが閉じて直接印刷される。
  */
-const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boolean => {
+const runAfterSystemPreview = (target: Window, onPrinted?: () => void) => {
+    if (!onPrinted) return;
+    let finished = false;
+    const finish = () => {
+        if (finished) return;
+        finished = true;
+        target.removeEventListener('afterprint', finish);
+        document.removeEventListener('visibilitychange', onVisible);
+        onPrinted();
+    };
+    let leftPage = false;
+    const onVisible = () => {
+        if (document.visibilityState === 'hidden') {
+            leftPage = true;
+            return;
+        }
+        if (leftPage && document.visibilityState === 'visible') finish();
+    };
+    target.addEventListener('afterprint', finish);
+    document.addEventListener('visibilitychange', onVisible);
+};
+
+/**
+ * iOS は表示中の画面の print() でシステムプレビューが出る。
+ * クリックと同じ処理の流れで呼び、成否をタイマーで推測しない
+ * （beforeprint が来ない端末で「開けなかった」と誤って知らせていた）。
+ */
+const printInCurrentPage = (labelsHtml: string, onPrinted?: () => void): boolean => {
     if (typeof window === 'undefined' || typeof window.print !== 'function') return false;
 
     removeInPlacePrintNodes();
@@ -497,7 +509,6 @@ const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boo
     style.textContent = `
     #${PRINT_ROOT_ID} { display: none; }
     @media print {
-      /* アプリの画面は印刷せず、印刷用の用紙だけを出力する */
       html, body { height: auto !important; overflow: visible !important; }
       body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
       #${PRINT_ROOT_ID} { display: block !important; }
@@ -511,43 +522,21 @@ const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boo
     document.head.appendChild(style);
     document.body.appendChild(root);
 
-    // 印刷プレビューを閉じたあとに片付ける
     const cleanup = () => {
         window.removeEventListener('afterprint', cleanup);
         removeInPlacePrintNodes();
     };
     window.addEventListener('afterprint', cleanup);
-
-    // 印刷ダイアログが開いたか（beforeprint / afterprint が来たか）を判定するための目印
-    let printStarted = false;
-    const markStarted = () => {
-        printStarted = true;
-    };
-    window.addEventListener('beforeprint', markStarted);
-    window.addEventListener('afterprint', markStarted);
+    runAfterSystemPreview(window, onPrinted);
 
     try {
-        // 差し込んだ内容をレイアウトさせてから、クリックと同じ処理の流れで印刷する
         void document.body.offsetHeight;
         window.print();
     } catch (error) {
         console.error(error);
-        window.removeEventListener('beforeprint', markStarted);
-        window.removeEventListener('afterprint', markStarted);
         cleanup();
         return false;
     }
-
-    // ダイアログが開かなかった端末（アプリ内ブラウザ等）は、あとから知らせる。
-    // 印刷用の要素は画面には表示されないため、ここでは片付けずに知らせるだけにする
-    // （片付けると、開くのが遅い端末で印刷内容が消えてしまう）。
-    window.setTimeout(() => {
-        window.removeEventListener('beforeprint', markStarted);
-        window.removeEventListener('afterprint', markStarted);
-        if (printStarted) return;
-        onUnsupported?.();
-    }, 1500);
-
     return true;
 };
 
@@ -555,20 +544,22 @@ const printInCurrentPage = (labelsHtml: string, onUnsupported?: () => void): boo
 const PRINT_FRAME_ID = 'pallet-print-frame';
 
 /**
- * 画面に表示しない iframe に帳票を書き出し、そのまま印刷ダイアログを開く。
+ * 画面に表示しない iframe に帳票を書き出し、システムの印刷プレビューを開く。
  *
- * 別ウィンドウを開くと、印刷プレビューの背面に用紙（帳票）が表示されてしまい、
- * 余分なページがあるように見えるため、PC では非表示の iframe で印刷する。
+ * Android では幅 0 の iframe を setTimeout してから print() すると、
+ * クリックの操作が途切れ、プレビューを出さずに既定のプリンタへ直接送る。
+ * スマホでは用紙サイズの iframe に書き出した直後、同じクリックの中で print() する。
  */
-const printInHiddenFrame = (html: string): boolean => {
+const printInHiddenFrame = (html: string, onPrinted?: () => void, immediate = false): boolean => {
     document.getElementById(PRINT_FRAME_ID)?.remove();
 
     const frame = document.createElement('iframe');
     frame.id = PRINT_FRAME_ID;
     frame.setAttribute('aria-hidden', 'true');
     frame.setAttribute('tabindex', '-1');
-    // 画面には表示せず、印刷処理のみに使用する
-    frame.style.cssText = 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
+    frame.style.cssText = immediate
+        ? 'position: fixed; left: -10000px; top: 0; width: 210mm; height: 297mm; border: 0;'
+        : 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
     document.body.appendChild(frame);
 
     const frameWindow = frame.contentWindow;
@@ -582,12 +573,12 @@ const printInHiddenFrame = (html: string): boolean => {
         window.setTimeout(() => frame.remove(), 1000);
     };
     frameWindow.addEventListener('afterprint', cleanup);
+    runAfterSystemPreview(frameWindow, onPrinted);
 
     frameDocument.open();
     frameDocument.write(html);
     frameDocument.close();
 
-    // フォントと SVG の描画が終わってから印刷ダイアログを開く
     const triggerPrint = () => {
         try {
             frameWindow.focus();
@@ -597,7 +588,12 @@ const printInHiddenFrame = (html: string): boolean => {
             frame.remove();
         }
     };
-    window.setTimeout(triggerPrint, 200);
+    // スマホはクリックと同じ処理の流れで開く。PC は描画を少し待ってから開く。
+    if (immediate) {
+        triggerPrint();
+    } else {
+        window.setTimeout(triggerPrint, 200);
+    }
     return true;
 };
 
@@ -605,22 +601,28 @@ const printInHiddenFrame = (html: string): boolean => {
  * パレット番号表を印刷する。
  * PC では画面に表示しない iframe に書き出してから印刷ダイアログを開くため、
  * 印刷プレビュー以外に用紙が表示されることはない。
- * モバイル端末では別ウィンドウの print() が動作しないため、現在の画面のまま印刷する。
+ * スマホはシステムの印刷プレビューを、クリックと同じ処理の流れで開く。
  */
 export const printPalletNumberSheet = (
     labels: PalletNumberSheetLabel[],
     targetWindow?: Window | null,
-    onUnsupported?: () => void
+    _onUnsupported?: () => void,
+    onPrinted?: () => void
 ): boolean => {
     if (!labels || labels.length === 0) {
         targetWindow?.close();
         return false;
     }
 
-    // モバイル端末は現在の画面で印刷する（呼び出し側が開いたウィンドウは閉じる）
-    if (isMobileViewport()) {
+    // スマホは自前の確認画面を出さず、システムの印刷プレビューを開く
+    if (prefersHandheldPrint()) {
         targetWindow?.close();
-        return printInCurrentPage(buildLabelsHtml(labels), onUnsupported);
+        if (isIosDevice()) {
+            return printInCurrentPage(buildLabelsHtml(labels), onPrinted);
+        }
+        const html = buildPalletNumberSheetHtml(labels);
+        if (!html) return false;
+        return printInHiddenFrame(html, onPrinted, true);
     }
 
     const html = buildPalletNumberSheetHtml(labels);
@@ -641,6 +643,7 @@ export const printPalletNumberSheet = (
             targetWindow.focus();
             targetWindow.print();
         };
+        runAfterSystemPreview(targetWindow, onPrinted);
         if (targetWindow.document.readyState === 'complete') {
             window.setTimeout(triggerWindowPrint, 200);
         } else {
@@ -650,7 +653,7 @@ export const printPalletNumberSheet = (
     }
 
     // 呼び出し側がウィンドウを開いていない場合は、画面に表示されない iframe で印刷する
-    return printInHiddenFrame(html);
+    return printInHiddenFrame(html, onPrinted, false);
 };
 
 /**
