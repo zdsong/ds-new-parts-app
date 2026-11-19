@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
 
+import useApiRequest from '../adapters/apiUtil';
 import FormInput from '../compontent/FormInput';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
@@ -13,7 +14,7 @@ import {
     canMixCategory,
     findScannedPallet,
 } from '../utils/moveData';
-import type { MoveLine, ScannedPallet } from '../utils/moveData';
+import type { MoveLine, MoveRequestDetail, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -91,6 +92,7 @@ const getCameraErrorMessage = (error?: unknown): string => {
 const SP401: React.FC = () => {
     const navigate = useNavigate();
     const notify = useNotify();
+    const { request } = useApiRequest();
     const [searchParams] = useSearchParams();
     /** 4.1 は移動と入庫で番号が同じため、クエリで切り替える */
     const kind = searchParams.get('kind') === 'receive' ? 'receive' : 'move';
@@ -151,6 +153,85 @@ const SP401: React.FC = () => {
     };
 
     /**
+     * 読み取った番号を画面のバーコードへ描く
+     */
+    const showScannedCode = (trimmed: string) => {
+        setErrorMessage('');
+        setScannedValue(trimmed);
+        // 読み取った内容を、印刷時と同じ規格（13 桁は EAN-13、それ以外は CODE128）で再描画する
+        setCodeSvg(buildBarcodeSvg(trimmed));
+    };
+
+    /**
+     * 移動の読取結果をパレット番号・在庫・移動依頼から組み立てる
+     */
+    const loadMoveScan = useCallback(async (code: string) => {
+        const trimmed = code.trim();
+        if (!trimmed) return;
+        showScannedCode(trimmed);
+        try {
+            const result = await request('get', `api/pallet/scan/${encodeURIComponent(trimmed)}`, {}, {}, true, false);
+            if (!result || result.code !== 200 || !result.data) {
+                setScannedPallet(null);
+                setOpenRequestId(null);
+                setErrorMessage(result?.message || 'パレット情報は存在しません。');
+                return;
+            }
+            const data = result.data as {
+                palletNo?: string;
+                dependent?: boolean;
+                transferRequested?: boolean;
+                warningMessage?: string | null;
+                lines?: Array<{
+                    id: string;
+                    itemCode: string;
+                    itemName: string;
+                    category: string;
+                    moveQty: number;
+                    storageQty: number;
+                    palletNo: string;
+                    storagePlace: string;
+                    request: MoveRequestDetail | null;
+                }>;
+            };
+            if (data.warningMessage) {
+                notify(data.warningMessage, { type: 'warning' });
+            }
+            const lines: MoveLine[] = (data.lines ?? []).map((line) => ({
+                id: line.id,
+                itemCode: line.itemCode,
+                itemName: line.itemName ?? '',
+                category: line.category === '1' ? '1' : '3',
+                moveQty: Number(line.moveQty ?? line.storageQty ?? 0),
+                storageQty: Number(line.storageQty ?? 0),
+                palletNo: line.palletNo,
+                storagePlace: line.storagePlace ?? '',
+                request: line.request ?? null,
+            }));
+            if (!lines.length && !data.transferRequested) {
+                setScannedPallet(null);
+                setOpenRequestId(null);
+                setErrorMessage(data.warningMessage || '在庫情報が存在しません。');
+                return;
+            }
+            const pallet: ScannedPallet = {
+                palletNo: data.palletNo || trimmed,
+                dependent: Boolean(data.dependent),
+                lines,
+                inbound: null,
+            };
+            setScannedPallet(pallet);
+            setOpenRequestId(lines.find((line) => line.request)?.id ?? null);
+            setInboundLocation('');
+            setInboundDone(false);
+        } catch {
+            setScannedPallet(null);
+            setOpenRequestId(null);
+            setErrorMessage('パレット情報は存在しません。');
+        }
+    }, [notify, request]);
+
+    /**
      * 読み取り結果を画面へ反映する
      */
     const applyScanResult = (value: string) => {
@@ -158,15 +239,16 @@ const SP401: React.FC = () => {
         if (!trimmed) return;
         stopCamera();
         setCameraOpen(false);
-        setErrorMessage('');
-        setScannedValue(trimmed);
-        // 読み取った内容を、印刷時と同じ規格（13 桁は EAN-13、それ以外は CODE128）で再描画する
-        setCodeSvg(buildBarcodeSvg(trimmed));
-        const pallet = findScannedPallet(trimmed);
-        setScannedPallet(pallet);
-        setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
-        setInboundLocation(pallet?.inbound?.destinationLoc || '');
-        setInboundDone(false);
+        if (kind === 'receive') {
+            showScannedCode(trimmed);
+            const pallet = findScannedPallet(trimmed);
+            setScannedPallet(pallet);
+            setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+            setInboundLocation(pallet?.inbound?.destinationLoc || '');
+            setInboundDone(false);
+            return;
+        }
+        void loadMoveScan(trimmed);
     };
 
     /** 読み取り結果の品目を移動候補へ追加する。製品と部品は混載できない */
@@ -444,18 +526,22 @@ const SP401: React.FC = () => {
         notify('移動完了にしました。', { type: 'success' });
     };
 
-    // カメラが使えない確認用。?pallet=B261010-001 で読み取り後の画面を開く
+    // カメラが使えない確認用。?pallet=番号 で読み取り後の画面を開く
     const palletQuery = searchParams.get('pallet');
     useEffect(() => {
         if (!palletQuery) return;
-        setScannedValue(palletQuery);
-        setCodeSvg(buildBarcodeSvg(palletQuery));
-        const pallet = findScannedPallet(palletQuery);
-        setScannedPallet(pallet);
-        setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
-        setInboundLocation(pallet?.inbound?.destinationLoc || '');
-        setInboundDone(false);
-    }, [palletQuery]);
+        if (kind === 'receive') {
+            setScannedValue(palletQuery);
+            setCodeSvg(buildBarcodeSvg(palletQuery));
+            const pallet = findScannedPallet(palletQuery);
+            setScannedPallet(pallet);
+            setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+            setInboundLocation(pallet?.inbound?.destinationLoc || '');
+            setInboundDone(false);
+            return;
+        }
+        void loadMoveScan(palletQuery);
+    }, [palletQuery, kind, loadMoveScan]);
 
     const addedIds = new Set(candidates.map((line) => line.id));
 

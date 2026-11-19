@@ -497,39 +497,20 @@ const P403: React.FC = () => {
                             placeholder="入力してください"
                         />
                         {/* 移動元のラベルは出さず、移動先と 1 つの欄に並べる（左が移動元、右が移動先） */}
-                        <div
-                            style={{
-                                display: 'grid',
-                                gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
-                                columnGap: '1rem',
-                                alignItems: 'center',
-                                width: '100%',
-                                minWidth: 0,
-                            }}
-                        >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
                             <FormInput
                                 type={'filter-select'}
                                 source="sourceWarehouse"
                                 label="移動先"
                                 choices={DEST_CHOICES}
-                                sx={{
-                                    display: 'contents',
-                                    label: { width: '150px', flexShrink: 0 },
-                                    input: { width: '100%', minWidth: 0 },
-                                }}
+                                sx={{ flex: '1.35 1 0', label: { width: '150px' } }}
                             />
                             <FormInput
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label={false}
                                 choices={DEST_CHOICES}
-                                sx={{
-                                    width: '100%',
-                                    minWidth: 0,
-                                    flex: 'none',
-                                    marginTop: 0,
-                                    input: { width: '100%', minWidth: 0 },
-                                }}
+                                sx={{ flex: '1 1 0', minWidth: 0 }}
                             />
                         </div>
                         <FormInput
