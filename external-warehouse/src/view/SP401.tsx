@@ -1,9 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { SimpleForm, useNotify } from 'react-admin';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
 
+import FormInput from '../compontent/FormInput';
+import { spFormInputSx, spSx } from '../styles/spSx';
+import { normalizeChoiceValue } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
+import {
+    MOVE_ITEM_MASTER,
+    MOVE_LOCATION_CHOICES,
+    canMixCategory,
+    findScannedPallet,
+    lineFromMaster,
+} from '../utils/moveData';
+import type { MoveItemMaster, MoveLine, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -70,15 +82,20 @@ const getCameraErrorMessage = (error?: unknown): string => {
 };
 
 /**
- * バーコード読み取り（移動）画面（SP401）
+ * バーコード読み取り画面（SP401）
  *
- * スマートフォンでの利用を前提とした画面。
- * 「バーコードを読み取る」ボタンからカメラを起動し、
- * パレット番号表に印字された一次元コード（CODE128／EAN-13）を読み取る。
- * 読み取った内容は画面のコード領域へ同じ規格のバーコードとして再表示する。
+ * 設計書：③移動管理（スマホ）4.1
+ *   移動…パレット番号表を読み、品目を移動候補に追加して移動登録（SP402）へ進む。
+ *   入庫…同じ番号の別画面。移動番号があるときだけロケ番を変えて移動完了にする。
+ *   入庫は /SP401?kind=receive で開く。
+ *   「品目検索」は別ルートを持たないため、この画面の中で切り替える。
  */
 const SP401: React.FC = () => {
     const navigate = useNavigate();
+    const notify = useNotify();
+    const [searchParams] = useSearchParams();
+    /** 4.1 は移動と入庫で番号が同じため、クエリで切り替える */
+    const kind = searchParams.get('kind') === 'receive' ? 'receive' : 'move';
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -96,6 +113,18 @@ const SP401: React.FC = () => {
     const [cameraOpen, setCameraOpen] = useState(false);
     // エラーメッセージ
     const [errorMessage, setErrorMessage] = useState('');
+    // 読み取ったパレット（未知の番号は null）
+    const [scannedPallet, setScannedPallet] = useState<ScannedPallet | null>(null);
+    // 移動候補（「追加」した品目）
+    const [candidates, setCandidates] = useState<MoveLine[]>([]);
+    // 品目検索を開いているか
+    const [itemSearchOpen, setItemSearchOpen] = useState(false);
+    // 読み取り結果の移動依頼詳細を開いている行
+    const [openRequestId, setOpenRequestId] = useState<string | null>(null);
+    // 入庫で変更できるロケ番
+    const [inboundLocation, setInboundLocation] = useState('');
+    // 入庫の移動完了を押したか
+    const [inboundDone, setInboundDone] = useState(false);
 
     /**
      * カメラとスキャン処理を停止する
@@ -137,6 +166,35 @@ const SP401: React.FC = () => {
         setScannedValue(trimmed);
         // 読み取った内容を、印刷時と同じ規格（13 桁は EAN-13、それ以外は CODE128）で再描画する
         setCodeSvg(buildBarcodeSvg(trimmed));
+        const pallet = findScannedPallet(trimmed);
+        setScannedPallet(pallet);
+        setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+        setInboundLocation(pallet?.inbound?.destinationLoc || '');
+        setInboundDone(false);
+    };
+
+    /** 読み取り結果の品目を移動候補へ追加する。製品と部品は混載できない */
+    const handleAddScanned = (line: MoveLine) => {
+        if (candidates.some((item) => item.id === line.id)) return;
+        if (!canMixCategory(candidates, line.category)) {
+            notify('製品と部品は混載できません。', { type: 'warning' });
+            return;
+        }
+        setCandidates((prev) => [...prev, { ...line, request: line.request ? { ...line.request } : null }]);
+    };
+
+    /** 品目検索で選んだ品目を移動候補へ追加する */
+    const handleAddMaster = (item: MoveItemMaster, quantity: number) => {
+        if (!canMixCategory(candidates, item.category)) {
+            notify('製品と部品は混載できません。', { type: 'warning' });
+            return;
+        }
+        if (candidates.some((line) => line.itemCode === item.itemCode)) {
+            notify('追加済みの品目です。', { type: 'warning' });
+            return;
+        }
+        setCandidates((prev) => [...prev, lineFromMaster(item, quantity)]);
+        setItemSearchOpen(false);
     };
 
     /**
@@ -353,15 +411,80 @@ const SP401: React.FC = () => {
     };
 
     /**
-     * 内容確認
+     * 内容を確認：追加した品目で新しいパレットを作る移動登録へ進む
      */
     const handleConfirm = () => {
-        if (!scannedValue) {
-            setErrorMessage('読み取り結果がありません。バーコードを読み取ってください。');
+        if (candidates.length === 0) {
+            setErrorMessage('移動候補の品目を追加してください。');
             return;
         }
         setErrorMessage('');
+        navigate('/SP402', {
+            state: {
+                view: 'register',
+                mode: 'issue',
+                palletNo: '',
+                lines: candidates,
+            },
+        });
     };
+
+    /** パレット番号を発番せず、読み取ったパレットをそのまま移動する */
+    const handleMoveWholePallet = () => {
+        if (!scannedPallet) {
+            setErrorMessage('パレットの読み取り結果がありません。');
+            return;
+        }
+        setErrorMessage('');
+        navigate('/SP402', {
+            state: {
+                view: 'register',
+                mode: 'whole',
+                palletNo: scannedPallet.palletNo,
+                lines: scannedPallet.lines,
+            },
+        });
+    };
+
+    /** 入庫：ロケ番を確定し、移動完了にする（画面内だけで状態を変える） */
+    const handleReceiveComplete = () => {
+        if (!scannedPallet?.inbound) {
+            setErrorMessage('移動登録情報を確認できません。');
+            return;
+        }
+        if (!inboundLocation) {
+            setErrorMessage('ロケ番を選択してください。');
+            return;
+        }
+        setErrorMessage('');
+        setInboundDone(true);
+        notify('移動完了にしました。', { type: 'success' });
+    };
+
+    // カメラが使えない確認用。?pallet=B261010-001 で読み取り後の画面を開く
+    const palletQuery = searchParams.get('pallet');
+    useEffect(() => {
+        if (!palletQuery) return;
+        setScannedValue(palletQuery);
+        setCodeSvg(buildBarcodeSvg(palletQuery));
+        const pallet = findScannedPallet(palletQuery);
+        setScannedPallet(pallet);
+        setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+        setInboundLocation(pallet?.inbound?.destinationLoc || '');
+        setInboundDone(false);
+    }, [palletQuery]);
+
+    if (itemSearchOpen) {
+        return (
+            <ItemSearchPanel
+                selectedCodes={candidates.map((line) => line.itemCode)}
+                onAdd={handleAddMaster}
+                onBack={() => setItemSearchOpen(false)}
+            />
+        );
+    }
+
+    const addedIds = new Set(candidates.map((line) => line.id));
 
     return (
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
@@ -460,7 +583,7 @@ const SP401: React.FC = () => {
                     </button>
                 </Box>
 
-                {/* 検索リンク（設計書 ③移動管理 1-1 の「別画面を起動」） */}
+                {/* 別画面へのリンク（画面イメージは移動依頼検索と品目検索） */}
                 <Box
                     sx={{
                         display: 'flex',
@@ -474,122 +597,128 @@ const SP401: React.FC = () => {
                 >
                     <Box
                         component="span"
-                        onClick={() => navigate('/SP402')}
-                        sx={{
-                            color: '#0b5cab',
-                            fontSize: 'clamp(12px, 3.4vw, 14px)',
-                            textDecoration: 'underline',
-                            cursor: 'pointer',
-                        }}
+                        onClick={() => navigate('/SP402', { state: { view: 'search' } })}
+                        sx={linkSx}
                     >
-                        移動依頼を確認する
+                        移動依頼検索
                     </Box>
-                    <Box
-                        component="span"
-                        onClick={() => navigate('/SP403')}
-                        sx={{
-                            color: '#0b5cab',
-                            fontSize: 'clamp(12px, 3.4vw, 14px)',
-                            textDecoration: 'underline',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        在庫を確認する
-                    </Box>
+                    {kind === 'move' ? (
+                        <Box component="span" onClick={() => setItemSearchOpen(true)} sx={linkSx}>
+                            品目検索
+                        </Box>
+                    ) : (
+                        <Box component="span" onClick={() => navigate('/SP403')} sx={linkSx}>
+                            在庫検索
+                        </Box>
+                    )}
                 </Box>
 
-                {/* 追加品目 */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px 6px' }}>
-                    <select
-                        aria-label="追加品目"
-                        style={{
-                            width: '70%',
-                            maxWidth: '320px',
-                            height: '36px',
-                            border: '1px solid #9e9e9e',
-                            borderRadius: '1px',
-                            backgroundColor: 'white',
-                            color: '#212121',
-                            fontSize: 'clamp(12px, 3.4vw, 14px)',
-                            padding: '0 8px',
-                        }}
-                    >
-                        <option>追加品目（0件）</option>
-                    </select>
-                </Box>
+                {kind === 'move' ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px 6px' }}>
+                        <select
+                            aria-label="追加品目"
+                            value=""
+                            style={selectStyle}
+                            onChange={() => undefined}
+                        >
+                            <option value="">{`追加品目（${candidates.length}件）`}</option>
+                            {candidates.map((line) => (
+                                <option key={line.id} value={line.id}>
+                                    {line.itemCode}
+                                </option>
+                            ))}
+                        </select>
+                    </Box>
+                ) : null}
 
-                {/* 読み取り結果 */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '10px 14px' }}>
-                    <Box component="span" sx={{ fontSize: 'clamp(12px, 3.4vw, 14px)', color: '#212121' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 14px' }}>
+                    <Box component="span" sx={spSx.sectionTitle}>
                         ■読み取り結果
                     </Box>
-                    <Box
-                        sx={{
-                            flex: 1,
-                            minHeight: '120px',
-                            marginTop: '10px',
-                            padding: scannedValue ? '10px' : 0,
-                            border: scannedValue ? '1px solid #d0d0d0' : 'none',
-                            borderRadius: '5px',
-                            backgroundColor: scannedValue ? '#fafafa' : 'transparent',
-                            fontSize: 'clamp(12px, 3.4vw, 14px)',
-                            color: '#212121',
-                            wordBreak: 'break-all',
-                        }}
-                    >
-                        {scannedValue}
-                    </Box>
+                    {kind === 'receive' ? (
+                        <ReceiveResult
+                            scannedValue={scannedValue}
+                            pallet={scannedPallet}
+                            location={inboundLocation}
+                            done={inboundDone}
+                            onLocationChange={setInboundLocation}
+                        />
+                    ) : scannedPallet ? (
+                        <>
+                            <div style={spSx.listCard}>
+                                <Field label="パレット番号">{scannedPallet.palletNo}</Field>
+                            </div>
+                            {scannedPallet.lines.map((line) => (
+                                <div key={line.id} style={spSx.listCard}>
+                                    <Field label="品目コード">{line.itemCode}</Field>
+                                    <Field label="品目名">{line.itemName}</Field>
+                                    {line.request ? (
+                                        <Field label="移動数量/保管数量">{`${line.moveQty} / ${line.storageQty}`}</Field>
+                                    ) : (
+                                        <Field label="保管数量">{line.storageQty}</Field>
+                                    )}
+                                    {line.request ? (
+                                        <RequestDetail
+                                            line={line}
+                                            open={openRequestId === line.id}
+                                            onToggle={() =>
+                                                setOpenRequestId((current) =>
+                                                    current === line.id ? null : line.id
+                                                )
+                                            }
+                                        />
+                                    ) : null}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        {addedIds.has(line.id) ? (
+                                            <span style={{ ...spSx.link, color: '#9e9e9e', cursor: 'default' }}>
+                                                追加済
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                style={spSx.smallButton}
+                                                onClick={() => handleAddScanned(line)}
+                                            >
+                                                追加
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    ) : scannedValue ? (
+                        <div style={spSx.empty}>該当するパレットが見つかりません。</div>
+                    ) : null}
                     {errorMessage ? (
-                        <Box sx={{ marginTop: '8px', color: '#d32f2f', fontSize: '12px' }}>{errorMessage}</Box>
+                        <Box sx={{ color: '#d32f2f', fontSize: '12px' }}>{errorMessage}</Box>
                     ) : null}
                 </Box>
 
-                {/* 下部ボタン */}
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '14px',
-                        padding: '12px 14px 18px',
-                    }}
-                >
-                    <button
-                        type="button"
-                        onClick={() => navigate(-1)}
-                        style={{
-                            flex: 1,
-                            maxWidth: '180px',
-                            height: '46px',
-                            border: 'none',
-                            borderRadius: '5px',
-                            backgroundColor: '#6f9fd0',
-                            color: 'white',
-                            fontSize: 'clamp(14px, 4vw, 17px)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                        }}
-                    >
-                        戻る
-                    </button>
-                    <button
-                        type="button"
-                        onClick={handleConfirm}
-                        style={{
-                            flex: 1,
-                            maxWidth: '180px',
-                            height: '46px',
-                            border: 'none',
-                            borderRadius: '5px',
-                            backgroundColor: '#0b5cab',
-                            color: 'white',
-                            fontSize: 'clamp(14px, 4vw, 17px)',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                        }}
-                    >
-                        内容を確認
-                    </button>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 14px 18px' }}>
+                    <Box sx={{ display: 'flex', gap: '14px' }}>
+                        <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                            戻る
+                        </button>
+                        {kind === 'receive' ? (
+                            <button
+                                type="button"
+                                style={primaryButtonStyle}
+                                onClick={handleReceiveComplete}
+                                disabled={inboundDone}
+                            >
+                                移動完了
+                            </button>
+                        ) : (
+                            <button type="button" style={primaryButtonStyle} onClick={handleConfirm}>
+                                内容を確認
+                            </button>
+                        )}
+                    </Box>
+                    {kind === 'move' && scannedPallet ? (
+                        <button type="button" style={{ ...primaryButtonStyle, maxWidth: 'none' }} onClick={handleMoveWholePallet}>
+                            パレット毎移動する
+                        </button>
+                    ) : null}
                 </Box>
             </Box>
 
@@ -685,6 +814,283 @@ const SP401: React.FC = () => {
                     </Box>
                 </Box>
             ) : null}
+        </Box>
+    );
+};
+
+const linkSx = {
+    color: '#0b5cab',
+    fontSize: 'clamp(12px, 3.4vw, 14px)',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+};
+
+const selectStyle: React.CSSProperties = {
+    width: '70%',
+    maxWidth: '320px',
+    height: '36px',
+    border: '1px solid #9e9e9e',
+    borderRadius: '1px',
+    backgroundColor: 'white',
+    color: '#212121',
+    fontSize: 'clamp(12px, 3.4vw, 14px)',
+    padding: '0 8px',
+};
+
+const backButtonStyle: React.CSSProperties = {
+    flex: 1,
+    maxWidth: '180px',
+    height: '46px',
+    border: 'none',
+    borderRadius: '5px',
+    backgroundColor: '#6f9fd0',
+    color: 'white',
+    fontSize: 'clamp(14px, 4vw, 17px)',
+    fontWeight: 600,
+    cursor: 'pointer',
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+    ...backButtonStyle,
+    backgroundColor: '#0b5cab',
+};
+
+/** カード内の項目名と値 */
+const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+    <div style={spSx.field}>
+        <span style={spSx.fieldLabel}>{label}</span>
+        <span style={spSx.fieldValue}>{children}</span>
+    </div>
+);
+
+/** 移動依頼がある品目の折りたたみ */
+const RequestDetail: React.FC<{ line: MoveLine; open: boolean; onToggle: () => void }> = ({
+    line,
+    open,
+    onToggle,
+}) => {
+    if (!line.request) return null;
+    return (
+        <div style={spSx.subSection}>
+            <div style={spSx.subSectionHeader} onClick={onToggle} role="button" aria-expanded={open}>
+                <span>移動依頼詳細</span>
+                <span>{open ? '－' : '＋'}</span>
+            </div>
+            {open ? (
+                <div style={spSx.subItem}>
+                    <span style={spSx.subItemLabel}>移動依頼番号</span>
+                    <span style={spSx.subItemValue}>{line.request.requestNo}</span>
+                    <span style={spSx.subItemLabel}>移動先</span>
+                    <span style={spSx.subItemValue}>{line.request.destinationLabel}</span>
+                    <span style={spSx.subItemLabel}>依頼者</span>
+                    <span style={spSx.subItemValue}>{line.request.requester}</span>
+                    <span style={spSx.subItemLabel}>移動希望日</span>
+                    <span style={spSx.subItemValue}>{line.request.desiredDate}</span>
+                    <span style={spSx.subItemLabel}>備考</span>
+                    <span style={spSx.subItemValue}>{line.request.remark || '－'}</span>
+                </div>
+            ) : null}
+        </div>
+    );
+};
+
+/** 入庫の読み取り結果。移動番号があるときだけロケ番を変えられる */
+const ReceiveResult: React.FC<{
+    scannedValue: string;
+    pallet: ScannedPallet | null;
+    location: string;
+    done: boolean;
+    onLocationChange: (value: string) => void;
+}> = ({ scannedValue, pallet, location, done, onLocationChange }) => {
+    if (!scannedValue) return null;
+    if (!pallet?.inbound) {
+        return <div style={spSx.empty}>移動登録情報を確認できません。</div>;
+    }
+    const inbound = pallet.inbound;
+    return (
+        <div style={spSx.listCard}>
+            <Field label="移動番号">{inbound.moveNo}</Field>
+            <Field label="パレット番号">{pallet.palletNo}</Field>
+            <SimpleForm
+                toolbar={false}
+                sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
+                onSubmit={() => undefined}
+                defaultValues={{ destinationLoc: location || inbound.destinationLoc }}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                    <FormInput
+                        type={'text'}
+                        source="destinationWh"
+                        label="移動先"
+                        structure="top-bottom"
+                        sx={spFormInputSx}
+                        defaultValue="行田工場"
+                        disabled
+                    />
+                    <FormInput
+                        type={'filter-select'}
+                        source="destinationLoc"
+                        label="ロケ番"
+                        structure="top-bottom"
+                        sx={spFormInputSx}
+                        choices={MOVE_LOCATION_CHOICES.gyoda}
+                        disabled={done}
+                        onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
+                    />
+                    <FormInput
+                        type={'text'}
+                        source="remark"
+                        label="備考"
+                        structure="top-bottom"
+                        sx={spFormInputSx}
+                        defaultValue={inbound.remark}
+                        disabled
+                    />
+                </div>
+            </SimpleForm>
+            <Field label="移動登録者">{inbound.registrar}</Field>
+            {done ? <Field label="移動状況">移動完了</Field> : null}
+            {pallet.lines.map((line) => (
+                <div key={line.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <Field label="品目コード">{line.itemCode}</Field>
+                    <Field label="品目名">{line.itemName}</Field>
+                    <Field label={line.request ? '移動数量' : '保管数量'}>
+                        {line.request ? line.moveQty : line.storageQty}
+                    </Field>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+/** 品目検索（4.1 の画面内。遷移図に単独の番号が無い） */
+const ItemSearchPanel: React.FC<{
+    selectedCodes: string[];
+    onAdd: (item: MoveItemMaster, quantity: number) => void;
+    onBack: () => void;
+}> = ({ selectedCodes, onAdd, onBack }) => {
+    const [keyword, setKeyword] = useState({ itemCode: '', itemName: '' });
+    const [formKey, setFormKey] = useState(0);
+    const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+    const results = MOVE_ITEM_MASTER.filter((item) => {
+        if (keyword.itemCode && !item.itemCode.includes(keyword.itemCode.trim())) return false;
+        if (keyword.itemName && !item.itemName.includes(keyword.itemName.trim())) return false;
+        return true;
+    });
+
+    return (
+        <Box sx={spSx.page}>
+            <Box sx={spSx.titleBar}>
+                <label style={spSx.title}>品目検索</label>
+            </Box>
+            <Box sx={spSx.sectionTitle}>■検索条件</Box>
+            <Box sx={spSx.card}>
+                <SimpleForm
+                    key={formKey}
+                    toolbar={false}
+                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
+                    onSubmit={(values: { itemCode?: string; itemName?: string }) => {
+                        setKeyword({
+                            itemCode: values?.itemCode || '',
+                            itemName: values?.itemName || '',
+                        });
+                    }}
+                    defaultValues={keyword}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                        <FormInput
+                            type={'text'}
+                            source="itemCode"
+                            label="品目コード"
+                            structure="top-bottom"
+                            sx={spFormInputSx}
+                            placeholder="入力してください"
+                        />
+                        <FormInput
+                            type={'text'}
+                            source="itemName"
+                            label="品目名"
+                            structure="top-bottom"
+                            sx={spFormInputSx}
+                            placeholder="入力してください"
+                        />
+                        <div style={spSx.buttonBar}>
+                            <button
+                                style={spSx.secondaryButton}
+                                type="button"
+                                onClick={() => {
+                                    setKeyword({ itemCode: '', itemName: '' });
+                                    setFormKey((key) => key + 1);
+                                }}
+                            >
+                                クリア
+                            </button>
+                            <button style={spSx.primaryButton} type="submit">
+                                検索
+                            </button>
+                        </div>
+                    </div>
+                </SimpleForm>
+            </Box>
+            <Box sx={spSx.sectionTitle}>{`■検索結果：${results.length}件`}</Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {results.length === 0 ? (
+                    <div style={spSx.empty}>該当する品目がありません。</div>
+                ) : (
+                    results.map((item) => {
+                        const added = selectedCodes.includes(item.itemCode);
+                        const quantity = quantities[item.itemCode] ?? item.storageQty;
+                        return (
+                            <div key={item.itemCode} style={spSx.listCard}>
+                                <Field label="品目コード">{item.itemCode}</Field>
+                                <Field label="品目名">{item.itemName}</Field>
+                                <Field label="保管数量">{item.storageQty}</Field>
+                                <SimpleForm
+                                    toolbar={false}
+                                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
+                                    onSubmit={() => undefined}
+                                    defaultValues={{ quantity }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={spSx.fieldLabel}>移動数量</span>
+                                        <FormInput
+                                            type={'number'}
+                                            source="quantity"
+                                            label={false}
+                                            structure="top-bottom"
+                                            sx={spFormInputSx}
+                                            disabled={added}
+                                            onChange={(value) => {
+                                                const next = Math.max(1, Math.floor(Number(value) || 1));
+                                                setQuantities((prev) => ({ ...prev, [item.itemCode]: next }));
+                                            }}
+                                        />
+                                        {added ? (
+                                            <span style={{ ...spSx.link, color: '#9e9e9e', cursor: 'default' }}>
+                                                追加済
+                                            </span>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                style={spSx.smallButton}
+                                                onClick={() => onAdd(item, quantity)}
+                                            >
+                                                追加
+                                            </button>
+                                        )}
+                                    </div>
+                                </SimpleForm>
+                            </div>
+                        );
+                    })
+                )}
+            </Box>
+            <Box sx={spSx.bottomActionBar}>
+                <Box component="button" type="button" sx={spSx.backButton} onClick={onBack}>
+                    戻る
+                </Box>
+            </Box>
         </Box>
     );
 };

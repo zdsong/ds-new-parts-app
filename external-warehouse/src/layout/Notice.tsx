@@ -152,7 +152,7 @@ export const Notice: React.FC<NoticeProps> = ({}) => {
         navigate('/N006/N007/' + notice.noticeParams);
         break;
       case '20': 
-        navigate('/N008' + notice.noticeParams);
+        navigate('/P008' + notice.noticeParams);
         break;
       case '30': 
         navigate('/N011' + notice.noticeParams);

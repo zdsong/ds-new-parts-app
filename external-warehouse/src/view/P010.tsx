@@ -14,7 +14,7 @@ interface ItemDetail {
   prbiko: string;
 }
 
-const N010: React.FC = () => {
+const P010: React.FC = () => {
   const { cd } = useParams<{ cd: string }>();
   const { request } = useApiRequest();
   // 品目区分の選択肢（辞書：bss_classification）
@@ -78,4 +78,4 @@ const N010: React.FC = () => {
   );
 };
 
-export default N010;
+export default P010;

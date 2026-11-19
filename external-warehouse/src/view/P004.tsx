@@ -34,7 +34,7 @@ const PasswordRuleTip = styled(Box)(({ }) => ({
     },
   }));
 
-const N004 = () => {
+const P004 = () => {
 
 
     const [loading, setLoading] = React.useState(false);
@@ -158,4 +158,4 @@ const N004 = () => {
     );
 };
 
-export default N004;
+export default P004;

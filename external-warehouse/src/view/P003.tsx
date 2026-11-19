@@ -5,22 +5,23 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
-import  LabelInput from '../compontent/LabelInput';
+import LabelInput from '../compontent/LabelInput';
 import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
-
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { authProvider } from '../adapters/authProvider';
 import { font } from '../styles/commonSX';
 import { HOME_ROUTE } from '../utils/appRoutes';
 
 
-const N002 = () => {
+const P003 = () => {
 
 
     const [loading, setLoading] = React.useState(false);
     const notify = useNotify();
     const translate = useTranslate();
     const navigate = useNavigate()
+
+    const { type } = useParams<{ type: string }>()
 
     useEffect(() => {
         const tempToken = sessionStorage.getItem('externalWarehouseToken')
@@ -30,39 +31,57 @@ const N002 = () => {
         }
     }, []);
 
-    const submitSendMail = async (values: any) => {
+    const submitVerify = async (values: any) => {
         setLoading(true)
         try{
-            await authProvider.sendMail(values)
-            notify(translate('ra.message.send_success'), { type: 'success' })
-            navigateN003()
+           const response = await authProvider.login(values)
+            if(type === 'login'){
+                await authProvider.checkAuth(response.data)
+                navigateHome()
+            }else if(type === 'reset-password'){
+                navigateP004()
+            }
         }catch(e){
-             if(e instanceof Error){
+            if(e instanceof Error){
                 notify(e.message, { type: 'error' })
             }
         }
-
         setLoading(false)
-
     };
 
-    const navigateN003 = () =>{
-        navigate('/login/verify/reset-password')
+    const submitResendCode = async () => {
+        setLoading(true)
+        try{
+            await authProvider.resendCode()
+            notify(translate('ra.message.send_success'), { type: 'success' })
+        }catch(e){
+            if(e instanceof Error){
+                notify(e.message, { type: 'error' })
+            }
+        }
+        setLoading(false)
+    };
+
+    const navigateHome = () =>{
+        navigate(HOME_ROUTE)
+    }
+
+    const navigateP004 = () =>{
+        navigate('/P004')
     }
 
 
+
     return (
-        <LoginShell
-            subtitle="パスワード再発行用の認証コードを送信します。登録しているメールアドレスを入力してください"
-        >
+        <LoginShell subtitle="メールでお送りした認証コードを入力してください">
             <SimpleForm
-             toolbar={false}
-             onSubmit={submitSendMail}
-             defaultValues={{mailAddress: ''}}
-             mode="onSubmit"
-             reValidateMode="onChange"
-             // カード内側の余白（MUI CardContent 既定）は外して幅を外枠側で管理する
-             sx={{ width: '100%', padding: '0' }}
+            toolbar={false}
+            onSubmit={submitVerify}
+            defaultValues={{verifyCode: '' }}
+            mode="onSubmit"
+            reValidateMode="onChange"
+            // カード内側の余白（MUI CardContent 既定）は外して幅を外枠側で管理する
+            sx={{ width: '100%', padding: '0' }}
             >
                 <div
                     style={{
@@ -74,8 +93,8 @@ const N002 = () => {
                 >
 
                 <LabelInput
-                source="mailAddress"
-                label="メールアドレス"
+                source="verifyCode"
+                label="認証コード"
                 type="text"
                 validate={[required()]}
                 sx={fluidInputSx}
@@ -105,17 +124,19 @@ const N002 = () => {
                                 sx={{ color: 'white' }}
                             />
                         ) :
-                            '認証コードを送信'
+                            '認証'
                         }
                     </Button>
+
                     <Typography
                         variant='body1'
-                        component="span"
+                        component="h2"
+                        gutterBottom
                         fontWeight='600'
                         sx={{ ...font.loginLinkFont, fontSize: FLUID.inputFont }}
-                        onClick={()=>{navigate(-1)}}
+                        onClick={submitResendCode}
                     >
-                        ログインに戻る
+                        認証コードを再送信する
                     </Typography>
                 </Box>
             </SimpleForm>
@@ -123,4 +144,4 @@ const N002 = () => {
     );
 };
 
-export default N002;
+export default P003;

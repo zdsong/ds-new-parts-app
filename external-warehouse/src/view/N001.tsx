@@ -38,7 +38,7 @@ const N001: React.FC<LoginPageDatas> = () => {
         try{
             await authProvider.logSend(values)
             notify(translate('ra.message.send_success'), { type: 'success' })
-            navigateN003()
+            navigateP003()
         }catch(e){
             if(e instanceof Error){
                 notify(e.message, { type: 'error' })
@@ -48,7 +48,7 @@ const N001: React.FC<LoginPageDatas> = () => {
 
     };
 
-    const navigateN003 = () =>{
+    const navigateP003 = () =>{
         navigate('/login/verify/login')
     }
 
@@ -68,7 +68,7 @@ const N001: React.FC<LoginPageDatas> = () => {
 
     };
 
-    const navigateN002 = () =>{
+    const navigateP002 = () =>{
         navigate('/login/send-email')
     }
 
@@ -144,7 +144,7 @@ const N001: React.FC<LoginPageDatas> = () => {
                         component="span"
                         fontWeight='600'
                         sx={{ ...font.loginLinkFont, fontSize: FLUID.inputFont }}
-                        onClick={()=>{navigateN002()}}
+                        onClick={()=>{navigateP002()}}
                     >
                         パスワードを忘れた方はこちら
                     </Typography>

@@ -24,7 +24,7 @@ interface ItemRow {
 
 interface SearchFormProps { }
 
-const N008: React.FC<SearchFormProps> = () => {
+const P008: React.FC<SearchFormProps> = () => {
   const [data, setData] = useState<ItemRow[]>([]);
   const [total, setTotal] = useState(0);
   const [pageNum, setPageNum] = useState(1);
@@ -47,7 +47,7 @@ const N008: React.FC<SearchFormProps> = () => {
    * 品目名クリック時の処理
    */
   const handleItemClick = (itemCode: string) => {
-    navigate(`/N010/${itemCode}`);
+    navigate(`/P010/${itemCode}`);
   };
 
   /**
@@ -258,7 +258,7 @@ const N008: React.FC<SearchFormProps> = () => {
           style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '4px', width: '25%' }}
         />
         <button
-          style={{ padding: '5px 10px', border: 'none', color: 'var(--mui-yamato-page-header-color)' }}
+          style={{ padding: '5px 10px', border: 'none', color: 'var(--mui-page-header-color)' }}
           onClick={() => fileInputRef.current?.click()}
         >
           ファイル選択
@@ -381,4 +381,4 @@ const N008: React.FC<SearchFormProps> = () => {
   );
 };
 
-export default N008;
+export default P008;

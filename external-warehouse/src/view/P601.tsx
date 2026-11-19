@@ -345,7 +345,7 @@ const P601: React.FC = () => {
                 </SimpleForm>
             </CustomCard>
 
-            {/* 一括登録エリア（N008と同じ配置） */}
+            {/* 一括登録エリア（P008と同じ配置） */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', gap: '10px' }}>
                 <span style={{ fontWeight: 'bold' }}>一括登録</span>
                 <input
@@ -471,7 +471,7 @@ const P601: React.FC = () => {
                 </DialogActions>
             </Dialog>
 
-            {/* インポートエラー情報（N008と同じ表示） */}
+            {/* インポートエラー情報（P008と同じ表示） */}
             <Modal
                 open={importErrorOpen}
                 onClose={() => setImportErrorOpen(false)}

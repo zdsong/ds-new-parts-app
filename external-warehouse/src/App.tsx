@@ -23,16 +23,14 @@ import { CacheProvider } from '@emotion/react';
 import { Box } from '@mui/material';
 import { PropsWithChildren } from 'react';
 
-import N002 from './view/N002';
-import N003 from './view/N003';
-import N004 from './view/N004';
-import N008 from './view/N008';
-import N010 from './view/N010';
+import P002 from './view/P002';
+import P003 from './view/P003';
+import P004 from './view/P004';
+import P008 from './view/P008';
+import P010 from './view/P010';
 
 import AppVersionPage from './view/AppVersionPage';
 import { HOME_ROUTE } from './utils/appRoutes';
-import C005 from './view/C005';
-import C006 from './view/C006';
 import C013 from './view/C013';
 import C014 from './view/C014';
 import C015 from './view/C015';
@@ -144,8 +142,8 @@ const App = () => {
               <Route path="/admin/*" element={<AdminPage />} />
               <Route path="/login" element={<LoginLayout><Outlet /></LoginLayout>}>
                 <Route index element={<CustomLoginPage />} />
-                <Route path="verify/:type" element={<N003 />} />
-                <Route path="send-email" element={<N002 />} />
+                <Route path="verify/:type" element={<P003 />} />
+                <Route path="send-email" element={<P002 />} />
               </Route>
             </Route>
 
@@ -158,12 +156,6 @@ const App = () => {
                 <Route index element={<C013 />} />
                 <Route path="C014/:cd" element={<C014 />} />
                 <Route path="C015/:cd?" element={<C015 />} />
-              </Route>
-
-              <Route path="/C005">
-                <Route index element={<C005 />} />
-                <Route path="C006/:farmerId?/:orderId?" element={<C006 />} />
-                <Route path="C006/:farmerId?" element={<C006 />} />
               </Route>
 
               <Route path="/S010">
@@ -213,10 +205,11 @@ const App = () => {
               <Route path="/SP304" element={<SP304 />} />
               <Route path="/SP305" element={<SP305 />} />
 
-              {/* 移動管理：バーコード読み取り */}
+              {/* ③移動管理（スマホ）4.1 バーコード読み取り。入庫は ?kind=receive */}
               <Route path="/SP401" element={<SP401 />} />
-              {/* 移動管理：移動依頼の確認・在庫の確認（SP401 から別画面として起動） */}
+              {/* ③移動管理（スマホ）4.2 移動依頼検索 / 移動登録 / 移動登録完了 */}
               <Route path="/SP402" element={<SP402 />} />
+              {/* ③移動管理（スマホ）4.3 在庫検索 */}
               <Route path="/SP403" element={<SP403 />} />
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
@@ -233,14 +226,14 @@ const App = () => {
               <Route path="/P603" element={<P603 />} />
 
               {/* 部品マスタ：詳細 */}
-              <Route path="/N010/:cd" element={<N010 />} />
+              <Route path="/P010/:cd" element={<P010 />} />
 
               <Route path="/appVersion" element={<AppVersionPage />} />
             </Route>
           </CustomRoutes>
 
-          <Resource name="N004" list={N004} />
-          <Resource name="N008" list={N008} />
+          <Resource name="P004" list={P004} />
+          <Resource name="P008" list={P008} />
         </Admin>
       </CacheProvider>
     </StyledEngineProvider>

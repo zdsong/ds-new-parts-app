@@ -5,7 +5,7 @@ import { buttonSx } from '../styles/commonSX';
 import { applyThemeVars, resolveInitialTheme } from '../styles/themeVars';
 
 /**
- * ログイン画面（N001〜N004）共通の外枠レイアウト
+ * ログイン画面（N001、P002〜P004）共通の外枠レイアウト
  *
  * 画面幅に応じて寸法を連続的に変化させる（clamp による線形補間）。
  *   計算式：clamp(最小値, calc(A + B vw), 最大値)
@@ -78,7 +78,7 @@ export const fluidLoginButtonSx = {
 };
 
 interface LoginShellProps {
-    /** タイトル直下の説明文（N002〜N004 で使用） */
+    /** タイトル直下の説明文（P002〜P004 で使用） */
     subtitle?: React.ReactNode;
     children: React.ReactNode;
 }

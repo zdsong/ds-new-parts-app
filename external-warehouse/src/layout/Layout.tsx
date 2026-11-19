@@ -25,18 +25,18 @@ export default ({ children }: { children: React.ReactNode }) => {
   
   const userStr = sessionStorage.getItem('user');
   const user = JSON.parse(userStr || '{}');
-  const [n004Page, setN004Page] = useState(false)
+  const [p004Page, setP004Page] = useState(false)
 
   if(!user) return
 
   React.useEffect(() => {
     if(!isLoginRoute){
-      if (location.pathname !== '/N004' && user.firstLogin) {
-          navigate('/N004');
+      if (location.pathname !== '/P004' && user.firstLogin) {
+          navigate('/P004');
       }
 
-      if(location.pathname === '/N004') setN004Page(true)
-        else setN004Page(false)
+      if(location.pathname === '/P004') setP004Page(true)
+        else setP004Page(false)
       
     }
   }, [user, location.pathname]); 
@@ -50,7 +50,7 @@ export default ({ children }: { children: React.ReactNode }) => {
                 100vh だとブラウザ下部ツールバー分だけ画面が下にはみ出し、
                 画面下端のボタンや入力欄が隠れる。 */}
             <Box sx={{ display: 'flex', flexDirection: 'column', height: 'var(--app-vh)' }}>
-                {!isLoginRoute && !n004Page?<CustomAppBar />:''}
+                {!isLoginRoute && !p004Page?<CustomAppBar />:''}
                 <Box component="main" sx={{ flex: 1, overflow: 'auto', p: 2 ,paddingTop: 0,
                     // iPhone のホームインジケーター（画面下端の横棒）に内容が重ならないようにする
                     paddingBottom: 'env(safe-area-inset-bottom)' }}>
