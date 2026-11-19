@@ -9,8 +9,10 @@ import { spFormInputSx, spItemFieldSx, spSx } from '../styles/spSx';
 import {
     CATEGORY_CHOICES,
     fromApiPallet,
+    hasNonPositiveQuantity,
     normalizeChoiceValue,
     printPalletLabels,
+    QUANTITY_MUST_BE_POSITIVE,
     toApiDetail,
 } from '../utils/palletData';
 import type {
@@ -30,6 +32,7 @@ import type {
  *   更新は PUT /api/pallet（version による楽観ロック）、削除は DELETE /api/pallet/{palletNo}。
  *   番号表印刷は、未印刷なら印刷の前に自動で更新（PUT /api/pallet）を行い、成功時のみ印刷し、
  *   印刷後は印刷済み（PUT /api/pallet/{palletNo}/printed）にする。
+ *   未印刷の印刷では、サーバが在庫情報詳細と在庫履歴を登録する。印刷済みの再印刷では在庫を登録しない。
  *   印刷済み（printed_flg=1）の場合は、印刷以外の操作（更新・削除・明細の増減など）をできないようにする。
  */
 interface Sp305State {
@@ -288,6 +291,11 @@ const SP305: React.FC = () => {
             notify('保管エリア（ロケ番）は必須入力項目です。', { type: 'warning' });
             return null;
         }
+        // 更新と印刷時の保存は、数量が 1 以上の明細だけを受け付ける
+        if (hasNonPositiveQuantity(details)) {
+            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
+            return null;
+        }
 
         try {
             const result = await request(
@@ -383,6 +391,11 @@ const SP305: React.FC = () => {
         }
         if (version === null) {
             notify('パレット情報を取得できていないため印刷できません。', { type: 'error' });
+            return;
+        }
+        // 未印刷の印刷は保存を伴うため、数量が 0 以下のときは印刷も保存もしない
+        if (!printed && hasNonPositiveQuantity(details)) {
+            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
             return;
         }
 
