@@ -768,7 +768,11 @@ const SP401: React.FC = () => {
                         )}
                     </Box>
                     {kind === 'move' && scannedPallet ? (
-                        <button type="button" style={{ ...primaryButtonStyle, maxWidth: 'none' }} onClick={handleMoveWholePallet}>
+                        <button
+                            type="button"
+                            style={{ ...primaryButtonStyle, flex: 'none', width: '100%', maxWidth: 'none' }}
+                            onClick={handleMoveWholePallet}
+                        >
                             パレット毎移動する
                         </button>
                     ) : null}
