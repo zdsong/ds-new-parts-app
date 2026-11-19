@@ -1,10 +1,12 @@
 /**
- * 移動管理（SP401／SP402）の画面用データ
+ * 移動管理（SP401〜SP405）の画面用データ
  *
  * 設計書：③移動管理（スマホ）
- *   4.1 バーコード読み取り（移動／入庫）
- *   4.2 移動登録・移動登録完了・移動依頼検索
- *   4.3 在庫検索は SP403
+ *   SP401 バーコード読み取り（移動／入庫）
+ *   SP402 移動登録（1-3）
+ *   SP403 在庫検索
+ *   SP404 移動依頼
+ *   SP405 移動登録完了（1-4 パレット番号表印刷）
  *
  * 移動専用の API はまだ使わない。画面イメージの例をフロント側に置く。
  */
@@ -42,9 +44,17 @@ export interface MoveLine {
     request: MoveRequestDetail | null;
 }
 
+/**
+ * パレットに移動依頼（依存）があるか
+ * 後で API が返す識別子。true なら新規パレットを作る登録、false ならパレットをそのまま送る。
+ */
+export type PalletDependency = boolean;
+
 /** バーコードで読み取ったパレット */
 export interface ScannedPallet {
     palletNo: string;
+    /** このパレットに移動依頼の依存があるか */
+    dependent: PalletDependency;
     lines: MoveLine[];
     /** 入庫側で移動番号がある場合だけ入る */
     inbound: {
@@ -56,20 +66,12 @@ export interface ScannedPallet {
     } | null;
 }
 
-/** 品目検索の 1 件 */
-export interface MoveItemMaster {
-    itemCode: string;
-    itemName: string;
-    category: MoveCategory;
-    storageQty: number;
-    palletNo: string;
-    storagePlace: string;
-}
-
 /** 移動登録画面へ渡す内容 */
 export interface MoveRegisterState {
     view: 'register';
     mode: MoveRegisterMode;
+    /** true: ①品目を選んで新しいパレットを作る / false: ②パレット毎に送る */
+    dependent: PalletDependency;
     palletNo: string;
     lines: MoveLine[];
 }
@@ -121,9 +123,77 @@ const sampleRequest: MoveRequestDetail = {
     remark: 'XXXXXXXXXXXXXXX',
 };
 
-/** 読み取り結果の例（パレット番号表 B261010-001） */
-const SAMPLE_PALLET: ScannedPallet = {
+/** ① 依存あり。依頼がある品目だけ依頼詳細を持ち、数量の初期値は依頼数量 */
+export const REGISTER_WITH_DEPENDENCY: MoveRegisterState = {
+    view: 'register',
+    mode: 'issue',
+    dependent: true,
+    palletNo: '',
+    lines: [
+        {
+            id: 'dep-1',
+            itemCode: 'TLR280LB-S400-401-BK-00',
+            itemName: 'H400 背面化粧扉(ブラック)',
+            category: '3',
+            moveQty: 50,
+            storageQty: 100,
+            palletNo: 'B261010-002',
+            storagePlace: '外部倉庫/A-1-2-3-5',
+            request: sampleRequest,
+        },
+        {
+            id: 'dep-2',
+            itemCode: 'TLR280LB-S400-401-BK-01',
+            itemName: 'H400 背面化粧扉(ブラック)',
+            category: '3',
+            moveQty: 100,
+            storageQty: 100,
+            palletNo: 'B261005-001',
+            storagePlace: '外部倉庫/B-1-2-3-5',
+            request: null,
+        },
+    ],
+};
+
+/**
+ * ② 依存なし。依頼データを持っていても画面では出さない
+ * （設計書の「移動依頼詳細 ＋」は描き間違い）
+ */
+export const REGISTER_WITHOUT_DEPENDENCY: MoveRegisterState = {
+    view: 'register',
+    mode: 'whole',
+    dependent: false,
     palletNo: 'B261010-001',
+    lines: [
+        {
+            id: 'plain-1',
+            itemCode: 'TLR280LB-S400-401-BK-00',
+            itemName: 'H400 背面化粧扉(ブラック)',
+            category: '3',
+            moveQty: 50,
+            storageQty: 100,
+            palletNo: 'B261010-002',
+            storagePlace: '外部倉庫/A-1-2-3-5',
+            request: sampleRequest,
+        },
+        {
+            id: 'plain-2',
+            itemCode: 'TLR280LB-S400-401-BK-01',
+            itemName: 'H400 背面化粧扉(ブラック)',
+            category: '3',
+            moveQty: 100,
+            storageQty: 100,
+            palletNo: 'B261005-001',
+            storagePlace: '外部倉庫/B-1-2-3-5',
+            request: null,
+        },
+    ],
+};
+
+/** 読み取り結果の例。B261010-001 は依存あり、B261010-002 は依存なし */
+const DEPENDENT_PALLET: ScannedPallet = {
+    palletNo: 'B261010-001',
+    dependent: true,
     inbound: {
         moveNo: '260001000',
         destinationWh: 'gyoda',
@@ -157,52 +227,27 @@ const SAMPLE_PALLET: ScannedPallet = {
     ],
 };
 
-/** 品目検索の例。製品を 1 件含め、混載できないことを画面で確認できる */
-export const MOVE_ITEM_MASTER: MoveItemMaster[] = [
-    {
-        itemCode: 'TLR280LB-S400-401-BK-00',
-        itemName: 'H400 背面化粧扉(ブラック)',
-        category: '3',
-        storageQty: 100,
-        palletNo: 'B261010-002',
-        storagePlace: '外部倉庫/A-1-2-3-5',
-    },
-    {
-        itemCode: 'TLR280LB-S400-401-BK-01',
-        itemName: 'H400 背面化粧扉(ブラック)',
-        category: '3',
-        storageQty: 100,
-        palletNo: 'B261005-001',
-        storagePlace: '外部倉庫/B-1-2-3-5',
-    },
-    {
-        itemCode: 'TLP280LB-S400N-301-BK-01',
-        itemName: 'H400 捺印扉(ブラック)',
-        category: '3',
-        storageQty: 10,
-        palletNo: 'B261010-002',
-        storagePlace: '外部倉庫/B-1-2-3-4',
-    },
-    {
-        itemCode: 'GP20A-101-RN-NAV3-00',
-        itemName: 'アルミ支柱A',
-        category: '1',
-        storageQty: 100,
-        palletNo: 'B261010-001',
-        storagePlace: '外部倉庫/A-1-2-3-4',
-    },
-];
+/** 依存のないパレット。依頼データは持たせ、画面側で出さないことを確認する */
+const PLAIN_PALLET: ScannedPallet = {
+    palletNo: 'B261010-002',
+    dependent: false,
+    inbound: null,
+    lines: REGISTER_WITHOUT_DEPENDENCY.lines.map((line) => ({
+        ...line,
+        request: line.request ? { ...line.request } : null,
+    })),
+};
+
+const clonePallet = (pallet: ScannedPallet): ScannedPallet => ({
+    ...pallet,
+    lines: pallet.lines.map((line) => ({ ...line, request: line.request ? { ...line.request } : null })),
+});
 
 /** 読み取った文字列からパレットを探す。未知の番号は null */
 export const findScannedPallet = (code: string): ScannedPallet | null => {
     const trimmed = code.trim();
-    if (!trimmed) return null;
-    if (trimmed === SAMPLE_PALLET.palletNo) {
-        return {
-            ...SAMPLE_PALLET,
-            lines: SAMPLE_PALLET.lines.map((line) => ({ ...line, request: line.request ? { ...line.request } : null })),
-        };
-    }
+    if (trimmed === DEPENDENT_PALLET.palletNo) return clonePallet(DEPENDENT_PALLET);
+    if (trimmed === PLAIN_PALLET.palletNo) return clonePallet(PLAIN_PALLET);
     return null;
 };
 
@@ -211,19 +256,6 @@ export const canMixCategory = (lines: MoveLine[], category: MoveCategory): boole
     if (lines.length === 0) return true;
     return lines.every((line) => line.category === category);
 };
-
-/** 品目マスタから移動候補を作る。移動依頼が無いので移動数量の初期値は保管数量 */
-export const lineFromMaster = (item: MoveItemMaster, moveQty: number): MoveLine => ({
-    id: `${item.itemCode}-${Date.now()}`,
-    itemCode: item.itemCode,
-    itemName: item.itemName,
-    category: item.category,
-    moveQty,
-    storageQty: item.storageQty,
-    palletNo: item.palletNo,
-    storagePlace: item.storagePlace,
-    request: null,
-});
 
 /** 移動登録を確定し、画面イメージと同じ番号を採る（サーバ採番は行わない） */
 export const completeMoveRegistration = (input: {

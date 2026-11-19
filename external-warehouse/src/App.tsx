@@ -65,6 +65,8 @@ import SP305 from './view/SP305';
 import SP401 from './view/SP401';
 import SP402 from './view/SP402';
 import SP403 from './view/SP403';
+import SP404 from './view/SP404';
+import SP405 from './view/SP405';
 import P406 from './view/P406';
 import P601 from './view/P601';
 import P602 from './view/P602';
@@ -207,10 +209,14 @@ const App = () => {
 
               {/* ③移動管理（スマホ）4.1 バーコード読み取り。入庫は ?kind=receive */}
               <Route path="/SP401" element={<SP401 />} />
-              {/* ③移動管理（スマホ）4.2 移動依頼検索 / 移動登録 / 移動登録完了 */}
+              {/* ③移動管理 1-3 移動登録 */}
               <Route path="/SP402" element={<SP402 />} />
-              {/* ③移動管理（スマホ）4.3 在庫検索 */}
+              {/* ③移動管理 4.3 在庫検索 */}
               <Route path="/SP403" element={<SP403 />} />
+              {/* ③移動管理 移動依頼 */}
+              <Route path="/SP404" element={<SP404 />} />
+              {/* ③移動管理 1-4 パレット番号表印刷（移動登録完了） */}
+              <Route path="/SP405" element={<SP405 />} />
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
