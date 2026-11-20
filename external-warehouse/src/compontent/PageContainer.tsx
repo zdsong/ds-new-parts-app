@@ -27,6 +27,10 @@ interface CustomCardProps {
         | 'caption' | 'overline'
         | 'inherit';
     divider?: boolean;
+    /** タイトルの下に横線を引く */
+    titleUnderline?: boolean;
+    /** ページ下端に余白を付ける */
+    bottomSpace?: boolean;
     sx?: object;
 }
 
@@ -42,11 +46,14 @@ const PageContainer: React.FC<CustomCardProps> = ({
     contentProps = {},
     cardProps = {},
     titleVariant = 'h6',
-    divider = true, 
+    divider = true,
+    titleUnderline = false,
+    bottomSpace = false,
     ...rest 
 }) => { 
     // ルーティングナビゲーションフック
     const navigate = useNavigate();
+    const { sx: contentSx, ...restContentProps } = (contentProps || {}) as { sx?: object };
     
     // タイトルレンダリング処理（文字列/React要素に対応）
     const renderTitle = () => { 
@@ -77,9 +84,12 @@ const PageContainer: React.FC<CustomCardProps> = ({
             {(title || subheader || avatar || action) && (
                 <Box
                 sx={{
-                    height: '100%',
+                    height: titleUnderline ? 'auto' : '100%',
                     display: 'flex',
                     flexDirection: 'row',
+                    ...(titleUnderline
+                        ? { margin: '0 20px', borderBottom: '1px solid #d0d0d0' }
+                        : {}),
                 }}
                 >
                 {/* カードヘッダー（タイトル領域） */}
@@ -91,6 +101,7 @@ const PageContainer: React.FC<CustomCardProps> = ({
                     sx={{
                         flex: 1,
                         ...PageHeaderContainer,
+                        ...(titleUnderline ? { margin: '8px 0 6px', padding: '2px 0', height: 'auto' } : {}),
                         ...(titleProps as any)?.sx,
                     }}
                     {...titleProps}
@@ -106,8 +117,12 @@ const PageContainer: React.FC<CustomCardProps> = ({
             
             {/* ページコンテンツ領域 */}
             <CardContent 
-                sx={pageContentContainer}
-                {...contentProps}
+                sx={{
+                    ...pageContentContainer,
+                    ...(bottomSpace ? { paddingBottom: '28px !important' } : {}),
+                    ...(contentSx || {}),
+                }}
+                {...restContentProps}
             >
                 {children}
             </CardContent>

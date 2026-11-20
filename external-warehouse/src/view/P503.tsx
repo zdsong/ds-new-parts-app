@@ -142,7 +142,7 @@ const P503: React.FC = () => {
     const pallets = detail.pallets || [];
 
     return (
-        <PageContainer title="在庫詳細（ロケ番）">
+        <PageContainer title="在庫詳細（ロケ番）" titleUnderline bottomSpace>
             <div style={sectionTitleStyle}>■基本情報</div>
             <div style={infoGridStyle}>
                 <InfoItem label="保管倉庫" value={detail.warehouse || ''} />

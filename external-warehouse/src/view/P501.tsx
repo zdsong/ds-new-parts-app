@@ -247,7 +247,7 @@ const P501: React.FC = () => {
     };
 
     return (
-        <PageContainer title="在庫一覧">
+        <PageContainer title="在庫一覧" titleUnderline bottomSpace>
             <div style={sectionTitleStyle}>■検索条件</div>
             <SimpleForm
                 key={formVersion}

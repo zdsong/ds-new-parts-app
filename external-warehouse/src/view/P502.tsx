@@ -228,7 +228,7 @@ const P502: React.FC = () => {
     );
 
     return (
-        <PageContainer title="在庫詳細（品目）">
+        <PageContainer title="在庫詳細（品目）" titleUnderline bottomSpace>
             <div style={sectionTitleStyle}>■基本情報</div>
             <div style={infoGridStyle}>
                 <InfoItem label="品目コード" value={detail.itemCode || itemCode} />

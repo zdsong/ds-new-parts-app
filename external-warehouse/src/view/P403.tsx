@@ -302,7 +302,7 @@ const P403: React.FC = () => {
     );
 
     return (
-        <PageContainer title={'移動依頼一覧'}>
+        <PageContainer title={'移動依頼一覧'} titleUnderline bottomSpace>
             <div style={sectionTitleStyle}>検索条件</div>
             <SimpleForm
                 key={formVersion}
