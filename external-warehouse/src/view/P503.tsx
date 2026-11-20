@@ -1,11 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { ColDef } from 'ag-grid-community';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import useApiRequest from '../adapters/apiUtil';
 import PageContainer from '../compontent/PageContainer';
 import ResultGrid from '../compontent/ResultGrid';
 import { buttonSx, tableSx } from '../styles/commonSX';
@@ -14,8 +15,8 @@ import { buttonSx, tableSx } from '../styles/commonSX';
  * 在庫詳細（ロケ番）画面（P503）
  *
  * 画面イメージ：④在庫管理 在庫詳細（ロケーション）
- * 画面タイトルは設計書の「在庫詳細（品目）」ではなく「在庫詳細（ロケ番）」とする。
- * バックエンドは未接続。表示は設計書の画面イメージに合わせた仮データ。
+ * 画面タイトルは「在庫詳細（ロケ番）」。
+ * 在庫一覧（P501）のロケ番から、倉庫コードとロケコードを渡して開く。
  */
 
 /** パレットに載っている品目 */
@@ -24,7 +25,7 @@ interface PalletItemRow {
     itemCode: string;
     itemName: string;
     storageType: string;
-    quantity: number;
+    quantity: number | string;
     usable: string;
 }
 
@@ -35,44 +36,22 @@ interface PalletGroup {
     items: PalletItemRow[];
 }
 
-const PALLET_GROUPS: PalletGroup[] = [
-    {
-        palletNo: 'B260528-001',
-        storagePeriod: '6ヵ月',
-        items: [
-            {
-                id: '1',
-                itemCode: 'MB33S-212-00',
-                itemName: '止水板1',
-                storageType: '稼働',
-                quantity: 400,
-                usable: '使用可',
-            },
-        ],
-    },
-    {
-        palletNo: 'B250401-001',
-        storagePeriod: '1年7ヵ月',
-        items: [
-            {
-                id: '2',
-                itemCode: 'MB33S-207-01',
-                itemName: 'シーズ材2',
-                storageType: '稼働',
-                quantity: 160,
-                usable: '使用可',
-            },
-            {
-                id: '3',
-                itemCode: 'MB33S-207-02',
-                itemName: 'XXXXXXX',
-                storageType: '稼働',
-                quantity: 160,
-                usable: '使用可',
-            },
-        ],
-    },
-];
+/** ロケ番の在庫詳細 */
+interface LocationDetail {
+    warehouse: string;
+    location: string;
+    updater: string;
+    updatedAt: string;
+    pallets: PalletGroup[];
+}
+
+const EMPTY_DETAIL: LocationDetail = {
+    warehouse: '',
+    location: '',
+    updater: '',
+    updatedAt: '',
+    pallets: [],
+};
 
 const sectionTitleStyle: React.CSSProperties = {
     fontSize: '15px',
@@ -113,8 +92,35 @@ const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) 
     </div>
 );
 
+/** 末尾の 0 を除いた数量 */
+const formatQuantity = (value: unknown) => {
+    if (value == null || value === '') {
+        return '';
+    }
+    const number = Number(value);
+    return Number.isFinite(number) ? String(number) : String(value);
+};
+
 const P503: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const whCd = searchParams.get('whCd') || '';
+    const locCd = searchParams.get('locCd') || '';
+    const { request } = useApiRequest();
+    const [detail, setDetail] = useState<LocationDetail>(EMPTY_DETAIL);
+
+    useEffect(() => {
+        const load = async () => {
+            if (!whCd || !locCd) {
+                setDetail(EMPTY_DETAIL);
+                return;
+            }
+            const result = await request('get', 'api/inventory/location', {}, { whCd, locCd }, true, false);
+            const data = result?.data;
+            setDetail(data && typeof data === 'object' ? data : EMPTY_DETAIL);
+        };
+        load();
+    }, [locCd, request, whCd]);
 
     const columnDefs = useMemo<ColDef<PalletItemRow>[]>(
         () => [
@@ -125,6 +131,7 @@ const P503: React.FC = () => {
                 headerName: '保管数',
                 field: 'quantity',
                 width: 110,
+                valueFormatter: (params) => formatQuantity(params.value),
                 cellStyle: { justifyContent: 'flex-end' },
             },
             { headerName: '使用可否', field: 'usable', width: 120 },
@@ -132,18 +139,20 @@ const P503: React.FC = () => {
         []
     );
 
+    const pallets = detail.pallets || [];
+
     return (
         <PageContainer title="在庫詳細（ロケ番）">
             <div style={sectionTitleStyle}>■基本情報</div>
             <div style={infoGridStyle}>
-                <InfoItem label="保管倉庫" value="外部倉庫" />
-                <InfoItem label="ロケ番" value="A-1-2-3-4" />
-                <InfoItem label="最終更新者" value="山田 太郎（物流）" />
-                <InfoItem label="最終更新日時" value="2026/10/01 15:00" />
+                <InfoItem label="保管倉庫" value={detail.warehouse || ''} />
+                <InfoItem label="ロケ番" value={detail.location || locCd} />
+                <InfoItem label="最終更新者" value={detail.updater || ''} />
+                <InfoItem label="最終更新日時" value={detail.updatedAt || ''} />
             </div>
 
             <div style={sectionTitleStyle}>■パレット番号一覧</div>
-            {PALLET_GROUPS.map((group) => (
+            {pallets.map((group) => (
                 <div key={group.palletNo} style={{ marginBottom: '18px' }}>
                     <div
                         style={{
@@ -161,12 +170,12 @@ const P503: React.FC = () => {
                         </div>
                         <div style={infoItemStyle}>
                             <span>保管期間</span>
-                            <span>{group.storagePeriod}</span>
+                            <span>{group.storagePeriod || ''}</span>
                         </div>
                     </div>
                     <ResultGrid<PalletItemRow>
                         columnDefs={columnDefs}
-                        rowData={group.items}
+                        rowData={group.items || []}
                         noRowsShow="品目がありません。"
                     />
                 </div>

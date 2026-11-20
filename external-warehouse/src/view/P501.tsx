@@ -1,12 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
+import { useFormContext } from 'react-hook-form';
 import { SimpleForm } from 'react-admin';
 import { ColDef } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 
+import useApiRequest from '../adapters/apiUtil';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import ResultGrid from '../compontent/ResultGrid';
@@ -18,18 +20,24 @@ import { normalizeChoiceValue } from '../utils/palletData';
  *
  * 画面イメージ：④在庫管理 在庫一覧（部品）
  * 検索条件は倉庫・ロケ番・品目コード・品目名。
- * バックエンドは未接続。一覧は設計書の画面イメージに合わせた仮データ。
+ * 一覧は在庫情報詳細を倉庫・ロケ・品目で集約した結果。
  */
+
+/** 選択肢 */
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 /** 在庫 1 行 */
 interface StockRow {
     id: string;
+    whCd: string;
     warehouse: string;
     location: string;
     itemCode: string;
     itemName: string;
-    /** 表示用。数値または xx */
-    quantity: string;
+    quantity: number | string;
     updatedDate: string;
     updater: string;
 }
@@ -42,22 +50,6 @@ interface SearchCondition {
     itemName: string;
 }
 
-const WAREHOUSE_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-const WAREHOUSE_LABELS: Record<string, string> = Object.fromEntries(
-    WAREHOUSE_CHOICES.map((choice) => [choice.key, choice.value])
-);
-
-const LOCATION_CHOICES = [
-    { key: 'A-1-2-3', value: 'A-1-2-3' },
-    { key: 'B-1-2-3-4', value: 'B-1-2-3-4' },
-    { key: 'B-1-2-3-5', value: 'B-1-2-3-5' },
-    { key: 'XXXXXXX', value: 'XXXXXXX' },
-];
-
 const PAGE_SIZE_CHOICES = [10, 20, 50];
 
 const INITIAL_CONDITION: SearchCondition = {
@@ -66,72 +58,6 @@ const INITIAL_CONDITION: SearchCondition = {
     itemCode: '',
     itemName: '',
 };
-
-/** 設計書の先頭行。残りは同じ体裁で 120 件になるまで足す */
-const buildRows = (): StockRow[] => {
-    const head: Omit<StockRow, 'id' | 'updatedDate'>[] = [
-        {
-            warehouse: '行田工場',
-            location: 'A-1-2-3',
-            itemCode: 'AAAAAAAAAA',
-            itemName: 'サンプルネジA',
-            quantity: '24',
-            updater: '山田 太郎（物流）',
-        },
-        {
-            warehouse: '行田工場',
-            location: 'A-1-2-3',
-            itemCode: 'XXXXXXXXXX',
-            itemName: 'サンプルネジB',
-            quantity: '70',
-            updater: 'XXXXXXXXXXXXXX',
-        },
-        {
-            warehouse: '外部倉庫',
-            location: 'B-1-2-3-4',
-            itemCode: 'XXXXXXXXXX',
-            itemName: 'サンプルネジC',
-            quantity: '110',
-            updater: 'XXXXXXXXXXXXXX',
-        },
-        {
-            warehouse: '外部倉庫',
-            location: 'B-1-2-3-4',
-            itemCode: 'XXXXXXXXXX',
-            itemName: 'サンプルネジD',
-            quantity: '150',
-            updater: 'XXXXXXXXXXXXXX',
-        },
-        {
-            warehouse: '外部倉庫',
-            location: 'B-1-2-3-5',
-            itemCode: 'XXXXXXXXXX',
-            itemName: 'サンプルネジD',
-            quantity: 'xx',
-            updater: 'XXXXXXXXXXXXXX',
-        },
-    ];
-    const rows: StockRow[] = head.map((row, index) => ({
-        ...row,
-        id: String(index + 1),
-        updatedDate: '2026/10/01',
-    }));
-    for (let index = rows.length; index < 120; index += 1) {
-        rows.push({
-            id: String(index + 1),
-            warehouse: '外部倉庫',
-            location: 'XXXXXXX',
-            itemCode: 'XXXXXXXXXX',
-            itemName: 'XXXXXXXXXXXXXX',
-            quantity: 'xx',
-            updatedDate: '2026/10/01',
-            updater: 'XXXXXXXXXXXXXX',
-        });
-    }
-    return rows;
-};
-
-const STOCK_ROWS = buildRows();
 
 const sectionTitleStyle: React.CSSProperties = {
     fontSize: '15px',
@@ -164,57 +90,130 @@ const linkStyle: React.CSSProperties = {
     color: '#1a73c7',
 };
 
+/** 末尾の 0 を除いた数量 */
+const formatQuantity = (value: unknown) => {
+    if (value == null || value === '') {
+        return '';
+    }
+    const number = Number(value);
+    return Number.isFinite(number) ? String(number) : String(value);
+};
+
+/** 倉庫を変えたらロケ番の選択を外す */
+const LocationReset: React.FC<{ warehouse: string }> = ({ warehouse }) => {
+    const { setValue } = useFormContext();
+    const previous = useRef(warehouse);
+    useEffect(() => {
+        if (previous.current !== warehouse) {
+            setValue('location', '');
+            previous.current = warehouse;
+        }
+    }, [setValue, warehouse]);
+    return null;
+};
+
 const P501: React.FC = () => {
     const navigate = useNavigate();
-    const [condition, setCondition] = useState<SearchCondition>(INITIAL_CONDITION);
+    const { request } = useApiRequest();
     const [formValues, setFormValues] = useState<SearchCondition>(INITIAL_CONDITION);
     const [formVersion, setFormVersion] = useState(0);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
+    const [rows, setRows] = useState<StockRow[]>([]);
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+    const [selectedWarehouse, setSelectedWarehouse] = useState('');
 
-    const filteredRows = useMemo(() => {
-        const code = condition.itemCode.trim();
-        const name = condition.itemName.trim();
-        const warehouse = WAREHOUSE_LABELS[condition.warehouse] || '';
-        return STOCK_ROWS.filter(
-            (row) =>
-                (!warehouse || row.warehouse === warehouse) &&
-                (!condition.location || row.location === condition.location) &&
-                (!code || row.itemCode.includes(code)) &&
-                (!name || row.itemName.includes(name))
-        );
-    }, [condition]);
+    const loadRows = useCallback(
+        async (next: SearchCondition) => {
+            const result = await request(
+                'get',
+                'api/inventory/list',
+                {},
+                {
+                    whCd: next.warehouse,
+                    locCd: next.location,
+                    itemCode: next.itemCode.trim(),
+                    itemName: next.itemName.trim(),
+                },
+                true,
+                false
+            );
+            setRows(Array.isArray(result?.data) ? result.data : []);
+        },
+        [request]
+    );
+
+    useEffect(() => {
+        const loadWarehouses = async () => {
+            const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+            setWarehouseOptions(Array.isArray(result?.data) ? result.data : []);
+        };
+        loadWarehouses();
+        loadRows(INITIAL_CONDITION);
+    }, [loadRows, request]);
+
+    useEffect(() => {
+        const loadLocations = async () => {
+            if (!selectedWarehouse) {
+                setLocationOptions([]);
+                return;
+            }
+            const result = await request(
+                'get',
+                `api/common/${selectedWarehouse}/location/options`,
+                {},
+                {},
+                false,
+                false
+            );
+            setLocationOptions(Array.isArray(result?.data) ? result.data : []);
+        };
+        loadLocations();
+    }, [request, selectedWarehouse]);
 
     const columnDefs = useMemo<ColDef<StockRow>[]>(
         () => [
             { headerName: '保管倉庫', field: 'warehouse', width: 130 },
-            { headerName: 'ロケ番', field: 'location', width: 140 },
+            {
+                headerName: 'ロケ番',
+                field: 'location',
+                width: 140,
+                cellRenderer: (params: { data?: StockRow; value?: string }) => (
+                    <span
+                        style={linkStyle}
+                        onClick={() =>
+                            params.data &&
+                            navigate(
+                                `/P503?whCd=${encodeURIComponent(params.data.whCd)}&locCd=${encodeURIComponent(params.data.location)}`
+                            )
+                        }
+                    >
+                        {params.value}
+                    </span>
+                ),
+            },
             {
                 headerName: '品目コード',
                 field: 'itemCode',
                 width: 160,
                 cellRenderer: (params: { value?: string }) => (
-                    <span style={linkStyle} onClick={() => navigate('/P502')}>
+                    <span
+                        style={linkStyle}
+                        onClick={() =>
+                            params.value && navigate(`/P502?itemCode=${encodeURIComponent(params.value)}`)
+                        }
+                    >
                         {params.value}
                     </span>
                 ),
             },
-            {
-                headerName: '品目名',
-                field: 'itemName',
-                flex: 1,
-                minWidth: 180,
-                cellRenderer: (params: { value?: string }) => (
-                    <span style={linkStyle} onClick={() => navigate('/P502')}>
-                        {params.value}
-                    </span>
-                ),
-            },
+            { headerName: '品目名', field: 'itemName', flex: 1, minWidth: 180 },
             {
                 headerName: '在庫数',
                 field: 'quantity',
                 width: 110,
-                valueFormatter: (params) => `${params.value ?? ''}個`,
+                valueFormatter: (params) => `${formatQuantity(params.value)}個`,
                 cellStyle: { justifyContent: 'flex-end' },
             },
             { headerName: '最終更新日', field: 'updatedDate', width: 140 },
@@ -224,20 +223,22 @@ const P501: React.FC = () => {
     );
 
     const handleSearch = (values: Record<string, unknown>) => {
-        setCondition({
+        const next: SearchCondition = {
             warehouse: normalizeChoiceValue(values?.warehouse),
             location: normalizeChoiceValue(values?.location),
             itemCode: String(values?.itemCode || ''),
             itemName: String(values?.itemName || ''),
-        });
+        };
         setPage(1);
+        loadRows(next);
     };
 
     const handleClear = () => {
-        setCondition(INITIAL_CONDITION);
         setFormValues(INITIAL_CONDITION);
+        setSelectedWarehouse('');
         setFormVersion((version) => version + 1);
         setPage(1);
+        loadRows(INITIAL_CONDITION);
     };
 
     const handlePageSizeChange = (value: number) => {
@@ -255,18 +256,24 @@ const P501: React.FC = () => {
                 toolbar={false}
                 defaultValues={formValues}
             >
+                <LocationReset warehouse={selectedWarehouse} />
                 <div style={formSx.form2}>
                     <FormInput
                         type={'filter-select'}
                         source="warehouse"
                         label="倉庫"
-                        choices={WAREHOUSE_CHOICES}
+                        choices={warehouseOptions}
+                        onChange={(value) => {
+                            const next = normalizeChoiceValue(value);
+                            setSelectedWarehouse(next);
+                            setFormValues((current) => ({ ...current, warehouse: next, location: '' }));
+                        }}
                     />
                     <FormInput
                         type={'filter-select'}
                         source="location"
                         label="ロケ番"
-                        choices={LOCATION_CHOICES}
+                        choices={locationOptions}
                     />
                     <FormInput type={'text'} source="itemCode" label="品目コード" />
                     <FormInput type={'text'} source="itemName" label="品目名" />
@@ -284,7 +291,7 @@ const P501: React.FC = () => {
             <div style={{ ...sectionTitleStyle, marginTop: '22px' }}>■検索結果一覧</div>
             <ResultGrid<StockRow>
                 columnDefs={columnDefs}
-                rowData={filteredRows}
+                rowData={rows}
                 showResultSummary
                 showPageSize
                 showTopPagination
