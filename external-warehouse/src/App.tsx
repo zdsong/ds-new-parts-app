@@ -57,6 +57,9 @@ import P403 from './view/P403';
 import P404 from './view/P404';
 import P405 from './view/P405';
 import P401 from './view/P401';
+import P501 from './view/P501';
+import P502 from './view/P502';
+import P503 from './view/P503';
 import SP301 from './view/SP301';
 import SP302 from './view/SP302';
 import SP303 from './view/SP303';
@@ -69,6 +72,7 @@ import SP404 from './view/SP404';
 import SP405 from './view/SP405';
 import SP406 from './view/SP406';
 import P406 from './view/P406';
+import P407 from './view/P407';
 import P601 from './view/P601';
 import P602 from './view/P602';
 import P603 from './view/P603';
@@ -223,7 +227,15 @@ const App = () => {
 
               {/* ②移動依頼管理：①行田工場から外部倉庫へ移動する場合（出庫） */}
               <Route path="/P401" element={<P401 />} />
+              {/* ④在庫管理：在庫一覧（部品） */}
+              <Route path="/P501" element={<P501 />} />
+              {/* ④在庫管理：在庫詳細（品目） */}
+              <Route path="/P502" element={<P502 />} />
+              {/* ④在庫管理：在庫詳細（ロケ番） */}
+              <Route path="/P503" element={<P503 />} />
               <Route path="/P406" element={<P406 />} />
+              {/* ③移動管理 3. 移動登録情報を確認する（移動情報詳細） */}
+              <Route path="/P407" element={<P407 />} />
               {/* ②移動依頼管理：2. 移動依頼を確認する（生産管理） */}
               <Route path="/P403" element={<P403 />} />
               <Route path="/P404" element={<P404 />} />
