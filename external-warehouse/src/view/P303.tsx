@@ -486,9 +486,9 @@ const P303: React.FC = () => {
     ];
 
     return (
-        <PageContainer title={'パレット番号発番'}>
+        <PageContainer title={'パレット番号発番'} titleUnderline bottomSpace>
             {/* 基本情報 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="基本情報" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="基本情報" border={false}>
                 <SimpleForm
                     key={formVersion}
                     id="p303-form"
@@ -551,7 +551,7 @@ const P303: React.FC = () => {
             </CustomCard>
 
             {/* 積載明細（区分に応じて部品／製品のカードを表示する） */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="部品一覧" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="部品一覧" border={false}>
                 <div style={buttonSx.buttonBar}>
                     <button
                         style={isCategorySelected ? buttonSx.button : buttonSx.disabledButton}

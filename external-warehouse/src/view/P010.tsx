@@ -62,7 +62,7 @@ const P010: React.FC = () => {
   const labelSx = { label: { width: '150px' } };
 
   return (
-    <PageContainer title={'品目詳細'} returnButton={true}>
+    <PageContainer title={'品目詳細'} returnButton={true} titleUnderline bottomSpace>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '16px 24px' }}>
         <FormTicket structure="left-right" label="品目コード" value={detail.itemCode || '-'} sx={labelSx} />
         <FormTicket structure="left-right" label="品目名" value={detail.itemName || '-'} sx={labelSx} />

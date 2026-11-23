@@ -500,9 +500,9 @@ const P404: React.FC = () => {
     ];
 
     return (
-        <PageContainer title={title}>
+        <PageContainer title={title} titleUnderline bottomSpace>
             {/* 基本情報 */}
-            <CustomCard
+            <CustomCard plain
                 sx={{ width: '100%' }}
                 titleVariant={'body1'}
                 title="基本情報"
@@ -557,7 +557,7 @@ const P404: React.FC = () => {
             </CustomCard>
 
             {/* 品目一覧 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="品目一覧" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="品目一覧" border={false}>
                 {/* 明細グリッドは行数に合わせて高さを詰める（一覧画面向けの min-height:350px を解除する） */}
                 <style>{`
                     .move-detail-grid .ag-center-cols-viewport,

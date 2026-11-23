@@ -484,9 +484,9 @@ const P304: React.FC = () => {
     ];
 
     return (
-        <PageContainer title={'パレット番号一覧'}>
+        <PageContainer title={'パレット番号一覧'} titleUnderline bottomSpace>
             {/* 検索条件 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
                 <SimpleForm
                     key={formVersion}
                     sx={formSx.formContainer}
@@ -550,7 +550,7 @@ const P304: React.FC = () => {
             </CustomCard>
 
             {/* 検索結果 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索結果" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索結果" border={false}>
                 <div style={resultHeaderStyle}>
                     <Typography variant={'body2'} sx={{ fontSize: 13 }}>
                         検索結果：{filteredPallets.length} 件

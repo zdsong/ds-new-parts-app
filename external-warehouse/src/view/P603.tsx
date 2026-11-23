@@ -161,8 +161,8 @@ const P603: React.FC = () => {
     };
 
     return (
-        <PageContainer title={'ロケ番更新'}>
-            <CustomCard
+        <PageContainer title={'ロケ番更新'} titleUnderline bottomSpace>
+            <CustomCard plain
                 sx={{ width: '100%' }}
                 titleVariant={'body1'}
                 title="ロケ番情報"

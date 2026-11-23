@@ -463,9 +463,9 @@ const P406: React.FC = () => {
     ];
 
     return (
-        <PageContainer title={'入庫依頼'}>
+        <PageContainer title={'入庫依頼'} titleUnderline bottomSpace>
             {/* 基本情報 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="基本情報" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="基本情報" border={false}>
                 <SimpleForm
                     key={formVersion}
                     id="p406-form"
@@ -527,7 +527,7 @@ const P406: React.FC = () => {
             </CustomCard>
 
             {/* 品目一覧 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="品目一覧" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="品目一覧" border={false}>
                 {/* 明細グリッドは行数に合わせて高さを詰める（一覧画面向けの min-height:350px を解除する） */}
                 <style>{`
                     .p406-detail-grid .ag-center-cols-viewport,

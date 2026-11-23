@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ColDef } from 'ag-grid-community';
 import { SimpleForm, useNotify, useTranslate } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
-import SearchCard from '../compontent/SearchCard';
+import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
@@ -176,9 +176,9 @@ const P008: React.FC<SearchFormProps> = () => {
   }, [])
 
   return (
-    <PageContainer title={'品目マスタ'}>
+    <PageContainer title={'品目マスタ'} titleUnderline bottomSpace>
       {/* 検索条件カード */}
-      <SearchCard
+      <CustomCard plain
         sx={{ width: '100%', marginBottom: '20px', }}
         titleVariant={'body1'}
         title="検索条件"
@@ -245,7 +245,7 @@ const P008: React.FC<SearchFormProps> = () => {
             </div>
           </div>
         </SimpleForm>
-      </SearchCard>
+      </CustomCard>
 
       {/* 一括登録エリア */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', gap: '10px' }}>

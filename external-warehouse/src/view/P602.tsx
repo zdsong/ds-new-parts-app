@@ -95,8 +95,8 @@ const P602: React.FC = () => {
     };
 
     return (
-        <PageContainer title={'ロケ番新規登録'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="ロケ番情報" border={false}>
+        <PageContainer title={'ロケ番新規登録'} titleUnderline bottomSpace>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="ロケ番情報" border={false}>
                 <SimpleForm
                     key={formVersion}
                     id="p602-form"

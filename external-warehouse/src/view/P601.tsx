@@ -290,9 +290,9 @@ const P601: React.FC = () => {
     ];
 
     return (
-        <PageContainer title={'ロケ番一覧'}>
+        <PageContainer title={'ロケ番一覧'} titleUnderline bottomSpace>
             {/* 検索条件 */}
-            <CustomCard
+            <CustomCard plain
                 sx={{ width: '100%' }}
                 titleVariant={'body1'}
                 title="検索条件"
@@ -393,7 +393,7 @@ const P601: React.FC = () => {
             </div>
 
             {/* 検索結果一覧 */}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索結果一覧" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索結果一覧" border={false}>
                 <Box
                     sx={{
                         display: 'flex',
