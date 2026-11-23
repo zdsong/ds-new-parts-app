@@ -270,7 +270,7 @@ const S095: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={'スケジュールログ'}>
+        <PageContainer titleUnderline bottomSpace title={'スケジュールログ'}>
             {showLogDetail && currentLog && (
                 <div style={{
                     position: 'fixed',
@@ -374,7 +374,7 @@ const S095: React.FC = () => {
                     </div>
                 </div>
             )}
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
                 <SimpleForm sx={formSx.formContainer} onSubmit={handleSearch} toolbar={false} values={searchParams}>
                     <div style={formSx.form1}>
                         <FormInput
@@ -434,7 +434,7 @@ const S095: React.FC = () => {
                 </SimpleForm>
             </CustomCard>
             
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="スケジュール・ログ・リスト" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="スケジュール・ログ・リスト" border={false}>
                 <div style={buttonSx.buttonBar}>
                     <button 
                         style={buttonSx.button}  

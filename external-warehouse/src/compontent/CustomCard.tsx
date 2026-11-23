@@ -21,6 +21,8 @@ interface CustomCardProps {
         | 'inherit';
     divider?: boolean;
     border?: boolean;
+    /** 外枠なし。見出しは ■。在庫画面と同じ並び */
+    plain?: boolean;
     sx?: object;
 }
 
@@ -38,6 +40,7 @@ const CustomCard: React.FC<CustomCardProps> = ({
     drawer = false,
     divider = true, 
     border = true,
+    plain = false,
     sx,
     ...rest 
 }) => { 
@@ -55,9 +58,10 @@ const CustomCard: React.FC<CustomCardProps> = ({
             return (
                 <Typography
                     variant={titleVariant as any}
-                    component="h2" 
+                    component="h2"
+                    sx={plain ? { fontSize: '15px', fontWeight: 700 } : undefined}
                 >
-                    {'▸ ' + title}
+                    {(plain ? '■ ' : '▸ ') + title}
                 </Typography>
             );
         }
@@ -69,7 +73,9 @@ const CustomCard: React.FC<CustomCardProps> = ({
             sx={{
                 overflow: 'hidden',
                 transition: 'all 0.3s ease',
-                ...cardContainer,
+                ...(plain
+                    ? { border: 'none', borderRadius: 0, backgroundColor: 'transparent' }
+                    : cardContainer),
             }}
             {...cardProps}
         >
@@ -81,7 +87,9 @@ const CustomCard: React.FC<CustomCardProps> = ({
                     avatar={avatar}
                     action={action}
                     sx={{
-                        ...cardHeaderContainer,
+                        ...(plain
+                            ? { padding: '2px 0', margin: '12px 0 8px', height: 'auto' }
+                            : cardHeaderContainer),
                         ...(titleProps as any)?.sx,
                     }}
                     {...titleProps}
@@ -94,11 +102,13 @@ const CustomCard: React.FC<CustomCardProps> = ({
             {/* コンテンツ領域（showFlagがtrueの場合に表示） */}
             {showFlag && (
                 <Box 
-                    sx={{
-                        ...cardContentContainer,
-                        border: border ? '1px solid #d0d0d0' : 0,
-                        padding: border ? cardContentContainer.padding : 0
-                    }}
+                    sx={plain
+                        ? { margin: 0, padding: 0, border: 0 }
+                        : {
+                            ...cardContentContainer,
+                            border: border ? '1px solid #d0d0d0' : 0,
+                            padding: border ? cardContentContainer.padding : 0
+                        }}
                 >
                     {children}
                 </Box>

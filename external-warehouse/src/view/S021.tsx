@@ -104,8 +104,8 @@ const S021: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={isEditMode ? '辞書の変更' : '新しい辞書'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="辞書情報">
+        <PageContainer titleUnderline bottomSpace title={isEditMode ? '辞書の変更' : '新しい辞書'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="辞書情報">
                 <SimpleForm
                     sx={formSx.formContainer}
                     onSubmit={handleSubmit}

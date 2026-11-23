@@ -222,8 +222,8 @@ const S022: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={'辞書明細 - ' + dictType}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
+        <PageContainer titleUnderline bottomSpace title={'辞書明細 - ' + dictType}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
                 <SimpleForm 
                     sx={formSx.formContainer} 
                     onSubmit={handleSearch} 
@@ -266,7 +266,7 @@ const S022: React.FC = () => {
                 </SimpleForm>
             </CustomCard>
             
-            <CustomCard sx={{ width: '100%', padding: 0 }} titleVariant={'body1'} title="辞書明細リスト" border={false}>
+            <CustomCard plain sx={{ width: '100%', padding: 0 }} titleVariant={'body1'} title="辞書明細リスト" border={false}>
                 <div style={buttonSx.buttonBar}>
                     <button 
                         style={buttonSx.button}  

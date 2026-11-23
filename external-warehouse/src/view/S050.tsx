@@ -325,8 +325,8 @@ const S050: React.FC = () => {
     };
 
     return (
-        <PageContainer title={'メニュー管理'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
+        <PageContainer titleUnderline bottomSpace title={'メニュー管理'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
                 <SimpleForm
                     sx={formSx.formContainer}
                     onSubmit={handleSearch}
@@ -360,7 +360,7 @@ const S050: React.FC = () => {
                 </SimpleForm>
             </CustomCard>
 
-            <CustomCard sx={{ width: '100%', marginTop: 2 }} titleVariant={'body1'} title="メニュー一覧" border={false}>
+            <CustomCard plain sx={{ width: '100%', marginTop: 2 }} titleVariant={'body1'} title="メニュー一覧" border={false}>
                 <div style={buttonSx.buttonBar}>
                     <button style={buttonSx.button} type="button" onClick={handleAdd}>
                         新規

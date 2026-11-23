@@ -58,8 +58,8 @@ const C014: React.FC<SearchFormProps> = () => {
     };
 
     return (
-        <PageContainer title={'ユーザ情報詳細'}>
-            <CustomCard sx={{width: '100%'}} titleVariant={'body1'} title="ユーザ情報">
+        <PageContainer titleUnderline bottomSpace title={'ユーザ情報詳細'}>
+            <CustomCard plain sx={{width: '100%'}} titleVariant={'body1'} title="ユーザ情報">
                 <div style={formSx.form2 as React.CSSProperties}>
                     <FormTicket 
                         label = {'ユーザID'}

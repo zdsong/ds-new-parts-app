@@ -144,8 +144,8 @@ const C015: React.FC<SearchFormProps> = () => {
   const [showPwdTip, setShowPwdTip] = useState(false);
 
   return (
-    <PageContainer title={'ユーザ情報登録・編集'}>
-      <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="ユーザ情報">
+    <PageContainer titleUnderline bottomSpace title={'ユーザ情報登録・編集'}>
+      <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="ユーザ情報">
         <SimpleForm
           sx={formSx.formContainer}
           onSubmit={sendUserData}
@@ -308,7 +308,7 @@ const C015: React.FC<SearchFormProps> = () => {
       </CustomCard>
 
       {editFlg && (
-        <CustomCard sx={{ width: '100%', marginTop: '20px' }} titleVariant={'body1'} title="パスワードセット">
+        <CustomCard plain sx={{ width: '100%', marginTop: '20px' }} titleVariant={'body1'} title="パスワードセット">
           <SimpleForm
             sx={formSx.formContainer}
             onSubmit={handleResetPassword}

@@ -284,8 +284,8 @@ const S061: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={isEditMode ? 'ロール編集' : 'ロール新規作成'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="ロール情報" border={false}>
+        <PageContainer titleUnderline bottomSpace title={isEditMode ? 'ロール編集' : 'ロール新規作成'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="ロール情報" border={false}>
                 <SimpleForm 
                     sx={formSx.formContainer} 
                     onSubmit={handleSubmit} 

@@ -352,8 +352,8 @@ const S051: React.FC = () => {
     };
 
     return (
-        <PageContainer title={isEditMode ? 'メニューの変更' : '新しいメニュー'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="メニュー情報">
+        <PageContainer titleUnderline bottomSpace title={isEditMode ? 'メニューの変更' : '新しいメニュー'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="メニュー情報">
                 <SimpleForm
                     key={isEditMode ? `edit-${formDefaultValues.menuId}` : 'new'}
                     sx={formSx.formContainer}

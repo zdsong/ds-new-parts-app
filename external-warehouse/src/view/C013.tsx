@@ -165,8 +165,8 @@ const C013: React.FC<SearchFormProps> = () => {
   }
 
   return (
-    <PageContainer title={'ユーザ管理'}>
-      <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件">
+    <PageContainer titleUnderline bottomSpace title={'ユーザ管理'}>
+      <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件">
         <SimpleForm
           sx={formSx.formContainer}
           onSubmit={handleSearch}
@@ -237,7 +237,7 @@ const C013: React.FC<SearchFormProps> = () => {
         </SimpleForm>
       </CustomCard>
 
-      <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title={'ユーザ一覧'} border={false}>
+      <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title={'ユーザ一覧'} border={false}>
         <div style={{...buttonSx.buttonBar, paddingRight: '20px'}}>
           <button
             style={buttonSx.button}

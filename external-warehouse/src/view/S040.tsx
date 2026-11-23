@@ -281,8 +281,8 @@ const S040: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={'操作ログ'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
+        <PageContainer titleUnderline bottomSpace title={'操作ログ'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索条件" border={false}>
                 <SimpleForm
                     ref={formRef} 
                     sx={formSx.formContainer} 
@@ -371,7 +371,7 @@ const S040: React.FC = () => {
                 </SimpleForm>
             </CustomCard>
 
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="操作ログのリスト" border={false}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="操作ログのリスト" border={false}>
                 <div style={buttonSx.buttonBar}>
                     <button 
                         style={buttonSx.button}  

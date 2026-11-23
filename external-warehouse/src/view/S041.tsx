@@ -78,8 +78,8 @@ const S041: React.FC = () => {
     };
 
     return (
-        <PageContainer title={'操作ログの詳細'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="操作ログの詳細" border={false}>
+        <PageContainer titleUnderline bottomSpace title={'操作ログの詳細'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="操作ログの詳細" border={false}>
                 <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                     <button 
                         style={buttonSx.button}

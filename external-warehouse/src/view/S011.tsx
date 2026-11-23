@@ -113,8 +113,8 @@ const S011: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={isEditMode ? 'システムパラメータの変更' : '新しいシステムパラメータ'}>
-            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="パラメータ情報">
+        <PageContainer titleUnderline bottomSpace title={isEditMode ? 'システムパラメータの変更' : '新しいシステムパラメータ'}>
+            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="パラメータ情報">
                 <SimpleForm
                     sx={formSx.formContainer}
                     onSubmit={handleSubmit}

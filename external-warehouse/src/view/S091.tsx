@@ -129,8 +129,8 @@ const S091: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer title={isEditMode ? 'タスクの変更' : 'タスクの追加'}>
-            <CustomCard sx={{width: '100%'}} titleVariant={'body1'}
+        <PageContainer titleUnderline bottomSpace title={isEditMode ? 'タスクの変更' : 'タスクの追加'}>
+            <CustomCard plain sx={{width: '100%'}} titleVariant={'body1'}
             title="タスク情報"
             >
                  <SimpleForm sx={formSx.formContainer} onSubmit={handleSubmit} toolbar={false}defaultValues={formDefaultValues}>
