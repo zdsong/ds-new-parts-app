@@ -60,6 +60,12 @@ interface MoveRequestRow {
     completedDate: string;
     /** 依頼者氏名 */
     requester: string;
+    /** 移動登録者 */
+    registrar: string;
+    /** 移動完了者 */
+    completer: string;
+    /** 備考 */
+    memo: string;
     /** 明細の品目。一覧には表示しない */
     items?: MoveRequestItem[];
 }
@@ -295,8 +301,13 @@ const P403: React.FC = () => {
             { headerName: '移動状況', field: 'statusLabel', width: 120 },
             { headerName: '移動元', field: 'sourceWarehouse', width: 140 },
             { headerName: '移動先', field: 'destWarehouse', width: 140 },
+            { headerName: '移動依頼者', field: 'requester', width: 140 },
+            { headerName: '移動依頼日', field: 'requestDate', width: 120 },
+            { headerName: '移動登録者', field: 'registrar', width: 140 },
             { headerName: '移動登録日', field: 'registeredDate', width: 180 },
-            { headerName: '移動完了日', field: 'completedDate', flex: 1, minWidth: 180 },
+            { headerName: '移動完了者', field: 'completer', width: 140 },
+            { headerName: '移動完了日', field: 'completedDate', width: 180 },
+            { headerName: '備考', field: 'memo', flex: 1, minWidth: 160 },
         ],
         [navigate]
     );
