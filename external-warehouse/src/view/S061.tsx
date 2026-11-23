@@ -28,6 +28,35 @@ interface RoleUser {
     status?: string;
 }
 
+/**
+ * 選択されたメニュー ID に、その親メニューの ID をすべて追加する
+ * 親メニューが保存されないと、ログイン後のメニュー表示が崩れるため
+ */
+const collectMenuIdsWithParents = (menuIds: string[], nodes: TreeSelectNode[]): string[] => {
+    const parentMap = new Map<string, string>();
+    const walk = (list: TreeSelectNode[], parentId?: string) => {
+        list.forEach((node) => {
+            if (parentId) {
+                parentMap.set(node.itemId, parentId);
+            }
+            if (node.children && node.children.length > 0) {
+                walk(node.children, node.itemId);
+            }
+        });
+    };
+    walk(nodes);
+
+    const result = new Set<string>(menuIds);
+    menuIds.forEach((id) => {
+        let parentId = parentMap.get(id);
+        while (parentId) {
+            result.add(parentId);
+            parentId = parentMap.get(parentId);
+        }
+    });
+    return Array.from(result);
+};
+
 const userTableHeadCell: React.CSSProperties = {
     padding: '6px 8px',
     textAlign: 'left',
@@ -105,7 +134,9 @@ const S061: React.FC = () => {
                     setMockTreeData(response.menus);
                 }
                 if (response?.checkedKeys) {
-                    setSelectedMenuIds(response.checkedKeys.map((id: any) => id.toString()));
+                    const checkedIds = response.checkedKeys.map((id: any) => id.toString());
+                    // 子メニューのみ保存されている場合も、親メニューを補完して表示・保存する
+                    setSelectedMenuIds(collectMenuIdsWithParents(checkedIds, response.menus || []));
                 }
             } else {
                 const response = await request('get', `api/system/menu/treeSelect`);
@@ -225,7 +256,7 @@ const S061: React.FC = () => {
                 roleSort: parseInt(data.roleSort || '0'), // 数値型に変換する
                 dataScope: data.dataScope || '1', // デフォルト値を保証する
                 status: data.status || '0', // デフォルト値を保証する
-                menuIds: selectedMenuIds,
+                menuIds: collectMenuIdsWithParents(selectedMenuIds, mockTreeData),
                 menuCheckStrictly: parseInt(menuCheckStrictly || '0')
             };
             
@@ -284,8 +315,8 @@ const S061: React.FC = () => {
     }, []);
 
     return (
-        <PageContainer titleUnderline bottomSpace title={isEditMode ? 'ロール編集' : 'ロール新規作成'}>
-            <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="ロール情報" border={false}>
+        <PageContainer title={isEditMode ? 'ロール編集' : 'ロール新規作成'}>
+            <CustomCard sx={{ width: '100%' }} titleVariant={'body1'} title="ロール情報" border={false}>
                 <SimpleForm 
                     sx={formSx.formContainer} 
                     onSubmit={handleSubmit} 

@@ -146,6 +146,35 @@ const CheckboxTreeSelect: React.FC<CheckboxTreeSelectProps> = ({
 
     traverseAndHandleSelect(treeData);
 
+    // 子ノードが選択されている場合は、その親ノードも選択状態にする
+    // （親メニューが保存されず、ログイン後のメニュー表示が崩れるのを防ぐ）
+    if (mode === 'multiple' && !checkStrictly) {
+      const syncParentSelection = (nodes: TreeSelectNode[]): boolean => {
+        let hasSelectedChild = false;
+        nodes.forEach((node) => {
+          const isLeaf = !node.children || node.children.length === 0;
+          if (isLeaf) {
+            if (finalSelectedIds.includes(node.itemId)) {
+              hasSelectedChild = true;
+            }
+            return;
+          }
+          const childSelected = syncParentSelection(node.children || []);
+          const nodeIndex = finalSelectedIds.indexOf(node.itemId);
+          if (childSelected && nodeIndex === -1) {
+            finalSelectedIds.push(node.itemId);
+          } else if (!childSelected && nodeIndex !== -1) {
+            finalSelectedIds.splice(nodeIndex, 1);
+          }
+          if (childSelected) {
+            hasSelectedChild = true;
+          }
+        });
+        return hasSelectedChild;
+      };
+      syncParentSelection(treeData);
+    }
+
     if (mode === 'single') {
       finalSelectedIds = finalSelectedIds.slice(-1);
     }
