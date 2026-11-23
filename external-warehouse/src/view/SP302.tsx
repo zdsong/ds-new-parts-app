@@ -6,7 +6,7 @@ import FormInput from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
 import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
-import { spFormInputSx, spSx } from '../styles/spSx';
+import { spFormInputSx, spSx, SP_VALUE_INDENT, spSquareReadonlyStyle } from '../styles/spSx';
 import {
     CATEGORY_CHOICES,
     DEFAULT_QUANTITY,
@@ -19,7 +19,7 @@ import type { ItemMaster, PalletDetailItem, PalletFormData } from '../utils/pall
  *
  * 設計書：①パレット番号管理 3.1 積載製品の登録／積載部品の登録
  *   パレットに積載する製品（部品）を検索して登録する。
- *   - 基本情報（パレット番号）と検索条件は 1 枚のカードにまとめる。
+ *   - 基本情報はパレット番号と、追加した品目の件数を表示する。件数は入力しない。
  *   - 検索条件の「製品／部品」は前画面（SP301）で選んだ区分で固定し、変更できない。
  *   - 検索結果は 品目コード・品目名・数量 の 3 項目のみ。数量は入力欄で直接変更できる。
  *   右上の「確認」でパレット番号発番（SP303）へ進む。
@@ -37,11 +37,13 @@ interface Sp302State {
 }
 
 /**
- * 基本情報の 2 つ目の入力枠の固定値
- * 項目名・機能が未確定のため、いったんラベルの無い固定値の枠として表示する。
- * 仕様が決まったら、この値を差し替えるか項目を追加する。
+ * 追加した品目の件数表示（入力・選択はしない）
  */
-const FIXED_FIELD_VALUE = '－';
+const addedCountStyle: React.CSSProperties = {
+    ...spSquareReadonlyStyle,
+    marginLeft: SP_VALUE_INDENT,
+    width: `calc(100% - ${SP_VALUE_INDENT})`,
+};
 
 /** 1 ページあたりの検索結果件数（スマートフォンで見やすい件数にする） */
 const PAGE_SIZE = 5;
@@ -71,8 +73,6 @@ const SP302: React.FC = () => {
     const [condition, setCondition] = useState({ itemCode: '', itemName: '' });
     // 検索条件フォームの初期値（クリア時に再描画する）
     const [formKey, setFormKey] = useState(0);
-    // 追加した品目の開閉状態
-    const [addedOpen, setAddedOpen] = useState(false);
     // 検索結果ごとの数量（品目コード → 入力値）
     const [quantities, setQuantities] = useState<Record<string, number>>({});
 
@@ -143,11 +143,6 @@ const SP302: React.FC = () => {
         setDetails((prev) => [...prev, { ...createDetailFromItem(item), quantity }]);
     };
 
-    /** 追加した明細を取り消す */
-    const handleRemove = (id: string) => {
-        setDetails((prev) => prev.filter((detail) => detail.id !== id));
-    };
-
     /** 確認：積載明細を引き継いで次の画面へ進む */
     const handleConfirm = () => {
         if (details.length === 0) {
@@ -203,7 +198,6 @@ const SP302: React.FC = () => {
                     toolbar={false}
                     defaultValues={{
                         palletNo: state.pallet?.palletNo || '',
-                        fixedField: FIXED_FIELD_VALUE,
                         itemCode: '',
                         itemName: '',
                         category,
@@ -221,46 +215,7 @@ const SP302: React.FC = () => {
                             placeholder="未発番"
                             disabled
                         />
-                        {/* 項目名・機能が未確定のため、ラベルの無い固定枠として表示する */}
-                        <FormInput
-                            type={'text'}
-                            source="fixedField"
-                            label={false}
-                            structure="top-bottom"
-                            sx={spFormInputSx}
-                            disabled
-                        />
-                        {addedOpen && (
-                            <>
-                                {details.length === 0 ? (
-                                    <div style={spSx.empty}>追加した品目はありません。</div>
-                                ) : (
-                                    details.map((detail, index) => (
-                                        <div key={detail.id} style={spSx.itemCard}>
-                                            <div style={spSx.itemHeader}>
-                                                <span style={spSx.itemTitle}>
-                                                    {`No.${index + 1} ${detail.itemCode}`}
-                                                </span>
-                                                <span
-                                                    style={spSx.linkDanger}
-                                                    onClick={() => handleRemove(detail.id)}
-                                                >
-                                                    削除
-                                                </span>
-                                            </div>
-                                            <div style={spSx.field}>
-                                                <span style={spSx.fieldLabel}>品目名</span>
-                                                <span style={spSx.fieldValue}>{detail.itemName}</span>
-                                            </div>
-                                            <div style={spSx.field}>
-                                                <span style={spSx.fieldLabel}>数量</span>
-                                                <span style={spSx.fieldValue}>{detail.quantity}</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </>
-                        )}
+                        <div style={addedCountStyle}>{`追加した品目（${details.length}件）`}</div>
 
                         {/* 検索条件（製品／部品は区分固定のため変更不可） */}
                         <div style={{ ...spSx.sectionTitle, marginTop: '4px' }}>■検索条件</div>

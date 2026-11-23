@@ -5,11 +5,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
 
 import FormInput from '../compontent/FormInput';
-import { spFormInputSx, spSx } from '../styles/spSx';
+import { spFormInputSx, spSx, spSquareInputStyle, SP_INPUT_HEIGHT } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
-import { MOVE_LOCATION_CHOICES, findScannedPallet } from '../utils/moveData';
-import type { ScannedPallet } from '../utils/moveData';
+import { MOVE_LOCATION_CHOICES, MOVE_WAREHOUSE_CHOICES, findScannedPallet } from '../utils/moveData';
+import type { MoveLine, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -66,6 +66,43 @@ const getCameraErrorMessage = (error?: unknown): string => {
     }
 };
 
+const palletHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '8px',
+};
+
+const palletNumberStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+};
+
+const palletDeleteStyle: React.CSSProperties = {
+    flex: 'none',
+    height: SP_INPUT_HEIGHT,
+    padding: '0 10px',
+    border: '1px solid #d32f2f',
+    borderRadius: 0,
+    backgroundColor: '#ffffff',
+    color: '#d32f2f',
+    fontSize: '13px',
+    fontWeight: 700,
+    cursor: 'pointer',
+};
+
+const palletFieldRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    width: '100%',
+};
+
+const palletFieldCellStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+};
+
 const linkSx = {
     color: '#0b5cab',
     fontSize: 'clamp(12px, 3.4vw, 14px)',
@@ -99,76 +136,141 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
     </div>
 );
 
+/** 移動依頼がある品目の折りたたみ。複数行を同時に開く */
+const RequestDetail: React.FC<{ line: MoveLine; open: boolean; onToggle: () => void }> = ({
+    line,
+    open,
+    onToggle,
+}) => {
+    if (!line.request) return null;
+    return (
+        <div style={spSx.subSection}>
+            <div style={spSx.subSectionHeader} onClick={onToggle} role="button" aria-expanded={open}>
+                <span>移動依頼詳細</span>
+                <span>{open ? '－' : '＋'}</span>
+            </div>
+            {open ? (
+                <div style={spSx.subItem}>
+                    <span style={spSx.subItemLabel}>移動依頼番号</span>
+                    <span style={spSx.subItemValue}>{line.request.requestNo}</span>
+                    <span style={spSx.subItemLabel}>移動先</span>
+                    <span style={spSx.subItemValue}>{line.request.destinationLabel}</span>
+                    <span style={spSx.subItemLabel}>依頼者</span>
+                    <span style={spSx.subItemValue}>{line.request.requester}</span>
+                    <span style={spSx.subItemLabel}>移動希望日</span>
+                    <span style={spSx.subItemValue}>{line.request.desiredDate}</span>
+                    <span style={spSx.subItemLabel}>備考</span>
+                    <span style={spSx.subItemValue}>{line.request.remark || '－'}</span>
+                </div>
+            ) : null}
+        </div>
+    );
+};
+
 /**
- * 入庫の読み取り結果。
- * 移動番号があるときだけロケ番を変えられる。無いときは確認できない旨を出す。
+ * 入庫で移動番号があるパレット 1 件。
+ * パレット番号はカードの中に置き、品目は 1 件ずつ枠で分ける。
  */
 const ReceiveResult: React.FC<{
-    scannedValue: string;
-    pallet: ScannedPallet | null;
+    pallet: ScannedPallet;
     location: string;
     done: boolean;
+    openRequestIds: Set<string>;
+    onToggleRequest: (lineId: string) => void;
     onLocationChange: (value: string) => void;
-}> = ({ scannedValue, pallet, location, done, onLocationChange }) => {
-    if (!scannedValue) return null;
-    if (!pallet?.inbound) {
-        return <div style={spSx.empty}>移動登録情報を確認できません。</div>;
-    }
+    onRemove: () => void;
+}> = ({ pallet, location, done, openRequestIds, onToggleRequest, onLocationChange, onRemove }) => {
+    if (!pallet.inbound) return null;
     const inbound = pallet.inbound;
     return (
         <div style={spSx.listCard}>
-            <Field label="移動番号">{inbound.moveNo}</Field>
-            <Field label="パレット番号">{pallet.palletNo}</Field>
+            <div style={palletHeaderStyle}>
+                <div style={palletNumberStyle}>
+                    <Field label="移動番号">{inbound.moveNo}</Field>
+                    <Field label="パレット番号">{pallet.palletNo}</Field>
+                </div>
+                <button type="button" style={palletDeleteStyle} onClick={onRemove}>
+                    削除
+                </button>
+            </div>
             <SimpleForm
                 toolbar={false}
                 sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
                 onSubmit={() => undefined}
-                defaultValues={{ destinationLoc: location || inbound.destinationLoc }}
+                defaultValues={{
+                    destinationWh: inbound.destinationWh,
+                    destinationLoc: location || inbound.destinationLoc,
+                    remark: inbound.remark,
+                }}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
-                    <FormInput
-                        type={'text'}
-                        source="destinationWh"
-                        label="移動先"
-                        structure="top-bottom"
-                        sx={spFormInputSx}
-                        defaultValue="行田工場"
-                        disabled
-                    />
-                    <FormInput
-                        type={'filter-select'}
-                        source="destinationLoc"
-                        label="ロケ番"
-                        structure="top-bottom"
-                        sx={spFormInputSx}
-                        choices={MOVE_LOCATION_CHOICES.gyoda}
-                        disabled={done}
-                        onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
-                    />
+                    <div style={palletFieldRowStyle}>
+                        <div style={palletFieldCellStyle}>
+                            <FormInput
+                                type={'filter-select'}
+                                source="destinationWh"
+                                label="移動先"
+                                structure="top-bottom"
+                                sx={spFormInputSx}
+                                choices={MOVE_WAREHOUSE_CHOICES}
+                                disabled
+                            />
+                        </div>
+                        <div style={palletFieldCellStyle}>
+                            <FormInput
+                                type={'filter-select'}
+                                source="destinationLoc"
+                                label="ロケ番"
+                                structure="top-bottom"
+                                sx={spFormInputSx}
+                                choices={MOVE_LOCATION_CHOICES.gyoda}
+                                disabled={done}
+                                onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
+                            />
+                        </div>
+                    </div>
                     <FormInput
                         type={'text'}
                         source="remark"
                         label="備考"
                         structure="top-bottom"
                         sx={spFormInputSx}
-                        multiline
-                        inputHeight={80}
-                        defaultValue={inbound.remark}
                         disabled
                     />
+                    <Field label="移動登録者">{inbound.registrar}</Field>
+                    {done ? <Field label="移動状況">移動完了</Field> : null}
+                    {pallet.lines.map((line) => (
+                        <div key={line.id} style={spSx.listCard}>
+                            <Field label="品目コード">{line.itemCode}</Field>
+                            <Field label="品目名">{line.itemName}</Field>
+                            <Field label={line.request ? '移動数量' : '保管数量'}>
+                                {line.request ? line.moveQty : line.storageQty}
+                            </Field>
+                            {line.request ? (
+                                <RequestDetail
+                                    line={line}
+                                    open={openRequestIds.has(line.id)}
+                                    onToggle={() => onToggleRequest(line.id)}
+                                />
+                            ) : (
+                                <>
+                                    <FormInput
+                                        type={'text'}
+                                        source={`lineRemark_${line.id.replace(/[^A-Za-z0-9_]/g, '_')}`}
+                                        label="備考"
+                                        structure="top-bottom"
+                                        sx={spFormInputSx}
+                                        multiline
+                                        inputHeight={80}
+                                        defaultValue=""
+                                    />
+                                    <Field label="移動登録者">{inbound.registrar}</Field>
+                                </>
+                            )}
+                        </div>
+                    ))}
                 </div>
             </SimpleForm>
-            <Field label="移動登録者">{inbound.registrar}</Field>
-            {done ? <Field label="移動状況">移動完了</Field> : null}
-            {pallet.lines.map((line) => (
-                <div key={line.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <Field label="品目コード">{line.itemCode}</Field>
-                    <Field label="品目名">{line.itemName}</Field>
-                    <Field label={line.request ? '移動数量' : '保管数量'}>
-                        {line.request ? line.moveQty : line.storageQty}
-                    </Field>
-                </div>
-            ))}
         </div>
     );
 };
@@ -177,9 +279,11 @@ const ReceiveResult: React.FC<{
  * パレット受取のバーコード読み取り画面（SP406）
  *
  * 設計書：③移動管理 2. パレットを受け取る場合（移動先）
- *   パレット番号表を読み、移動番号があるときだけロケ番を変えて移動完了にする。
+ *   パレット番号表を複数読み、移動番号があるパレットだけカードにする。
+ *   移動番号がない番号はカードにせず、画面下の通知で知らせる。
  *   カメラが使えない確認は /SP406?pallet=B261010-001（移動あり）
- *   または /SP406?pallet=B261010-002（移動登録情報なし）。
+ *   または /SP406?pallet=B261010-002（移動番号なし）。
+ *   もう 1 件は B261010-003。
  */
 const SP406: React.FC = () => {
     const navigate = useNavigate();
@@ -193,14 +297,21 @@ const SP406: React.FC = () => {
     const lastScanAtRef = useRef(0);
     const zxingRef = useRef<ZxingModule | null>(null);
     const readerRef = useRef<MultiFormatReader | null>(null);
+    // 読み取り済みの番号。カメラは同じ番号を連続で返す
+    const scannedNosRef = useRef<Set<string>>(new Set());
+    const lastCameraCodeRef = useRef('');
+    const onCodeRef = useRef<(value: string) => void>(() => undefined);
 
-    const [scannedValue, setScannedValue] = useState('');
     const [codeSvg, setCodeSvg] = useState('');
     const [cameraOpen, setCameraOpen] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    const [scannedPallet, setScannedPallet] = useState<ScannedPallet | null>(null);
-    const [inboundLocation, setInboundLocation] = useState('');
+    // 移動番号があるパレットだけ積む
+    const [scannedPallets, setScannedPallets] = useState<ScannedPallet[]>([]);
+    const [locations, setLocations] = useState<Record<string, string>>({});
+    const [openRequestIds, setOpenRequestIds] = useState<Set<string>>(() => new Set());
     const [inboundDone, setInboundDone] = useState(false);
+    // TODO 削除: 開発完了後に消す。カメラの代わりにバーコードを手入力して同じ読取処理を通す
+    const [testBarcode, setTestBarcode] = useState('');
 
     const stopCamera = () => {
         scanningRef.current = false;
@@ -223,18 +334,76 @@ const SP406: React.FC = () => {
         setCameraOpen(false);
     };
 
-    const applyScanResult = (value: string) => {
+    /**
+     * 読み取り結果をカードへ足す。
+     * 移動番号がない場合はカードを出さず、画面下の通知だけ出す。
+     * カメラ読取のときは閉じずに次の番号も読めるようにする。
+     */
+    const applyScanResult = (value: string, fromCamera = false) => {
         const trimmed = value.trim();
         if (!trimmed) return;
-        stopCamera();
-        setCameraOpen(false);
-        setErrorMessage('');
-        setScannedValue(trimmed);
+        if (fromCamera) {
+            if (lastCameraCodeRef.current === trimmed) return;
+            lastCameraCodeRef.current = trimmed;
+        } else {
+            stopCamera();
+            setCameraOpen(false);
+        }
+        if (scannedNosRef.current.has(trimmed)) {
+            if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+            return;
+        }
         setCodeSvg(buildBarcodeSvg(trimmed));
         const pallet = findScannedPallet(trimmed);
-        setScannedPallet(pallet);
-        setInboundLocation(pallet?.inbound?.destinationLoc || '');
+        if (!pallet?.inbound) {
+            notify('移動登録情報を確認できません。', { type: 'error' });
+            return;
+        }
+        scannedNosRef.current.add(trimmed);
+        scannedNosRef.current.add(pallet.palletNo);
+        setScannedPallets((prev) => (prev.some((item) => item.palletNo === pallet.palletNo) ? prev : [...prev, pallet]));
+        setLocations((prev) => (
+            prev[pallet.palletNo] ? prev : { ...prev, [pallet.palletNo]: pallet.inbound?.destinationLoc || '' }
+        ));
+        setOpenRequestIds((current) => {
+            const requestIds = pallet.lines.filter((line) => line.request).map((line) => line.id);
+            if (requestIds.every((id) => current.has(id))) return current;
+            const next = new Set(current);
+            requestIds.forEach((id) => next.add(id));
+            return next;
+        });
         setInboundDone(false);
+    };
+
+    /** 読み取ったパレットを一覧から外す */
+    const handleRemovePallet = (palletNo: string) => {
+        const target = scannedPallets.find((pallet) => pallet.palletNo === palletNo);
+        const lineIds = new Set(target?.lines.map((line) => line.id) ?? []);
+        setScannedPallets((prev) => prev.filter((pallet) => pallet.palletNo !== palletNo));
+        setLocations((prev) => {
+            if (!(palletNo in prev)) return prev;
+            const next = { ...prev };
+            delete next[palletNo];
+            return next;
+        });
+        setOpenRequestIds((current) => {
+            if (!Array.from(lineIds).some((id) => current.has(id))) return current;
+            const next = new Set(current);
+            lineIds.forEach((id) => next.delete(id));
+            return next;
+        });
+        scannedNosRef.current.delete(palletNo);
+        if (lastCameraCodeRef.current === palletNo) lastCameraCodeRef.current = '';
+    };
+
+    onCodeRef.current = (value: string) => applyScanResult(value, true);
+
+    /**
+     * TODO 削除: 開発完了後にこの関数と画面のテスト用入力を削除する。
+     * 入力したバーコードを、カメラ読取と同じ applyScanResult に渡す。
+     */
+    const handleTestBarcodeSearch = () => {
+        applyScanResult(testBarcode);
     };
 
     const decodeCanvas = (
@@ -317,7 +486,7 @@ const SP406: React.FC = () => {
         lastScanAtRef.current = now;
 
         const value = scanOnce();
-        if (value) applyScanResult(value);
+        if (value) onCodeRef.current(value);
     };
 
     useEffect(() => {
@@ -377,6 +546,7 @@ const SP406: React.FC = () => {
                 }
 
                 lastScanAtRef.current = 0;
+                lastCameraCodeRef.current = '';
                 scanningRef.current = true;
                 scanFrame();
             } catch (error) {
@@ -424,29 +594,34 @@ const SP406: React.FC = () => {
 
     /** ロケ番を確定し、移動完了にする（画面内だけで状態を変える） */
     const handleReceiveComplete = () => {
-        if (!scannedPallet?.inbound) {
-            setErrorMessage('移動登録情報を確認できません。');
+        if (scannedPallets.length === 0) {
+            notify('移動登録情報を確認できません。', { type: 'error' });
             return;
         }
-        if (!inboundLocation) {
-            setErrorMessage('ロケ番を選択してください。');
+        if (scannedPallets.some((pallet) => !locations[pallet.palletNo])) {
+            notify('ロケ番を選択してください。', { type: 'warning' });
             return;
         }
-        setErrorMessage('');
         setInboundDone(true);
         notify('移動完了にしました。', { type: 'success' });
+    };
+
+    const handleToggleRequest = (lineId: string) => {
+        setOpenRequestIds((current) => {
+            const next = new Set(current);
+            if (next.has(lineId)) next.delete(lineId);
+            else next.add(lineId);
+            return next;
+        });
     };
 
     // カメラが使えない確認用
     const palletQuery = searchParams.get('pallet');
     useEffect(() => {
         if (!palletQuery) return;
-        setScannedValue(palletQuery);
-        setCodeSvg(buildBarcodeSvg(palletQuery));
-        const pallet = findScannedPallet(palletQuery);
-        setScannedPallet(pallet);
-        setInboundLocation(pallet?.inbound?.destinationLoc || '');
-        setInboundDone(false);
+        applyScanResult(palletQuery, false);
+        // 初回のクエリだけ読む
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [palletQuery]);
 
     return (
@@ -557,20 +732,65 @@ const SP406: React.FC = () => {
                     </Box>
                 </Box>
 
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 14px 0' }}>
+                    {/* TODO 削除: 開発完了後にこのテスト用バーコード入力を削除する */}
+                    <Box component="span" sx={{ fontSize: '12px', color: '#c62828', fontWeight: 700 }}>
+                        テスト用（開発完了後に削除）
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                            aria-label="テスト用バーコード"
+                            value={testBarcode}
+                            placeholder="バーコード"
+                            onChange={(event) => setTestBarcode(event.target.value)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    handleTestBarcodeSearch();
+                                }
+                            }}
+                            style={{ ...spSquareInputStyle, flex: 1, minWidth: 0 }}
+                        />
+                        <button
+                            type="button"
+                            onClick={handleTestBarcodeSearch}
+                            style={{
+                                flex: 'none',
+                                boxSizing: 'border-box',
+                                height: SP_INPUT_HEIGHT,
+                                padding: '0 14px',
+                                border: 'none',
+                                borderRadius: '5px',
+                                backgroundColor: '#0b5cab',
+                                color: 'white',
+                                fontSize: '14px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                            }}
+                        >
+                            検索
+                        </button>
+                    </Box>
+                </Box>
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 14px' }}>
                     <Box component="span" sx={spSx.sectionTitle}>
                         ■読み取り結果
                     </Box>
-                    <ReceiveResult
-                        scannedValue={scannedValue}
-                        pallet={scannedPallet}
-                        location={inboundLocation}
-                        done={inboundDone}
-                        onLocationChange={setInboundLocation}
-                    />
-                    {errorMessage ? (
-                        <Box sx={{ color: '#d32f2f', fontSize: '12px' }}>{errorMessage}</Box>
-                    ) : null}
+                    {scannedPallets.map((pallet) => (
+                        <ReceiveResult
+                            key={pallet.palletNo}
+                            pallet={pallet}
+                            location={locations[pallet.palletNo] || ''}
+                            done={inboundDone}
+                            openRequestIds={openRequestIds}
+                            onToggleRequest={handleToggleRequest}
+                            onLocationChange={(value) =>
+                                setLocations((prev) => ({ ...prev, [pallet.palletNo]: value }))
+                            }
+                            onRemove={() => handleRemovePallet(pallet.palletNo)}
+                        />
+                    ))}
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: '14px', padding: '12px 14px 18px' }}>

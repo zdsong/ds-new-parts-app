@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react';
+
 /**
  * SP（スマートフォン）画面向けの共通スタイル
  *
@@ -19,6 +21,25 @@ export const SP_INPUT_HEIGHT = '25.56px';
  * 設計書では項目名を左端に置き、その下の値と入力枠だけ一段下げる。
  */
 export const SP_VALUE_INDENT = '12px';
+
+/** 共通入力枠と同じ直角のテキストボックス（検索欄など） */
+export const spSquareInputStyle: CSSProperties = {
+    boxSizing: 'border-box',
+    height: SP_INPUT_HEIGHT,
+    lineHeight: SP_INPUT_HEIGHT,
+    padding: '0 8px',
+    border: '1px solid rgba(0, 0, 0, 0.23)',
+    borderRadius: 0,
+    backgroundColor: '#ffffff',
+    fontSize: '14px',
+    color: '#212121',
+};
+
+/** 共通入力枠と同じ直角の表示専用ボックス（件数など） */
+export const spSquareReadonlyStyle: CSSProperties = {
+    ...spSquareInputStyle,
+    backgroundColor: 'gainsboro',
+};
 
 export const spSx = {
     /** 画面全体（タイトルバー＋内容を縦に積む） */
@@ -613,7 +634,7 @@ export const spItemFieldSx = {
             height: SP_INPUT_HEIGHT,
             paddingTop: '2px',
             paddingBottom: '2px',
-            borderRadius: '5px',
+            borderRadius: '0',
             backgroundColor: 'white',
         },
         // 非活性時は入力枠全体をグレーで塗る

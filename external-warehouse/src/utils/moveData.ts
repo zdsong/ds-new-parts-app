@@ -191,7 +191,7 @@ export const REGISTER_WITHOUT_DEPENDENCY: MoveRegisterState = {
     ],
 };
 
-/** 読み取り結果の例。B261010-001 は依存あり、B261010-002 は依存なし */
+/** 読み取り結果の例。B261010-001 / B261010-003 は入庫あり、B261010-002 は移動番号なし */
 const DEPENDENT_PALLET: ScannedPallet = {
     palletNo: 'B261010-001',
     dependent: true,
@@ -228,6 +228,25 @@ const DEPENDENT_PALLET: ScannedPallet = {
     ],
 };
 
+/** 入庫確認用の 2 件目。複数読み取りで別カードになることを確認する */
+const DEPENDENT_PALLET_NEXT: ScannedPallet = {
+    palletNo: 'B261010-003',
+    dependent: true,
+    inbound: {
+        moveNo: '260001001',
+        destinationWh: 'gyoda',
+        destinationLoc: 'A-1-2-3-5',
+        remark: 'YYYYYYYYYYYYYYY',
+        registrar: MOVE_REGISTRAR,
+    },
+    lines: DEPENDENT_PALLET.lines.map((line, index) => ({
+        ...line,
+        id: `scan-next-${index + 1}`,
+        palletNo: 'B261010-003',
+        request: line.request ? { ...line.request } : null,
+    })),
+};
+
 /** 依存のないパレット。依頼データは持たせ、画面側で出さないことを確認する */
 const PLAIN_PALLET: ScannedPallet = {
     palletNo: 'B261010-002',
@@ -248,6 +267,7 @@ const clonePallet = (pallet: ScannedPallet): ScannedPallet => ({
 export const findScannedPallet = (code: string): ScannedPallet | null => {
     const trimmed = code.trim();
     if (trimmed === DEPENDENT_PALLET.palletNo) return clonePallet(DEPENDENT_PALLET);
+    if (trimmed === DEPENDENT_PALLET_NEXT.palletNo) return clonePallet(DEPENDENT_PALLET_NEXT);
     if (trimmed === PLAIN_PALLET.palletNo) return clonePallet(PLAIN_PALLET);
     return null;
 };

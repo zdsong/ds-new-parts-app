@@ -456,7 +456,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
           <>
             <IconButton
               size="small"
-              sx={{ color: 'rgba(0, 0, 0, 0.54)', cursor: 'pointer', padding: 0, border: '1px solid #CBCBCB', borderRadius: '0 5px 5px 0' }}
+              sx={{ color: 'rgba(0, 0, 0, 0.54)', cursor: 'pointer', padding: 0, border: '1px solid #CBCBCB', borderRadius: 0 }}
               onClick={handlePopoverOpen}
             >
               <CalendarTodayIcon  />

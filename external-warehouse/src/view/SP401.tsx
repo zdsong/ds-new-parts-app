@@ -6,7 +6,7 @@ import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
 
 import useApiRequest from '../adapters/apiUtil';
 import FormInput from '../compontent/FormInput';
-import { spFormInputSx, spSx } from '../styles/spSx';
+import { spFormInputSx, spSx, spSquareInputStyle, spSquareReadonlyStyle, SP_INPUT_HEIGHT } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
 import {
@@ -84,7 +84,8 @@ const getCameraErrorMessage = (error?: unknown): string => {
  * バーコード読み取り画面（SP401）
  *
  * 設計書：③移動管理（スマホ）4.1
- *   移動…パレット番号表を読み、品目を移動候補に追加して移動登録（SP402）へ進む。
+ *   移動…パレット番号表を複数読み、品目を移動候補に追加して移動登録（SP402）へ進む。
+ *   読み取ったパレットは 1 件ずつカードにし、右上の削除でそのパレットだけ外せる。
  *   入庫…同じ番号の別画面。移動番号があるときだけロケ番を変えて移動完了にする。
  *   入庫は /SP401?kind=receive で開く。
  *   「品目検索」は在庫検索（SP403）、「移動依頼検索」は移動依頼（SP404）を開く。
@@ -104,6 +105,12 @@ const SP401: React.FC = () => {
     const lastScanAtRef = useRef(0);
     const zxingRef = useRef<ZxingModule | null>(null);
     const readerRef = useRef<MultiFormatReader | null>(null);
+    // 読み取り済みの番号。カメラは同じ番号を連続で返すため、追加済みは無視する
+    const scannedNosRef = useRef<Set<string>>(new Set());
+    // カメラが今向けている番号。同じ番号の連続通知を止める
+    const lastCameraCodeRef = useRef('');
+    // パレット番号と、それを読み取ったバーコードの対応（削除時に両方外す）
+    const codeByPalletRef = useRef<Map<string, string>>(new Map());
 
     // 読み取り結果（バーコードの内容）
     const [scannedValue, setScannedValue] = useState('');
@@ -113,12 +120,14 @@ const SP401: React.FC = () => {
     const [cameraOpen, setCameraOpen] = useState(false);
     // エラーメッセージ
     const [errorMessage, setErrorMessage] = useState('');
-    // 読み取ったパレット（未知の番号は null）
+    // 読み取ったパレット（未知の番号は null）。入庫は 1 件だけ
     const [scannedPallet, setScannedPallet] = useState<ScannedPallet | null>(null);
+    // 移動で読み取ったパレット（複数）。あとから削除できる
+    const [scannedPallets, setScannedPallets] = useState<ScannedPallet[]>([]);
     // 移動候補（「追加」した品目）
     const [candidates, setCandidates] = useState<MoveLine[]>([]);
-    // 読み取り結果の移動依頼詳細を開いている行
-    const [openRequestId, setOpenRequestId] = useState<string | null>(null);
+    // 読み取り結果で開いている移動依頼詳細。複数行を同時に開く
+    const [openRequestIds, setOpenRequestIds] = useState<Set<string>>(() => new Set());
     // 入庫で変更できるロケ番
     const [inboundLocation, setInboundLocation] = useState('');
     // 入庫の移動完了を押したか
@@ -165,18 +174,31 @@ const SP401: React.FC = () => {
     };
 
     /**
-     * 移動の読取結果をパレット番号・在庫・移動依頼から組み立てる
+     * 移動の読取結果をパレット番号・在庫・移動依頼から組み立て、一覧へ追加する。
+     * カメラは同じ番号を繰り返し返すため、追加済みの番号は足さない。
      */
-    const loadMoveScan = useCallback(async (code: string) => {
+    const loadMoveScan = useCallback(async (code: string, fromCamera = false) => {
         const trimmed = code.trim();
         if (!trimmed) return;
+        if (fromCamera) {
+            if (lastCameraCodeRef.current === trimmed) return;
+            lastCameraCodeRef.current = trimmed;
+        }
+        if (scannedNosRef.current.has(trimmed)) {
+            if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+            return;
+        }
+        scannedNosRef.current.add(trimmed);
         showScannedCode(trimmed);
         try {
             const result = await request('get', `api/pallet/scan/${encodeURIComponent(trimmed)}`, {}, {}, true, false);
             if (!result || result.code !== 200 || !result.data) {
-                setScannedPallet(null);
-                setOpenRequestId(null);
-                setErrorMessage(result?.message || 'パレット情報は存在しません。');
+                scannedNosRef.current.delete(trimmed);
+                if (!fromCamera) {
+                    setErrorMessage(result?.message || 'パレット情報は存在しません。');
+                } else {
+                    notify(result?.message || 'パレット情報は存在しません。', { type: 'warning' });
+                }
                 return;
             }
             const data = result.data as {
@@ -211,46 +233,84 @@ const SP401: React.FC = () => {
                 request: line.request ?? null,
             }));
             if (!lines.length && !data.transferRequested) {
-                setScannedPallet(null);
-                setOpenRequestId(null);
-                setErrorMessage(data.warningMessage || '在庫情報が存在しません。');
+                scannedNosRef.current.delete(trimmed);
+                const message = data.warningMessage || '在庫情報が存在しません。';
+                if (!fromCamera) setErrorMessage(message);
+                else notify(message, { type: 'warning' });
+                return;
+            }
+            const palletNo = data.palletNo || trimmed;
+            if (scannedNosRef.current.has(palletNo) && palletNo !== trimmed) {
+                scannedNosRef.current.delete(trimmed);
+                if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
                 return;
             }
             const pallet: ScannedPallet = {
-                palletNo: data.palletNo || trimmed,
+                palletNo,
                 dependent: Boolean(data.dependent),
                 lines,
                 inbound: null,
             };
-            setScannedPallet(pallet);
-            setOpenRequestId(lines.find((line) => line.request)?.id ?? null);
-            setInboundLocation('');
-            setInboundDone(false);
+            scannedNosRef.current.add(palletNo);
+            codeByPalletRef.current.set(palletNo, trimmed);
+            setScannedPallets((prev) => (prev.some((item) => item.palletNo === palletNo) ? prev : [...prev, pallet]));
+            const requestId = lines.find((line) => line.request)?.id;
+            if (requestId) {
+                setOpenRequestIds((current) => {
+                    if (current.has(requestId)) return current;
+                    const next = new Set(current);
+                    next.add(requestId);
+                    return next;
+                });
+            }
+            setErrorMessage('');
         } catch {
-            setScannedPallet(null);
-            setOpenRequestId(null);
-            setErrorMessage('パレット情報は存在しません。');
+            scannedNosRef.current.delete(trimmed);
+            if (!fromCamera) setErrorMessage('パレット情報は存在しません。');
+            else notify('パレット情報は存在しません。', { type: 'warning' });
         }
     }, [notify, request]);
 
     /**
      * 読み取り結果を画面へ反映する
+     * 移動はカメラを閉じずに次のパレットも読めるようにする。
      */
     const applyScanResult = (value: string) => {
         const trimmed = value.trim();
         if (!trimmed) return;
-        stopCamera();
-        setCameraOpen(false);
         if (kind === 'receive') {
+            stopCamera();
+            setCameraOpen(false);
             showScannedCode(trimmed);
             const pallet = findScannedPallet(trimmed);
             setScannedPallet(pallet);
-            setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+            setOpenRequestIds(new Set(pallet?.lines.filter((line) => line.request).map((line) => line.id) ?? []));
             setInboundLocation(pallet?.inbound?.destinationLoc || '');
             setInboundDone(false);
             return;
         }
-        void loadMoveScan(trimmed);
+        void loadMoveScan(trimmed, false);
+    };
+
+    /** 読み取ったパレットを一覧と移動候補から外す */
+    const handleRemovePallet = (palletNo: string) => {
+        const target = scannedPallets.find((pallet) => pallet.palletNo === palletNo);
+        const lineIds = new Set(target?.lines.map((line) => line.id) ?? []);
+        setScannedPallets((prev) => prev.filter((pallet) => pallet.palletNo !== palletNo));
+        setCandidates((prev) => prev.filter((line) => line.palletNo !== palletNo && !lineIds.has(line.id)));
+        setOpenRequestIds((current) => {
+            if (!Array.from(lineIds).some((id) => current.has(id))) return current;
+            const next = new Set(current);
+            lineIds.forEach((id) => next.delete(id));
+            return next;
+        });
+        const code = codeByPalletRef.current.get(palletNo);
+        codeByPalletRef.current.delete(palletNo);
+        scannedNosRef.current.delete(palletNo);
+        if (code) scannedNosRef.current.delete(code);
+        if (lastCameraCodeRef.current === palletNo || lastCameraCodeRef.current === code) {
+            lastCameraCodeRef.current = '';
+        }
     };
 
     /**
@@ -367,7 +427,12 @@ const SP401: React.FC = () => {
         lastScanAtRef.current = now;
 
         const value = scanOnce();
-        if (value) applyScanResult(value);
+        if (!value) return;
+        if (kind === 'move') {
+            void loadMoveScan(value, true);
+            return;
+        }
+        applyScanResult(value);
     };
 
     // カメラ起動・停止の制御
@@ -433,6 +498,7 @@ const SP401: React.FC = () => {
                 }
 
                 lastScanAtRef.current = 0;
+                lastCameraCodeRef.current = '';
                 scanningRef.current = true;
                 scanFrame();
             } catch (error) {
@@ -493,12 +559,17 @@ const SP401: React.FC = () => {
             return;
         }
         setErrorMessage('');
-        const dependent = scannedPallet?.dependent ?? candidates.some((line) => line.request);
+        const dependent = scannedPallets.length === 1
+            ? scannedPallets[0].dependent
+            : candidates.some((line) => line.request);
+        const palletNo = scannedPallets.length === 1 && !scannedPallets[0].dependent
+            ? scannedPallets[0].palletNo
+            : '';
         navigate('/SP402', {
             state: {
                 view: 'register',
                 dependent,
-                palletNo: dependent ? '' : scannedPallet?.palletNo || '',
+                palletNo,
                 lines: candidates,
             },
         });
@@ -506,17 +577,19 @@ const SP401: React.FC = () => {
 
     /** パレット番号を発番せず、読み取ったパレットをそのまま移動する */
     const handleMoveWholePallet = () => {
-        if (!scannedPallet) {
+        if (scannedPallets.length === 0) {
             setErrorMessage('パレットの読み取り結果がありません。');
             return;
         }
         setErrorMessage('');
+        const only = scannedPallets.length === 1 ? scannedPallets[0] : null;
+        const lines = scannedPallets.flatMap((pallet) => pallet.lines);
         navigate('/SP402', {
             state: {
                 view: 'register',
-                dependent: scannedPallet.dependent,
-                palletNo: scannedPallet.dependent ? '' : scannedPallet.palletNo,
-                lines: scannedPallet.lines,
+                dependent: only ? only.dependent : lines.some((line) => line.request),
+                palletNo: only && !only.dependent ? only.palletNo : '',
+                lines,
             },
         });
     };
@@ -545,7 +618,7 @@ const SP401: React.FC = () => {
             setCodeSvg(buildBarcodeSvg(palletQuery));
             const pallet = findScannedPallet(palletQuery);
             setScannedPallet(pallet);
-            setOpenRequestId(pallet?.lines.find((line) => line.request)?.id ?? null);
+            setOpenRequestIds(new Set(pallet?.lines.filter((line) => line.request).map((line) => line.id) ?? []));
             setInboundLocation(pallet?.inbound?.destinationLoc || '');
             setInboundDone(false);
             return;
@@ -694,22 +767,15 @@ const SP401: React.FC = () => {
                                         handleTestBarcodeSearch();
                                     }
                                 }}
-                                style={{
-                                    flex: 1,
-                                    minWidth: 0,
-                                    height: '36px',
-                                    border: '1px solid #9e9e9e',
-                                    borderRadius: '1px',
-                                    padding: '0 8px',
-                                    fontSize: 'clamp(12px, 3.4vw, 14px)',
-                                }}
+                                style={{ ...spSquareInputStyle, flex: 1, minWidth: 0 }}
                             />
                             <button
                                 type="button"
                                 onClick={handleTestBarcodeSearch}
                                 style={{
                                     flex: 'none',
-                                    height: '36px',
+                                    boxSizing: 'border-box',
+                                    height: SP_INPUT_HEIGHT,
                                     padding: '0 14px',
                                     border: 'none',
                                     borderRadius: '5px',
@@ -727,20 +793,8 @@ const SP401: React.FC = () => {
                 ) : null}
 
                 {kind === 'move' ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px 6px' }}>
-                        <select
-                            aria-label="追加品目"
-                            value=""
-                            style={selectStyle}
-                            onChange={() => undefined}
-                        >
-                            <option value="">{`追加品目（${candidates.length}件）`}</option>
-                            {candidates.map((line) => (
-                                <option key={line.id} value={line.id}>
-                                    {line.itemCode}
-                                </option>
-                            ))}
-                        </select>
+                    <Box sx={{ padding: '10px 14px 6px' }}>
+                        <div style={spSquareReadonlyStyle}>{`追加品目（${candidates.length}件）`}</div>
                     </Box>
                 ) : null}
 
@@ -756,49 +810,63 @@ const SP401: React.FC = () => {
                             done={inboundDone}
                             onLocationChange={setInboundLocation}
                         />
-                    ) : scannedPallet ? (
-                        <>
-                            <div style={spSx.listCard}>
-                                <Field label="パレット番号">{scannedPallet.palletNo}</Field>
-                            </div>
-                            {scannedPallet.lines.map((line) => (
-                                <div key={line.id} style={spSx.listCard}>
-                                    <Field label="品目コード">{line.itemCode}</Field>
-                                    <Field label="品目名">{line.itemName}</Field>
-                                    {line.request ? (
-                                        <Field label="移動数量/保管数量">{`${line.moveQty} / ${line.storageQty}`}</Field>
-                                    ) : (
-                                        <Field label="保管数量">{line.storageQty}</Field>
-                                    )}
-                                    {line.request ? (
-                                        <RequestDetail
-                                            line={line}
-                                            open={openRequestId === line.id}
-                                            onToggle={() =>
-                                                setOpenRequestId((current) =>
-                                                    current === line.id ? null : line.id
-                                                )
-                                            }
-                                        />
-                                    ) : null}
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                        {addedIds.has(line.id) ? (
-                                            <span style={{ ...spSx.link, color: '#9e9e9e', cursor: 'default' }}>
-                                                追加済
-                                            </span>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                style={spSx.smallButton}
-                                                onClick={() => handleAddScanned(line)}
-                                            >
-                                                追加
-                                            </button>
-                                        )}
+                    ) : scannedPallets.length > 0 ? (
+                        scannedPallets.map((pallet) => (
+                            <div key={pallet.palletNo} style={spSx.listCard}>
+                                <div style={palletHeaderStyle}>
+                                    <div style={palletNumberStyle}>
+                                        <Field label="パレット番号">{pallet.palletNo}</Field>
                                     </div>
+                                    <button
+                                        type="button"
+                                        style={palletDeleteStyle}
+                                        onClick={() => handleRemovePallet(pallet.palletNo)}
+                                    >
+                                        削除
+                                    </button>
                                 </div>
-                            ))}
-                        </>
+                                {pallet.lines.map((line) => (
+                                    <div key={`${pallet.palletNo}-${line.id}`} style={palletLineStyle}>
+                                        <Field label="品目コード">{line.itemCode}</Field>
+                                        <Field label="品目名">{line.itemName}</Field>
+                                        {line.request ? (
+                                            <Field label="移動数量/保管数量">{`${line.moveQty} / ${line.storageQty}`}</Field>
+                                        ) : (
+                                            <Field label="保管数量">{line.storageQty}</Field>
+                                        )}
+                                        {line.request ? (
+                                            <RequestDetail
+                                                line={line}
+                                                open={openRequestIds.has(line.id)}
+                                                onToggle={() =>
+                                                    setOpenRequestIds((current) => {
+                                                        const next = new Set(current);
+                                                        if (next.has(line.id)) next.delete(line.id);
+                                                        else next.add(line.id);
+                                                        return next;
+                                                    })
+                                                }
+                                            />
+                                        ) : null}
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                            {addedIds.has(line.id) ? (
+                                                <span style={{ ...spSx.link, color: '#9e9e9e', cursor: 'default' }}>
+                                                    追加済
+                                                </span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    style={spSx.smallButton}
+                                                    onClick={() => handleAddScanned(line)}
+                                                >
+                                                    追加
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ))
                     ) : scannedValue ? (
                         <div style={spSx.empty}>該当するパレットが見つかりません。</div>
                     ) : null}
@@ -827,7 +895,7 @@ const SP401: React.FC = () => {
                             </button>
                         )}
                     </Box>
-                    {kind === 'move' && scannedPallet ? (
+                    {kind === 'move' && scannedPallets.length > 0 ? (
                         <button
                             type="button"
                             style={{ ...primaryButtonStyle, flex: 'none', width: '100%', maxWidth: 'none' }}
@@ -942,16 +1010,38 @@ const linkSx = {
     cursor: 'pointer',
 };
 
-const selectStyle: React.CSSProperties = {
-    width: '70%',
-    maxWidth: '320px',
-    height: '36px',
-    border: '1px solid #9e9e9e',
-    borderRadius: '1px',
-    backgroundColor: 'white',
-    color: '#212121',
-    fontSize: 'clamp(12px, 3.4vw, 14px)',
-    padding: '0 8px',
+const palletHeaderStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: '8px',
+};
+
+const palletNumberStyle: React.CSSProperties = {
+    flex: 1,
+    minWidth: 0,
+    border: 'none',
+};
+
+const palletDeleteStyle: React.CSSProperties = {
+    flex: 'none',
+    height: SP_INPUT_HEIGHT,
+    padding: '0 10px',
+    border: '1px solid #d32f2f',
+    borderRadius: 0,
+    backgroundColor: '#ffffff',
+    color: '#d32f2f',
+    fontSize: '13px',
+    fontWeight: 700,
+    cursor: 'pointer',
+};
+
+const palletLineStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    borderTop: '1px solid #e0e0e0',
+    paddingTop: '8px',
 };
 
 const backButtonStyle: React.CSSProperties = {

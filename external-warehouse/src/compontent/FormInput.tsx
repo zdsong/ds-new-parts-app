@@ -60,7 +60,7 @@ const inputContainer = {
 const dateInputSx = {
     '& .MuiInputLabel-root': { display: 'none' },
     '& .MuiInputBase-input ': { height: '25.56px', paddingTop: '2px', paddingBottom: '0px' },
-    '& .MuiInputBase-root': { borderRadius: '5px' },
+    '& .MuiInputBase-root': { borderRadius: '0' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
     ...inputContainer
@@ -72,7 +72,7 @@ const dateInputSx = {
 const dateSelectSx = {
     '& .MuiInputLabel-root': { display: 'none' },
     '& .MuiInputBase-input ': { height: '24px', padding: '2px 5px 0 5px' },
-    '& .MuiInputBase-root': { borderRadius: '5px 0 0 5px' },
+    '& .MuiInputBase-root': { borderRadius: '0' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
     minWidth: 0,
@@ -83,7 +83,7 @@ const dateSelectSx = {
 const selectInputSx = {
     '& .MuiInputLabel-root': { display: 'none' },
     '& .MuiInputBase-input ': { paddingTop: '2px', paddingBottom: '0px' },
-    '& .MuiInputBase-root': { borderRadius: '5px' },
+    '& .MuiInputBase-root': { borderRadius: '0' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
     '& .MuiSelect-select': {
@@ -96,7 +96,7 @@ const selectInputSx = {
 const filterSelectInputSx = {
     '& .MuiInputLabel-root': { display: 'none' },
     '& .MuiInputBase-input ': { paddingTop: '2px', paddingBottom: '0px' },
-    '& .MuiInputBase-root': { borderRadius: '5px', padding: 0, height: '25.56px' },
+    '& .MuiInputBase-root': { borderRadius: '0', padding: 0, height: '25.56px' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
     '& .MuiAutocomplete-input': {padding: '0 5px !important'},
@@ -107,7 +107,7 @@ const filterSelectInputSx = {
 // 基本入力フィールドスタイル
 const inputSx = {
     '& .MuiInputLabel-root': { display: 'none' },
-    '& .MuiInputBase-root ': { height: '25.56px', paddingTop: '2px', paddingBottom: '2px', borderRadius: '5px' },
+    '& .MuiInputBase-root ': { height: '25.56px', paddingTop: '2px', paddingBottom: '2px', borderRadius: '0' },
     '& .MuiInputBase-input': { paddingTop: '0px', paddingBottom: '0px', paddingLeft: '5px' },
     '& .MuiFormControl-root': { marginTop: 0 },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
@@ -263,7 +263,7 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
                   paddingRight: '0px',
                   paddingBottom: '4px',
                   paddingLeft: '0px',
-                  borderRadius: '5px',
+                  borderRadius: '0',
               },
               '& .MuiInputBase-input': {
                   height: '100%',
