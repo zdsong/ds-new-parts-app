@@ -227,7 +227,7 @@ const P407: React.FC = () => {
     );
 
     return (
-        <PageContainer title="移動情報" titleUnderline bottomSpace>
+        <PageContainer title="移動情報詳細" titleUnderline bottomSpace>
             <div style={sectionTitleStyle}>■基本情報</div>
             <SimpleForm
                 key={`basic-${status}`}

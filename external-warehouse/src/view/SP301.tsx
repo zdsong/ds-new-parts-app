@@ -22,7 +22,7 @@ const SP301: React.FC = () => {
     return (
         <Box sx={spSx.page}>
             <Box sx={spSx.titleBar}>
-                <label style={spSx.title}>パレット管理</label>
+                <label style={spSx.title}>製品・部品選択</label>
             </Box>
 
             <Typography sx={{ fontSize: '14px', color: '#212121', lineHeight: 1.6, margin: '12px 0 4px' }}>
