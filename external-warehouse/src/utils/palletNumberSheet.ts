@@ -426,8 +426,29 @@ const SHEET_PRINT_STYLE = `
 /** 画面で確認するときのスタイル（別ウィンドウで開いた場合のみ有効） */
 const SHEET_SCREEN_STYLE = `
     @media screen {
-      body { background: #e8e8e8; padding: 10mm 0; }
+      body { background: #e8e8e8; padding: 10mm 0 24mm; }
       .ps { margin: 0 auto 10mm; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); background: #ffffff; }
+      .ps-back {
+        display: block;
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        z-index: 20;
+        box-sizing: border-box;
+        width: 33.333vw;
+        height: 48px;
+        margin: 0;
+        padding: 0 8px;
+        border: none;
+        border-radius: 0;
+        background: #6f9fd0;
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 700;
+      }
+    }
+    @media print {
+      .ps-back { display: none !important; }
     }
 `;
 
@@ -461,11 +482,15 @@ ${body}
 /** 現在の画面に差し込む印刷用要素の ID */
 const PRINT_ROOT_ID = 'pallet-print-root';
 const PRINT_STYLE_ID = 'pallet-print-style';
+/** 印刷中は画面側も帳票だけにする。iOS はプリンタ選択で再描画するとき画面用の体裁を使う */
+const PRINTING_CLASS = 'pallet-printing';
 
 /** 現在の画面に差し込んだ印刷用の要素を片付ける */
 const removeInPlacePrintNodes = () => {
     document.getElementById(PRINT_ROOT_ID)?.remove();
     document.getElementById(PRINT_STYLE_ID)?.remove();
+    document.documentElement.classList.remove(PRINTING_CLASS);
+    document.body.classList.remove(PRINTING_CLASS);
 };
 
 /**
@@ -495,46 +520,263 @@ const runAfterSystemPreview = (target: Window, onPrinted?: () => void) => {
 };
 
 /**
- * iOS は表示中の画面の print() でシステムプレビューが出る。
- * クリックと同じ処理の流れで呼び、成否をタイマーで推測しない
- * （beforeprint が来ない端末で「開けなかった」と誤って知らせていた）。
+ * iOS は表示中の画面や iframe を print() すると、
+ * プリンタや用紙サイズを変えた再プレビューが白紙になる。
+ * 帳票だけの文書を 1 つのウィンドウで開く。
+ * 読み込み完了前に print() すると「読み込みが終わっていません」と出る。
+ * プリンタや用紙の変更でも afterprint が来るため、そのタイミングでは画面を戻さない。
+ */
+const PRINT_DONE_CALLBACK = '__palletPrintDone';
+const PRINT_RETURN_FLAG = 'ewPalletPrintReturn';
+const PRINT_WINDOW_NAME = 'palletNumberSheetPrint';
+
+const withIosPrintControls = (html: string): string => {
+    const script = `
+<button type="button" class="ps-back" id="ps-back">元の画面へ戻る</button>
+<style>
+  @media screen {
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    body { padding: 8px 0 56px !important; }
+    #ps-slot { overflow: hidden; margin: 0 auto; }
+    #ps-fit { transform-origin: top left; }
+  }
+  @media print {
+    #ps-slot, #ps-fit {
+      width: auto !important;
+      height: auto !important;
+      transform: none !important;
+      overflow: visible !important;
+      margin: 0 !important;
+    }
+  }
+</style>
+<script>
+(function () {
+  function goBack() {
+    try { sessionStorage.setItem(${JSON.stringify(PRINT_RETURN_FLAG)}, '1'); } catch (error) {}
+    try {
+      var opener = window.opener;
+      if (opener && !opener.closed) {
+        if (opener.${PRINT_DONE_CALLBACK}) opener.${PRINT_DONE_CALLBACK}();
+        opener.focus();
+      }
+    } catch (error) {}
+    window.close();
+    setTimeout(function () {
+      if (!window.closed && history.length > 1) history.back();
+    }, 0);
+  }
+  function fitSheet() {
+    var slot = document.getElementById('ps-slot');
+    var fit = document.getElementById('ps-fit');
+    if (!slot || !fit) return;
+    fit.style.transform = 'none';
+    slot.style.width = 'auto';
+    slot.style.height = 'auto';
+    var sheetWidth = fit.scrollWidth;
+    var sheetHeight = fit.scrollHeight;
+    if (!sheetWidth || !sheetHeight) return;
+    var maxWidth = window.innerWidth;
+    var maxHeight = window.innerHeight - 56;
+    var scale = Math.min(maxWidth / sheetWidth, maxHeight / sheetHeight);
+    fit.style.transform = 'scale(' + scale + ')';
+    slot.style.width = (sheetWidth * scale) + 'px';
+    slot.style.height = (sheetHeight * scale) + 'px';
+  }
+  function placeButton() {
+    var back = document.getElementById('ps-back');
+    if (!back) return;
+    var viewport = window.visualViewport;
+    var zoom = viewport && viewport.scale ? viewport.scale : 1;
+    var visibleWidth = viewport ? viewport.width : window.innerWidth;
+    var visibleHeight = viewport ? viewport.height : window.innerHeight;
+    var offsetLeft = viewport ? viewport.offsetLeft : 0;
+    var offsetTop = viewport ? viewport.offsetTop : 0;
+    var layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+    back.style.width = (visibleWidth / 3) + 'px';
+    back.style.height = (48 / zoom) + 'px';
+    back.style.fontSize = (16 / zoom) + 'px';
+    back.style.left = offsetLeft + 'px';
+    back.style.bottom = Math.max(0, layoutHeight - offsetTop - visibleHeight) + 'px';
+  }
+  function layoutPreview() {
+    fitSheet();
+    placeButton();
+  }
+  var back = document.getElementById('ps-back');
+  if (back) back.addEventListener('click', goBack);
+  window.addEventListener('resize', layoutPreview);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', layoutPreview);
+    window.visualViewport.addEventListener('scroll', placeButton);
+  }
+  window.addEventListener('load', function () {
+    layoutPreview();
+    window.print();
+  });
+})();
+</script>`;
+    return html
+        .replace(
+            '<meta charset="utf-8" />',
+            '<meta charset="utf-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1" />'
+        )
+        .replace('<body>', `<body>${script}<div id="ps-slot"><div id="ps-fit">`)
+        .replace('</body>', '</div></div></body>');
+};
+
+const printInOwnDocument = (html: string, onPrinted?: () => void): boolean => {
+    // about:blank に書き出すと、用紙サイズ変更で文書が読み直されて白紙になる。
+    // 同じ内容を指す URL にして、読み直しても帳票が残るようにする。
+    // 印刷のたびに新しい画面を開かず、同じウィンドウを使う。
+    const blob = new Blob([withIosPrintControls(html)], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const child = window.open(url, PRINT_WINDOW_NAME);
+    if (!child) {
+        URL.revokeObjectURL(url);
+        return false;
+    }
+
+    const host = window as Window & { [PRINT_DONE_CALLBACK]?: () => void };
+    let done = false;
+    const notifyDone = () => {
+        if (done) return;
+        done = true;
+        delete host[PRINT_DONE_CALLBACK];
+        try {
+            sessionStorage.removeItem(PRINT_RETURN_FLAG);
+        } catch (error) {
+            console.error(error);
+        }
+        window.setTimeout(() => {
+            try {
+                if (child.closed) URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error(error);
+            }
+        }, 1000);
+        onPrinted?.();
+    };
+    host[PRINT_DONE_CALLBACK] = notifyDone;
+
+    const onPageShow = () => {
+        let pending = false;
+        try {
+            pending = sessionStorage.getItem(PRINT_RETURN_FLAG) === '1';
+        } catch (error) {
+            console.error(error);
+        }
+        if (!pending) return;
+        window.removeEventListener('pageshow', onPageShow);
+        notifyDone();
+    };
+    window.addEventListener('pageshow', onPageShow);
+
+    try {
+        child.focus();
+    } catch (error) {
+        console.error(error);
+    }
+    return true;
+};
+
+/**
+ * iOS で別ウィンドウを開けなかったときの予備。
+ * 画面用の体裁でも帳票だけが見えるようにし、再プレビューの beforeprint で差し直す。
+ * プリンタ選択の afterprint では帳票を外さない。
  */
 const printInCurrentPage = (labelsHtml: string, onPrinted?: () => void): boolean => {
     if (typeof window === 'undefined' || typeof window.print !== 'function') return false;
 
-    removeInPlacePrintNodes();
-
-    const style = document.createElement('style');
-    style.id = PRINT_STYLE_ID;
-    style.textContent = `
-    #${PRINT_ROOT_ID} { display: none; }
-    @media print {
-      html, body { height: auto !important; overflow: visible !important; }
-      body > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
-      #${PRINT_ROOT_ID} { display: block !important; }
-      ${SHEET_PRINT_STYLE}
-    }`;
-
-    const root = document.createElement('div');
-    root.id = PRINT_ROOT_ID;
-    root.innerHTML = labelsHtml;
-
-    document.head.appendChild(style);
-    document.body.appendChild(root);
-
-    const cleanup = () => {
-        window.removeEventListener('afterprint', cleanup);
+    const mount = () => {
         removeInPlacePrintNodes();
+
+        const style = document.createElement('style');
+        style.id = PRINT_STYLE_ID;
+        style.textContent = `
+        html.${PRINTING_CLASS}, body.${PRINTING_CLASS} {
+          height: auto !important;
+          overflow: visible !important;
+          background: #ffffff !important;
+        }
+        body.${PRINTING_CLASS} > *:not(#${PRINT_ROOT_ID}) { display: none !important; }
+        #${PRINT_ROOT_ID} {
+          display: block !important;
+          position: fixed;
+          inset: 0;
+          z-index: 2147483647;
+          overflow: auto;
+          background: #ffffff;
+        }
+        ${SHEET_PRINT_STYLE}`;
+
+        const root = document.createElement('div');
+        root.id = PRINT_ROOT_ID;
+        root.innerHTML = labelsHtml;
+
+        document.head.appendChild(style);
+        document.body.appendChild(root);
+        document.documentElement.classList.add(PRINTING_CLASS);
+        document.body.classList.add(PRINTING_CLASS);
     };
-    window.addEventListener('afterprint', cleanup);
-    runAfterSystemPreview(window, onPrinted);
+
+    mount();
+
+    const printMedia = window.matchMedia('print');
+    let settled = false;
+    let finishTimer = 0;
+
+    const finish = () => {
+        if (settled || printMedia.matches) return;
+        settled = true;
+        window.clearTimeout(finishTimer);
+        printMedia.removeEventListener('change', onPrintMedia);
+        window.removeEventListener('beforeprint', onBeforePrint);
+        window.removeEventListener('afterprint', onAfterPrint);
+        removeInPlacePrintNodes();
+        onPrinted?.();
+    };
+
+    const scheduleFinish = () => {
+        window.clearTimeout(finishTimer);
+        finishTimer = window.setTimeout(() => {
+            if (printMedia.matches) return;
+            finish();
+        }, 1500);
+    };
+
+    const onBeforePrint = () => {
+        window.clearTimeout(finishTimer);
+        mount();
+    };
+
+    const onPrintMedia = () => {
+        if (printMedia.matches) {
+            window.clearTimeout(finishTimer);
+            return;
+        }
+        scheduleFinish();
+    };
+
+    const onAfterPrint = () => {
+        if (printMedia.matches) return;
+        scheduleFinish();
+    };
+
+    printMedia.addEventListener('change', onPrintMedia);
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
 
     try {
         void document.body.offsetHeight;
         window.print();
     } catch (error) {
         console.error(error);
-        cleanup();
+        settled = true;
+        printMedia.removeEventListener('change', onPrintMedia);
+        window.removeEventListener('beforeprint', onBeforePrint);
+        window.removeEventListener('afterprint', onAfterPrint);
+        removeInPlacePrintNodes();
         return false;
     }
     return true;
@@ -618,6 +860,10 @@ export const printPalletNumberSheet = (
     if (prefersHandheldPrint()) {
         targetWindow?.close();
         if (isIosDevice()) {
+            const html = buildPalletNumberSheetHtml(labels);
+            if (!html) return false;
+            // 別ウィンドウが開けない端末だけ、今の画面に帳票を載せて印刷する
+            if (printInOwnDocument(html, onPrinted)) return true;
             return printInCurrentPage(buildLabelsHtml(labels), onPrinted);
         }
         const html = buildPalletNumberSheetHtml(labels);

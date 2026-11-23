@@ -123,6 +123,8 @@ const SP401: React.FC = () => {
     const [inboundLocation, setInboundLocation] = useState('');
     // 入庫の移動完了を押したか
     const [inboundDone, setInboundDone] = useState(false);
+    // TODO 削除: 開発完了後に消す。カメラの代わりにバーコードを手入力して同じ読取処理を通す
+    const [testBarcode, setTestBarcode] = useState('');
 
     /**
      * カメラとスキャン処理を停止する
@@ -249,6 +251,14 @@ const SP401: React.FC = () => {
             return;
         }
         void loadMoveScan(trimmed);
+    };
+
+    /**
+     * TODO 削除: 開発完了後にこの関数と画面のテスト用入力を削除する。
+     * 入力したバーコードを、カメラ読取と同じ applyScanResult に渡す。
+     */
+    const handleTestBarcodeSearch = () => {
+        applyScanResult(testBarcode);
     };
 
     /** 読み取り結果の品目を移動候補へ追加する。製品と部品は混載できない */
@@ -665,6 +675,56 @@ const SP401: React.FC = () => {
                         品目検索
                     </Box>
                 </Box>
+
+                {kind === 'move' ? (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px 14px 0' }}>
+                        {/* TODO 削除: 開発完了後にこのテスト用バーコード入力を削除する */}
+                        <Box component="span" sx={{ fontSize: '12px', color: '#c62828', fontWeight: 700 }}>
+                            テスト用（開発完了後に削除）
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input
+                                aria-label="テスト用バーコード"
+                                value={testBarcode}
+                                placeholder="バーコード"
+                                onChange={(event) => setTestBarcode(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter') {
+                                        event.preventDefault();
+                                        handleTestBarcodeSearch();
+                                    }
+                                }}
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    height: '36px',
+                                    border: '1px solid #9e9e9e',
+                                    borderRadius: '1px',
+                                    padding: '0 8px',
+                                    fontSize: 'clamp(12px, 3.4vw, 14px)',
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleTestBarcodeSearch}
+                                style={{
+                                    flex: 'none',
+                                    height: '36px',
+                                    padding: '0 14px',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    backgroundColor: '#0b5cab',
+                                    color: 'white',
+                                    fontSize: '14px',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                検索
+                            </button>
+                        </Box>
+                    </Box>
+                ) : null}
 
                 {kind === 'move' ? (
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 14px 6px' }}>
