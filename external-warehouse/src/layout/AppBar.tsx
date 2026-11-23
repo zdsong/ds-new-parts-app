@@ -7,10 +7,11 @@ import { MessageChatAppBar } from './MessageChat'
 
 import { AppBarSx } from '../styles/layoutSx';
 import customIcon from '../assets/icons/logo-icon.png';
-import { useLocation, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Notice } from './Notice';
 import ThemeToggle from './ThemeToggel';
 import LoginUserInfoBar from './LoginUserInfo';
+import MenuTrail, { MenuTitleMaps, useMenuTrail } from './MenuTrail';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
 import { useIsMobile } from '../utils/deviceUtil';
 import { HOME_ROUTE } from '../utils/appRoutes';
@@ -46,7 +47,7 @@ const FLUID = {
 const hideUserInfoSx = { display: { xs: 'none', md: 'flex' } };
 const hideLogoBelowSmSx = { display: { xs: 'none', sm: 'block' } };
 
-// システム名（PC 表示時のタイトル）
+// システム名。メニューに属さない画面（初期表示など）でのみ使う
 const APP_TITLE = '外部倉庫管理システム（仮称）';
 
 interface MenuItem {
@@ -56,17 +57,6 @@ interface MenuItem {
   path?: string,
   meta: any,
   children?: MenuItem[],
-}
-
-/**
- * ルート名ごとのメニュー名
- * ・current：画面自身のメニュー名
- * ・parent ：直上の親メニュー名（親が無い場合は自身のメニュー名）
- * モバイル表示では画面幅が狭くメニュー階層が見えないため、親メニュー名をタイトルに使う。
- */
-interface MenuTitleMaps {
-  current: Record<string, string>;
-  parent: Record<string, string>;
 }
 
 // 既存画面が存在するルート名の一覧
@@ -288,17 +278,25 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
 }) => {
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   // スマートフォン表示かどうかを判定する（utils/deviceUtil の共通判定）
   const isMobile = useIsMobile();
   // メニュー名のマップ（ルート名 → 自身／親のメニュー名）
   const [menuTitles, setMenuTitles] = React.useState<MenuTitleMaps>({ current: {}, parent: {} });
+  // パンくず用に、取得したメニュー階層を保持する
+  const [menuTree, setMenuTree] = React.useState<MenuItem[]>(() => {
+    const token = sessionStorage.getItem('externalWarehouseToken') || '';
+    if (menuCache && menuCache.token === token) return menuCache.items;
+    return [];
+  });
+  const { headerTitle, visibleTrail } = useMenuTrail(menuTree, menuTitles);
+  const appTitle = headerTitle || APP_TITLE;
 
   React.useEffect(() => {
     let active = true;
     loadMenuItems().then((items) => {
       if (!active) return;
+      setMenuTree(items);
       const titleMaps: MenuTitleMaps = { current: {}, parent: {} };
       // parentTitle には「直上の親メニュー名」を引き継ぐ（親が無ければ自身の名前を使う）
       const walk = (list: MenuItem[], parentTitle?: string) => {
@@ -321,13 +319,6 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
     };
   }, []);
 
-  // 現在表示中の画面に対応するメニュー名を取得する
-  const routeName = location.pathname.replace(/^\/+/, '').split('/')[0];
-  const currentMenuTitle = menuTitles.current[routeName];
-  // スマートフォンではシステム名ではなく、表示中の画面が属する親メニュー名を表示する
-  const mobileMenuTitle = menuTitles.parent[routeName] || currentMenuTitle;
-  const appTitle = isMobile && mobileMenuTitle ? mobileMenuTitle : APP_TITLE;
-
   // システム名（ロゴ）をクリックしたときは初期表示画面へ戻る
   const navigateHome = () =>{
     navigate(HOME_ROUTE)
@@ -336,6 +327,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
   const icon = themeIcon === 'S' ? SIcon : themeIcon === 'D' ? DIcon : customIcon
 
   return (
+    <>
     <AppBar {...props} userMenu={false} toolbar={null} sx={AppBarSx.baseAppBarSx} >
       <AppBarContainer>
         {/* 左側セクション（ロゴ + タイトル） */}
@@ -364,7 +356,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
                 // 文字は折り返さず、幅に応じて少しずつ縮める（極端に狭い場合のみ省略記号）
                 fontSize: isMobile ? FLUID.mobileTitleFont : FLUID.titleFont,
                 // スマートフォンの副題は太字にし、下寄りに置いて画面名と揃える
-                fontWeight: isMobile ? 700 : undefined,
+                fontWeight: 700,
                 lineHeight: isMobile ? 1.1 : undefined,
                 marginBottom: isMobile ? '0px' : undefined,
                 position: isMobile ? 'relative' : undefined,
@@ -384,6 +376,8 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
         <RightSection/>
       </AppBarContainer>
     </AppBar>
+    <MenuTrail trail={visibleTrail} />
+    </>
   );
 };
 
