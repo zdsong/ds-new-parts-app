@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import useApiRequest from '../adapters/apiUtil';
 import FormInput from '../compontent/FormInput';
+import type { FormInputRefHandle } from '../compontent/FormInput';
 import SpQuantityInput from '../compontent/SpQuantityInput';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import {
-    MOVE_LOCATION_CHOICES,
-    MOVE_REGISTRAR,
-    MOVE_WAREHOUSE_CHOICES,
     REGISTER_WITHOUT_DEPENDENCY,
     REGISTER_WITH_DEPENDENCY,
-    completeMoveRegistration,
 } from '../utils/moveData';
 import type { MoveLine, MoveRegisterState } from '../utils/moveData';
 import { normalizeChoiceValue } from '../utils/palletData';
@@ -22,6 +20,12 @@ import { normalizeChoiceValue } from '../utils/palletData';
  * 設計書：③移動管理 1-3 移動登録。
  * 移動依頼は SP404、登録完了（1-4 パレット番号表印刷）は SP405。
  */
+
+/** 倉庫・ロケ番の選択肢 */
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 /** カード内の縦積み。検索欄と同じ幅にする */
 const formColumn: React.CSSProperties = {
@@ -42,27 +46,68 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 /**
  * 移動登録（設計書 ③移動管理 1-3）
- * dependent=true  … ①品目を選んで新しいパレットを作る。依頼詳細と削除を出す。
- * dependent=false … ②パレット毎に送る。依頼詳細は出さない（設計書の「＋」は描き間違い）。
+ * 画面表示は依存の有無にかかわらず同じ並びにし、移動依頼がある品目だけ
+ * 移動依頼詳細を出す（依存がない場合は依頼部分を表示しない）。
  */
 const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => {
     const navigate = useNavigate();
     const notify = useNotify();
+    const { request } = useApiRequest();
     const dependent = initial.dependent;
     const [lines, setLines] = useState<MoveLine[]>(initial.lines.map((line) => ({ ...line })));
-    const [warehouse, setWarehouse] = useState('gyoda');
-    const [location, setLocation] = useState('A-1-2-3-4');
+    const [warehouse, setWarehouse] = useState('');
+    const [location, setLocation] = useState('');
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
     const [remark, setRemark] = useState('');
-    const [registrar, setRegistrar] = useState(MOVE_REGISTRAR);
+    const [registrar, setRegistrar] = useState('');
     const [formKey, setFormKey] = useState(0);
+    // 二重登録を防ぐため、送信中はボタンを押せなくする
+    const [submitting, setSubmitting] = useState(false);
+    // 未入力の項目へフォーカスを移すための参照
+    const warehouseRef = useRef<FormInputRefHandle | null>(null);
+    const locationRef = useRef<FormInputRefHandle | null>(null);
+    const registrarRef = useRef<FormInputRefHandle | null>(null);
     const [openId, setOpenId] = useState<string | null>(
         dependent ? initial.lines.find((line) => line.request)?.id ?? null : null
     );
-    const locations = MOVE_LOCATION_CHOICES[warehouse] || [];
+
+    /** 倉庫・ロケ番の選択肢を共通 API から取得する */
+    useEffect(() => {
+        const loadWarehouses = async () => {
+            const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+            const options = Array.isArray(result?.data) ? (result.data as OptionItem[]) : [];
+            setWarehouseOptions(options);
+            if (options.length > 0) {
+                setWarehouse(options[0].key);
+                setFormKey((key) => key + 1);
+            }
+        };
+        loadWarehouses();
+    }, [request]);
+
+    /** 倉庫が変わったらロケ番の選択肢を取得する */
+    useEffect(() => {
+        const loadLocations = async () => {
+            if (!warehouse) {
+                setLocationOptions([]);
+                return;
+            }
+            const result = await request(
+                'get',
+                `api/common/${warehouse}/location/options`,
+                {},
+                {},
+                false,
+                false
+            );
+            setLocationOptions(Array.isArray(result?.data) ? result.data : []);
+        };
+        loadLocations();
+    }, [request, warehouse]);
 
     const handleWarehouse = (value: unknown) => {
-        const next = normalizeChoiceValue(value);
-        setWarehouse(next);
+        setWarehouse(normalizeChoiceValue(value));
         setLocation('');
         setFormKey((key) => key + 1);
     };
@@ -71,9 +116,15 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
         setLines((prev) => prev.filter((line) => line.id !== id));
     };
 
-    const handleSubmit = () => {
-        if (!warehouse || !location) {
-            notify('移動先の倉庫とロケ番を選択してください。', { type: 'warning' });
+    const handleSubmit = async () => {
+        if (!warehouse) {
+            notify('移動先の倉庫を選択してください。', { type: 'warning' });
+            warehouseRef.current?.focus();
+            return;
+        }
+        if (!location) {
+            notify('移動先のロケ番を選択してください。', { type: 'warning' });
+            locationRef.current?.focus();
             return;
         }
         if (lines.length === 0) {
@@ -84,18 +135,67 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
             notify('移動数量を入力してください。', { type: 'warning' });
             return;
         }
-        const result = completeMoveRegistration({
-            mode: dependent ? 'issue' : 'whole',
-            palletNo: dependent ? '' : initial.palletNo,
-            destinationWh: warehouse,
-            destinationLoc: location,
-            remark,
-            lines,
-        });
-        navigate('/SP405', {
-            replace: true,
-            state: { ...result, registrar },
-        });
+        if (lines.some((line) => line.moveQty > line.storageQty)) {
+            notify('移動数量が保管数量を超えています。', { type: 'warning' });
+            return;
+        }
+        if (!registrar.trim()) {
+            notify('移動登録者を入力してください。', { type: 'warning' });
+            registrarRef.current?.focus();
+            return;
+        }
+        if (submitting) {
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const response = await request('post', 'api/transfer/register', {
+                palletNo: initial.palletNo || lines[0]?.palletNo || '',
+                dependent,
+                destinationWhCd: warehouse,
+                destinationLocCd: location,
+                remark,
+                registrar: registrar.trim(),
+                lines: lines.map((line) => ({
+                    id: line.id,
+                    itemCode: line.itemCode,
+                    itemName: line.itemName,
+                    category: line.category,
+                    moveQty: line.moveQty,
+                    storageQty: line.storageQty,
+                    palletNo: line.palletNo,
+                    version: line.version ?? null,
+                    requestNo: line.request?.requestNo ?? null,
+                    requestDetailNo: line.request?.requestDetailNo ?? null,
+                })),
+            });
+            const data = response?.code === 200
+                ? (response.data as { transferNo: string; palletNo: string; mode: 'whole' | 'issue' } | null)
+                : null;
+            if (!data) {
+                return;
+            }
+            navigate('/SP405', {
+                replace: true,
+                state: {
+                    view: 'complete',
+                    mode: data.mode,
+                    moveNo: data.transferNo,
+                    palletNo: data.palletNo,
+                    destinationWh: warehouse,
+                    destinationWhNm:
+                        warehouseOptions.find((option) => option.key === warehouse)?.value || warehouse,
+                    destinationLoc: location,
+                    remark,
+                    registrar: registrar.trim(),
+                    lines,
+                },
+            });
+        } catch {
+            // エラー内容は request 内で通知されるため、ここでは何もしない
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -124,25 +224,27 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                             label="パレット番号"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            placeholder={dependent ? '未発番' : ''}
+                            placeholder="未発番"
                             disabled
                         />
                         <FormInput
+                            ref={warehouseRef}
                             type={'filter-select'}
                             source="destinationWh"
                             label="移動先"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={MOVE_WAREHOUSE_CHOICES}
+                            choices={warehouseOptions}
                             onChange={handleWarehouse}
                         />
                         <FormInput
+                            ref={locationRef}
                             type={'filter-select'}
                             source="destinationLoc"
                             label="ロケ番"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={locations}
+                            choices={locationOptions}
                             onChange={(value) => setLocation(normalizeChoiceValue(value))}
                         />
                     </div>
@@ -155,44 +257,38 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                     <div key={line.id} style={spSx.listCard}>
                         <div style={spSx.itemHeader}>
                             <span style={spSx.itemTitle}>{line.itemCode}</span>
-                            {dependent ? (
-                                <span style={spSx.linkDanger} onClick={() => handleRemove(line.id)}>
-                                    削除
-                                </span>
-                            ) : null}
+                            <span style={spSx.linkDanger} onClick={() => handleRemove(line.id)}>
+                                削除
+                            </span>
                         </div>
                         <Field label="品目名">{line.itemName}</Field>
-                        {dependent ? (
-                            <div style={spSx.field}>
-                                <span style={spSx.fieldLabel}>移動数量/保管数量</span>
-                                <SimpleForm
-                                    toolbar={false}
-                                    sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
-                                    onSubmit={() => undefined}
-                                    defaultValues={{ quantity: line.moveQty }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <SpQuantityInput
-                                            value={line.moveQty}
-                                            min={1}
-                                            onChange={(value) =>
-                                                setLines((prev) =>
-                                                    prev.map((item) =>
-                                                        item.id === line.id ? { ...item, moveQty: value } : item
-                                                    )
+                        <div style={spSx.field}>
+                            <span style={spSx.fieldLabel}>移動数量/保管数量</span>
+                            <SimpleForm
+                                toolbar={false}
+                                sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
+                                onSubmit={() => undefined}
+                                defaultValues={{ quantity: line.moveQty }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <SpQuantityInput
+                                        value={line.moveQty}
+                                        min={1}
+                                        onChange={(value) =>
+                                            setLines((prev) =>
+                                                prev.map((item) =>
+                                                    item.id === line.id ? { ...item, moveQty: value } : item
                                                 )
-                                            }
-                                        />
-                                        <span style={{ ...spSx.fieldValue, paddingLeft: 0 }}>{`/ ${line.storageQty}`}</span>
-                                    </div>
-                                </SimpleForm>
-                            </div>
-                        ) : (
-                            <Field label="移動数量/保管数量">{`${line.moveQty} / ${line.storageQty}`}</Field>
-                        )}
+                                            )
+                                        }
+                                    />
+                                    <span style={{ ...spSx.fieldValue, paddingLeft: 0 }}>{`/ ${line.storageQty}`}</span>
+                                </div>
+                            </SimpleForm>
+                        </div>
                         <Field label="パレット番号">{line.palletNo}</Field>
                         <Field label="保管場所">{line.storagePlace}</Field>
-                        {dependent && line.request ? (
+                        {line.request ? (
                             <div style={spSx.subSection}>
                                 <div
                                     style={spSx.subSectionHeader}
@@ -243,6 +339,7 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                             onChange={(value) => setRemark(typeof value === 'string' ? value : '')}
                         />
                         <FormInput
+                            ref={registrarRef}
                             type={'text'}
                             source="registrar"
                             label="移動登録者"
@@ -259,7 +356,12 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                 <button type="button" style={spSx.secondaryButton} onClick={() => navigate(-1)}>
                     戻る
                 </button>
-                <button type="button" style={spSx.primaryButton} onClick={handleSubmit}>
+                <button
+                    type="button"
+                    style={submitting ? { ...spSx.primaryButton, ...spSx.buttonDisabled } : spSx.primaryButton}
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                >
                     移動登録
                 </button>
             </Box>

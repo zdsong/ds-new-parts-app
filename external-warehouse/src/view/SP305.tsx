@@ -381,45 +381,27 @@ const SP305: React.FC = () => {
         await submitPallet(values);
     };
 
-    /** パレット番号表を印刷済みにする（以降は印刷以外の操作ができなくなる） */
-    const markPrinted = async () => {
+    /** パレット番号表を印刷済みにする（在庫を登録し、以降は印刷以外の操作ができなくなる） */
+    const markPrinted = async (): Promise<boolean> => {
         const result = await request('put', `api/pallet/${palletNo}/printed`, {}, {}, false, false);
         if (result?.code !== 200) {
             notify(result?.message || '印刷フラグの更新に失敗しました。', { type: 'error' });
-            return;
+            return false;
         }
         // 印刷済みになった状態（バージョン・更新日時）を取得し直す
         const refreshed = await request('get', `api/pallet/${palletNo}`, {}, {}, false, false);
         applyApiPallet(refreshed?.data || null);
-    };
-
-    /** 印刷後の保存（更新 → 印刷済みにする） */
-    const saveAfterPrint = async () => {
-        setPrinting(true);
-        try {
-            const apiPallet = await submitPallet(undefined, { silent: true });
-            if (!apiPallet) {
-                notify('印刷は行いましたが、パレット情報の更新に失敗しました。', { type: 'error' });
-                return;
-            }
-            await markPrinted();
-        } catch (error) {
-            console.error(error);
-            notify('印刷後の更新に失敗しました。', { type: 'error' });
-        } finally {
-            setPrinting(false);
-        }
+        return true;
     };
 
     /**
      * 番号表を印刷する
      *
-     * スマホはシステムの印刷プレビューを開く。プレビューを閉じるまで画面は描き換えない。
-     * 未印刷の場合は、印刷のあとに更新と印刷済みの更新を行う。
-     * 印刷できた場合は印刷済み（printed_flg=1）にし、以降は印刷以外の操作をできなくする。
+     * 印刷の前に、パレット情報の更新 → 在庫の登録・印刷済みへの更新を行う。
+     * 保存に失敗した場合は印刷しない（印刷済みにしてから更新できなくなるのを防ぐ）。
      * 印刷済みの場合はデータを変更できないため、そのまま印刷する。
      */
-    const handlePrint = () => {
+    const handlePrint = async () => {
         if (printing) return;
         if (!palletNo) {
             notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
@@ -437,30 +419,43 @@ const SP305: React.FC = () => {
             return;
         }
 
-        const afterPrint = () => {
-            notify('1 枚のパレット番号表を印刷します。', { type: 'success' });
-            if (!printed) {
-                void saveAfterPrint();
+        if (!printed) {
+            setPrinting(true);
+            try {
+                // 先にパレット情報を保存する（印刷済みにすると更新できなくなるため）
+                const apiPallet = await submitPallet(undefined, { silent: true });
+                if (!apiPallet) {
+                    notify('印刷前のパレット情報の保存に失敗しました。', { type: 'error' });
+                    return;
+                }
+                // 在庫を登録してから印刷済みにする
+                if (!(await markPrinted())) {
+                    notify('印刷前の在庫登録に失敗しました。', { type: 'error' });
+                    return;
+                }
+            } catch (error) {
+                console.error(error);
+                notify('印刷前の保存に失敗しました。', { type: 'error' });
+                return;
+            } finally {
+                setPrinting(false);
             }
-        };
+        }
 
-        const count = printPalletLabels(
-            [
-                {
-                    ...pallet,
-                    storageLocationName: getWarehouseName(pallet.storageLocation),
-                    details: detailsRef.current,
-                },
-            ],
-            undefined,
-            undefined,
-            afterPrint
-        );
+        const count = printPalletLabels([
+            {
+                ...pallet,
+                storageLocationName: getWarehouseName(pallet.storageLocation),
+                details: detailsRef.current,
+            },
+        ]);
         if (count === 0) {
             notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
                 type: 'warning',
             });
+            return;
         }
+        notify('1 枚のパレット番号表を印刷します。', { type: 'success' });
     };
 
     /** 削除処理（パレット情報を削除して一覧へ戻る） */

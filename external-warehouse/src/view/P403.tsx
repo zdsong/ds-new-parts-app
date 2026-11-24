@@ -97,12 +97,7 @@ const LEGACY_WAREHOUSE: Record<string, string> = {
     '20': '2',
 };
 
-/** 画面に出す移動状況。移動予定と移動完了だけ */
-const SCREEN_STATUS_KEYS = ['TF_P', 'TF_F'];
-const SCREEN_STATUS_CHOICES: OptionItem[] = [
-    { key: 'TF_P', value: '移動予定' },
-    { key: 'TF_F', value: '移動完了' },
-];
+/** 画面に出す移動状況（辞書 bss_transfer_status から取得する） */
 
 // 表示件数の選択肢（設計書の「表示件数」に相当）
 const PAGE_SIZE_CHOICES = [10, 20, 50];
@@ -195,8 +190,7 @@ const P403: React.FC = () => {
             ]);
             setWarehouseOptions(Array.isArray(warehouse?.data) ? warehouse.data : []);
             const loaded = Array.isArray(status?.data) ? (status.data as OptionItem[]) : [];
-            const visible = loaded.filter((option) => SCREEN_STATUS_KEYS.includes(option.key));
-            setStatusOptions(visible.length > 0 ? visible : SCREEN_STATUS_CHOICES);
+            setStatusOptions(loaded);
         };
         loadOptions();
         loadRows(INITIAL_CONDITION);
@@ -289,7 +283,7 @@ const P403: React.FC = () => {
     const columnDefs = useMemo<ColDef<MoveRequestRow>[]>(
         () => [
             {
-                headerName: '移動番号',
+                headerName: '移動依頼番号',
                 field: 'requestNo',
                 width: 160,
                 cellRenderer: (params: { data?: MoveRequestRow; value?: string }) => (
@@ -323,7 +317,7 @@ const P403: React.FC = () => {
                 defaultValues={formValues}
             >
                 <div style={formSx.form2}>
-                    <FormInput type={'text'} source="moveNo" label="移動番号" />
+                    <FormInput type={'text'} source="moveNo" label="移動依頼番号" />
                     <div
                         style={{
                             display: 'grid',

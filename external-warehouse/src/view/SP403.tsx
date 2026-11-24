@@ -7,7 +7,7 @@ import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
-import type { ApiPallet, OptionItem } from '../utils/palletData';
+import type { OptionItem } from '../utils/palletData';
 
 /**
  * 在庫確認画面（SP403）
@@ -22,14 +22,12 @@ import type { ApiPallet, OptionItem } from '../utils/palletData';
  *   ・検索結果…1 件 1 カード。品目コード／品目名／保管数／パレット番号／保管場所。
  *   ・ページ番号の下に「閉じる」（移動登録 SP401 へ戻る）。
  *
- * 補足：在庫専用の API がまだ無いため、パレット一覧（GET /api/pallet/list）を
- *       在庫として読み替え、積載明細を 1 件 1 行に展開して表示する。
- *       在庫専用 API ができたら fetchStock の呼び出し先を差し替える。
+ * 在庫は在庫情報詳細（bss_inventory_detail）から取得する。
  */
 
-/** 一覧の 1 行分（＝パレットに積載された品目 1 件） */
+/** 一覧の 1 行分（＝在庫情報詳細 1 件） */
 interface StockRow {
-    /** 行の一意キー（パレット番号＋品目コード＋連番） */
+    /** 行の一意キー（在庫情報詳細ID） */
     key: string;
     /** 品目コード */
     itemCode: string;
@@ -45,6 +43,19 @@ interface StockRow {
     locationNo: string;
 }
 
+/** 在庫検索 API の 1 行 */
+interface ApiStockRow {
+    id: string;
+    itemCode?: string;
+    itemName?: string;
+    whCd?: string;
+    whName?: string;
+    locCd?: string;
+    palletNo?: string;
+    qty?: number | string;
+    allocationQty?: number | string;
+}
+
 /** 検索条件の初期値 */
 const INITIAL_CONDITION = {
     whCd: '',
@@ -54,13 +65,6 @@ const INITIAL_CONDITION = {
 
 /** 1 ページあたりの表示件数（スマートフォンで見やすい件数にする） */
 const PAGE_SIZE = 5;
-
-/**
- * 一覧取得時に 1 度に読み込むパレット数
- * パレット単位ではなく「積載明細＝在庫 1 件」でページ送りするため、
- * ページ単位ではなくまとめて取得し、画面側で 5 件ずつに区切る。
- */
-const FETCH_PALLET_SIZE = 200;
 
 /** カード内の項目（項目名＋値の縦積み） */
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
@@ -121,35 +125,27 @@ const SP403: React.FC = () => {
             try {
                 const result = await request(
                     'get',
-                    'api/pallet/list',
+                    'api/transfer/stock',
                     {
                         whCd: condition.whCd,
                         itemCode: condition.itemCode,
                         itemName: condition.itemName,
                     },
-                    { current: 1, pageSize: FETCH_PALLET_SIZE },
+                    {},
                     false,
                     false
                 );
-                const pallets: ApiPallet[] = result?.rows || [];
+                const rows: ApiStockRow[] = Array.isArray(result?.data) ? result.data : [];
 
-                // パレット 1 枚につき積載明細の数だけ行を作る
-                const stockRows: StockRow[] = [];
-                pallets.forEach((pallet) => {
-                    const warehouseName = pallet.whNm || pallet.whCd || '';
-                    const locationNo = pallet.locCd || '';
-                    (pallet.details || []).forEach((detail, index) => {
-                        stockRows.push({
-                            key: `${pallet.palletNo}-${detail.itemCode}-${index}`,
-                            itemCode: detail.itemCode || '',
-                            itemName: detail.itemName || '',
-                            quantity: Number(detail.storageQty ?? 0),
-                            palletNo: pallet.palletNo || '',
-                            warehouseName,
-                            locationNo,
-                        });
-                    });
-                });
+                const stockRows: StockRow[] = rows.map((row) => ({
+                    key: String(row.id),
+                    itemCode: row.itemCode || '',
+                    itemName: row.itemName || '',
+                    quantity: Number(row.qty ?? 0),
+                    palletNo: row.palletNo || '',
+                    warehouseName: row.whName || row.whCd || '',
+                    locationNo: row.locCd || '',
+                }));
                 setRows(stockRows);
             } catch (error) {
                 console.error(error);

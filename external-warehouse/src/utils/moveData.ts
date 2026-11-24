@@ -21,6 +21,8 @@ export type MoveRegisterMode = 'issue' | 'whole';
 /** 移動依頼の表示内容 */
 export interface MoveRequestDetail {
     requestNo: string;
+    /** 移動依頼明細番号（移動登録で依頼明細を特定する） */
+    requestDetailNo?: number | null;
     destinationLabel: string;
     requester: string;
     desiredDate: string;
@@ -43,6 +45,8 @@ export interface MoveLine {
     storagePlace: string;
     /** 移動依頼がある品目だけ入る */
     request: MoveRequestDetail | null;
+    /** 在庫情報詳細の楽観ロック用バージョン */
+    version?: number | null;
 }
 
 /**
@@ -88,34 +92,16 @@ export interface MoveCompleteState {
     moveNo: string;
     palletNo: string;
     destinationWh: string;
+    /** 移動先倉庫名（共通 API から取得した表示名） */
+    destinationWhNm?: string;
     destinationLoc: string;
     remark: string;
     registrar: string;
     lines: MoveLine[];
 }
 
-/** 移動先倉庫 */
-export const MOVE_WAREHOUSE_CHOICES = [
-    { key: 'gyoda', value: '行田工場' },
-    { key: 'external', value: '外部倉庫' },
-];
-
-/** 倉庫ごとのロケ番 */
-export const MOVE_LOCATION_CHOICES: Record<string, { key: string; value: string }[]> = {
-    gyoda: [
-        { key: 'A-1-2-3-4', value: 'A-1-2-3-4' },
-        { key: 'A-1-2-3-5', value: 'A-1-2-3-5' },
-    ],
-    external: [
-        { key: 'A-1-2-3-4', value: 'A-1-2-3-4' },
-        { key: 'A-1-2-3-5', value: 'A-1-2-3-5' },
-        { key: 'B-1-2-3-5', value: 'B-1-2-3-5' },
-    ],
-};
-
-/** 倉庫コードから表示名を返す */
-export const moveWarehouseLabel = (key: string): string =>
-    MOVE_WAREHOUSE_CHOICES.find((choice) => choice.key === key)?.value || '';
+/** 倉庫コードから表示名を返す（表示名は共通 API の倉庫選択肢を使用する） */
+export const moveWarehouseLabel = (key: string): string => key || '';
 
 /** 画面イメージの移動登録者 */
 export const MOVE_REGISTRAR = '佐藤太郎（外部倉庫）';

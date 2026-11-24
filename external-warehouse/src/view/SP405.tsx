@@ -40,7 +40,8 @@ const SP405: React.FC = () => {
     const location = useLocation();
     const incoming = location.state as MoveCompleteState | null;
     const result = incoming?.moveNo && incoming.lines ? incoming : SAMPLE_COMPLETE;
-    const destination = `${moveWarehouseLabel(result.destinationWh)}/${result.destinationLoc}`;
+    const destinationWhName = result.destinationWhNm || moveWarehouseLabel(result.destinationWh);
+    const destination = `${destinationWhName}/${result.destinationLoc}`;
 
     const handlePrint = () => {
         const details: PalletDetailItem[] = result.lines.map((line) => ({
@@ -64,7 +65,7 @@ const SP405: React.FC = () => {
                 {
                     palletNo: result.palletNo,
                     category: result.lines[0]?.category || '3',
-                    storageLocationName: moveWarehouseLabel(result.destinationWh),
+                    storageLocationName: destinationWhName,
                     details,
                 },
             ],

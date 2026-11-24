@@ -10,11 +10,10 @@ import { spFormInputSx, spSx, spSquareInputStyle, spSquareReadonlyStyle, SP_INPU
 import { normalizeChoiceValue } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
 import {
-    MOVE_LOCATION_CHOICES,
     canMixCategory,
     findScannedPallet,
 } from '../utils/moveData';
-import type { MoveLine, MoveRequestDetail, ScannedPallet } from '../utils/moveData';
+import type { MoveCategory, MoveLine, MoveRequestDetail, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -111,6 +110,10 @@ const SP401: React.FC = () => {
     const lastCameraCodeRef = useRef('');
     // パレット番号と、それを読み取ったバーコードの対応（削除時に両方外す）
     const codeByPalletRef = useRef<Map<string, string>>(new Map());
+    // 最初に読み取ったパレットの依存有無。2 枚目以降は同じ依存有無だけを許可する
+    const dependentModeRef = useRef<boolean | null>(null);
+    // 最初に読み取ったパレットの品目区分。製品と部品は混在できない
+    const categoryModeRef = useRef<MoveCategory | null>(null);
 
     // 読み取り結果（バーコードの内容）
     const [scannedValue, setScannedValue] = useState('');
@@ -194,11 +197,7 @@ const SP401: React.FC = () => {
             const result = await request('get', `api/pallet/scan/${encodeURIComponent(trimmed)}`, {}, {}, true, false);
             if (!result || result.code !== 200 || !result.data) {
                 scannedNosRef.current.delete(trimmed);
-                if (!fromCamera) {
-                    setErrorMessage(result?.message || 'パレット情報は存在しません。');
-                } else {
-                    notify(result?.message || 'パレット情報は存在しません。', { type: 'warning' });
-                }
+                notify(result?.message || 'パレット情報は存在しません。', { type: 'warning' });
                 return;
             }
             const data = result.data as {
@@ -215,6 +214,7 @@ const SP401: React.FC = () => {
                     storageQty: number;
                     palletNo: string;
                     storagePlace: string;
+                    version?: number;
                     request: MoveRequestDetail | null;
                 }>;
             };
@@ -231,12 +231,12 @@ const SP401: React.FC = () => {
                 palletNo: line.palletNo,
                 storagePlace: line.storagePlace ?? '',
                 request: line.request ?? null,
+                version: line.version ?? null,
             }));
             if (!lines.length && !data.transferRequested) {
                 scannedNosRef.current.delete(trimmed);
                 const message = data.warningMessage || '在庫情報が存在しません。';
-                if (!fromCamera) setErrorMessage(message);
-                else notify(message, { type: 'warning' });
+                notify(message, { type: 'warning' });
                 return;
             }
             const palletNo = data.palletNo || trimmed;
@@ -245,12 +245,36 @@ const SP401: React.FC = () => {
                 if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
                 return;
             }
+            // 最初に読み取ったパレットと依存有無が違う場合は、混在させず読み取りを取り消す
+            const dependent = Boolean(data.dependent);
+            const dependentMode = dependentModeRef.current;
+            if (dependentMode !== null && dependentMode !== dependent) {
+                scannedNosRef.current.delete(trimmed);
+                scannedNosRef.current.delete(palletNo);
+                const message = '依存のあるパレットと依存のないパレットは混在できません。';
+                notify(message, { type: 'warning' });
+                return;
+            }
+            // 品目区分（製品・部品）が最初のパレットと違う場合も、混在させず読み取りを取り消す
+            const category = lines[0]?.category;
+            const categoryMode = categoryModeRef.current;
+            if (category && categoryMode !== null && categoryMode !== category) {
+                scannedNosRef.current.delete(trimmed);
+                scannedNosRef.current.delete(palletNo);
+                const message = '製品と部品は混載できません。';
+                notify(message, { type: 'warning' });
+                return;
+            }
             const pallet: ScannedPallet = {
                 palletNo,
-                dependent: Boolean(data.dependent),
+                dependent,
                 lines,
                 inbound: null,
             };
+            dependentModeRef.current = dependent;
+            if (category) {
+                categoryModeRef.current = category;
+            }
             scannedNosRef.current.add(palletNo);
             codeByPalletRef.current.set(palletNo, trimmed);
             setScannedPallets((prev) => (prev.some((item) => item.palletNo === palletNo) ? prev : [...prev, pallet]));
@@ -266,8 +290,7 @@ const SP401: React.FC = () => {
             setErrorMessage('');
         } catch {
             scannedNosRef.current.delete(trimmed);
-            if (!fromCamera) setErrorMessage('パレット情報は存在しません。');
-            else notify('パレット情報は存在しません。', { type: 'warning' });
+            notify('パレット情報は存在しません。', { type: 'warning' });
         }
     }, [notify, request]);
 
@@ -296,7 +319,13 @@ const SP401: React.FC = () => {
     const handleRemovePallet = (palletNo: string) => {
         const target = scannedPallets.find((pallet) => pallet.palletNo === palletNo);
         const lineIds = new Set(target?.lines.map((line) => line.id) ?? []);
-        setScannedPallets((prev) => prev.filter((pallet) => pallet.palletNo !== palletNo));
+        const remaining = scannedPallets.filter((pallet) => pallet.palletNo !== palletNo);
+        // すべて外したら、次の読み取りで依存有無と品目区分を決め直せるようにする
+        if (remaining.length === 0) {
+            dependentModeRef.current = null;
+            categoryModeRef.current = null;
+        }
+        setScannedPallets(remaining);
         setCandidates((prev) => prev.filter((line) => line.palletNo !== palletNo && !lineIds.has(line.id)));
         setOpenRequestIds((current) => {
             if (!Array.from(lineIds).some((id) => current.has(id))) return current;
@@ -329,6 +358,24 @@ const SP401: React.FC = () => {
             return;
         }
         setCandidates((prev) => [...prev, { ...line, request: line.request ? { ...line.request } : null }]);
+    };
+
+    /** 移動依頼詳細の開閉 */
+    const toggleRequestDetail = (lineId: string) => {
+        setOpenRequestIds((current) => {
+            const next = new Set(current);
+            if (next.has(lineId)) next.delete(lineId);
+            else next.add(lineId);
+            return next;
+        });
+    };
+
+    /** 依存番号のリンクから、対応する品目の移動依頼詳細を開閉する */
+    const toggleRequestByNo = (requestNo: string) => {
+        const line = scannedPallets
+            .flatMap((pallet) => pallet.lines)
+            .find((item) => item.request?.requestNo === requestNo);
+        if (line) toggleRequestDetail(line.id);
     };
 
     /**
@@ -554,22 +601,21 @@ const SP401: React.FC = () => {
      * 内容を確認：追加した品目で新しいパレットを作る移動登録へ進む
      */
     const handleConfirm = () => {
+        // 追加品目があるときだけ内容確認へ進める。無い場合は通知で知らせる
         if (candidates.length === 0) {
-            setErrorMessage('移動候補の品目を追加してください。');
+            notify('移動候補の品目を追加してください。', { type: 'warning' });
             return;
         }
         setErrorMessage('');
         const dependent = scannedPallets.length === 1
             ? scannedPallets[0].dependent
             : candidates.some((line) => line.request);
-        const palletNo = scannedPallets.length === 1 && !scannedPallets[0].dependent
-            ? scannedPallets[0].palletNo
-            : '';
         navigate('/SP402', {
             state: {
                 view: 'register',
                 dependent,
-                palletNo,
+                // 内容確認からはパレット番号を引き継がない
+                palletNo: '',
                 lines: candidates,
             },
         });
@@ -627,6 +673,15 @@ const SP401: React.FC = () => {
     }, [palletQuery, kind, loadMoveScan]);
 
     const addedIds = new Set(candidates.map((line) => line.id));
+    // 読み取ったパレットの依存番号（重複なし）。追加品目の下にリンクで出す
+    const dependencyNumbers = Array.from(
+        new Set(
+            scannedPallets
+                .flatMap((pallet) => pallet.lines)
+                .map((line) => line.request?.requestNo)
+                .filter((no): no is string => Boolean(no))
+        )
+    );
 
     return (
         <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
@@ -793,8 +848,17 @@ const SP401: React.FC = () => {
                 ) : null}
 
                 {kind === 'move' ? (
-                    <Box sx={{ padding: '10px 14px 6px' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 14px 6px' }}>
                         <div style={spSquareReadonlyStyle}>{`追加品目（${candidates.length}件）`}</div>
+                        {/* 依存のあるパレットを読み取った場合は、その依存番号をリンクで出す */}
+                        {dependencyNumbers.map((requestNo) => (
+                            <div key={requestNo} style={dependencyRowStyle}>
+                                <span style={dependencyLabelStyle}>依存番号</span>
+                                <span style={dependencyLinkStyle} onClick={() => toggleRequestByNo(requestNo)}>
+                                    {requestNo}
+                                </span>
+                            </div>
+                        ))}
                     </Box>
                 ) : null}
 
@@ -815,7 +879,9 @@ const SP401: React.FC = () => {
                             <div key={pallet.palletNo} style={spSx.listCard}>
                                 <div style={palletHeaderStyle}>
                                     <div style={palletNumberStyle}>
-                                        <Field label="パレット番号" emphasize>{pallet.palletNo}</Field>
+                                        <Field label="パレット番号" valueStyle={palletNumberValueStyle}>
+                                            {pallet.palletNo}
+                                        </Field>
                                     </div>
                                     <button
                                         type="button"
@@ -838,14 +904,7 @@ const SP401: React.FC = () => {
                                             <RequestDetail
                                                 line={line}
                                                 open={openRequestIds.has(line.id)}
-                                                onToggle={() =>
-                                                    setOpenRequestIds((current) => {
-                                                        const next = new Set(current);
-                                                        if (next.has(line.id)) next.delete(line.id);
-                                                        else next.add(line.id);
-                                                        return next;
-                                                    })
-                                                }
+                                                onToggle={() => toggleRequestDetail(line.id)}
                                             />
                                         ) : null}
                                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -890,7 +949,16 @@ const SP401: React.FC = () => {
                                 移動完了
                             </button>
                         ) : (
-                            <button type="button" style={primaryButtonStyle} onClick={handleConfirm}>
+                            <button
+                                type="button"
+                                style={
+                                    candidates.length === 0
+                                        ? { ...primaryButtonStyle, ...spSx.buttonDisabled }
+                                        : primaryButtonStyle
+                                }
+                                onClick={handleConfirm}
+                                disabled={candidates.length === 0}
+                            >
                                 内容を確認
                             </button>
                         )}
@@ -1023,6 +1091,31 @@ const palletNumberStyle: React.CSSProperties = {
     border: 'none',
 };
 
+/** パレット番号は太字・黒で目立たせる */
+const palletNumberValueStyle: React.CSSProperties = {
+    fontWeight: 700,
+    color: '#000000',
+};
+
+/** 依存番号の行（追加ボタンの下） */
+const dependencyRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'flex-end',
+    gap: '6px',
+};
+
+const dependencyLabelStyle: React.CSSProperties = {
+    color: '#5f5f5f',
+    fontSize: '12px',
+};
+
+/** 依存番号のリンク */
+const dependencyLinkStyle: React.CSSProperties = {
+    ...spSx.cardLink,
+    paddingLeft: 0,
+};
+
 const palletDeleteStyle: React.CSSProperties = {
     flex: 'none',
     height: SP_INPUT_HEIGHT,
@@ -1062,22 +1155,15 @@ const primaryButtonStyle: React.CSSProperties = {
     backgroundColor: '#0b5cab',
 };
 
-/** カード内の項目名と値。emphasize のとき項目名を太字にする */
-const Field: React.FC<{ label: string; children: React.ReactNode; emphasize?: boolean }> = ({
+/** カード内の項目名と値。valueStyle で値だけ見た目を変えられる */
+const Field: React.FC<{ label: string; children: React.ReactNode; valueStyle?: React.CSSProperties }> = ({
     label,
     children,
-    emphasize = false,
+    valueStyle,
 }) => (
     <div style={spSx.field}>
-        <span
-            style={{
-                ...spSx.fieldLabel,
-                ...(emphasize ? { color: '#212121', fontWeight: 700 } : {}),
-            }}
-        >
-            {label}
-        </span>
-        <span style={spSx.fieldValue}>{children}</span>
+        <span style={spSx.fieldLabel}>{label}</span>
+        <span style={{ ...spSx.fieldValue, ...valueStyle }}>{children}</span>
     </div>
 );
 
@@ -1120,6 +1206,22 @@ const ReceiveResult: React.FC<{
     done: boolean;
     onLocationChange: (value: string) => void;
 }> = ({ scannedValue, pallet, location, done, onLocationChange }) => {
+    const { request } = useApiRequest();
+    const [locationOptions, setLocationOptions] = useState<Array<{ key: string; value: string }>>([]);
+
+    // 移動先（行田工場）のロケ番を共通 API から取得する
+    useEffect(() => {
+        if (!pallet?.inbound) {
+            setLocationOptions([]);
+            return;
+        }
+        const loadLocations = async () => {
+            const result = await request('get', 'api/common/10/location/options', {}, {}, false, false);
+            setLocationOptions(Array.isArray(result?.data) ? result.data : []);
+        };
+        loadLocations();
+    }, [pallet, request]);
+
     if (!scannedValue) return null;
     if (!pallet?.inbound) {
         return <div style={spSx.empty}>移動登録情報を確認できません。</div>;
@@ -1128,7 +1230,7 @@ const ReceiveResult: React.FC<{
     return (
         <div style={spSx.listCard}>
             <Field label="移動番号">{inbound.moveNo}</Field>
-            <Field label="パレット番号" emphasize>{pallet.palletNo}</Field>
+            <Field label="パレット番号">{pallet.palletNo}</Field>
             <SimpleForm
                 toolbar={false}
                 sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
@@ -1151,7 +1253,7 @@ const ReceiveResult: React.FC<{
                         label="ロケ番"
                         structure="top-bottom"
                         sx={spFormInputSx}
-                        choices={MOVE_LOCATION_CHOICES.gyoda}
+                        choices={locationOptions}
                         disabled={done}
                         onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
                     />

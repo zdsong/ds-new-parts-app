@@ -10,7 +10,7 @@ import { spFormInputSx, spSx, spSquareInputStyle, SP_INPUT_HEIGHT } from '../sty
 import { normalizeChoiceValue } from '../utils/palletData';
 import type { OptionItem } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
-import type { MoveLine, MoveRequestDetail, ScannedPallet } from '../utils/moveData';
+import type { MoveLine, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -120,118 +120,75 @@ const linkSx = {
     cursor: 'pointer',
 };
 
-/** 移動読取 API の依頼 */
-interface ScanRequest {
-    requestNo?: string;
-    destinationLabel?: string;
-    requester?: string;
-    desiredDate?: string;
-    remark?: string;
-}
-
-/** 移動読取 API の品目 */
-interface ScanLine {
-    id: string;
-    itemCode: string;
-    itemName?: string;
-    category?: string;
-    moveQty?: number;
-    storageQty?: number;
-    palletNo?: string;
-    storagePlace?: string;
-    request?: ScanRequest | null;
-}
-
-/** GET /api/pallet/scan/{palletNo} */
-interface PalletScanResult {
-    palletNo?: string;
-    lines?: ScanLine[];
-}
-
-/** GET /api/transfer/detail の明細 */
-interface TransferDetailLine {
+/** GET /api/transfer/receive/scan の明細 */
+interface ScanDetailLine {
     detailNo: number;
     itemCode: string;
     itemName?: string;
+    classification?: string;
+    classificationCode?: string;
     storageQty?: number | null;
-    usedQty?: number | null;
-    lostDamagedQty?: number | null;
-    disposalQty?: number | null;
-    palletNo?: string;
+    moveQty?: number | null;
+    sourcePalletNo?: string;
+    destPalletNo?: string;
+    transferRequestNo?: string;
 }
 
-/** GET /api/transfer/detail */
-interface TransferDetail {
-    requestNo: string;
+/** GET /api/transfer/receive/scan の移動情報 */
+interface ScanMove {
+    transferNo: string;
+    status?: string;
+    statusLabel?: string;
+    sourceWhCd?: string;
+    sourceWarehouse?: string;
+    sourceLocCd?: string;
     destWhCd?: string;
     destWarehouse?: string;
-    desiredDate?: string;
-    requester?: string;
+    destLocCd?: string;
+    sourcePalletNo?: string;
+    destPalletNo?: string;
+    registrar?: string;
+    registeredDate?: string;
     memo?: string;
-    details?: TransferDetailLine[];
+    details?: ScanDetailLine[];
 }
 
-/** POST /api/transfer/update に返す依頼。明細は依頼の全行 */
-interface TransferOrderSnapshot {
-    requestNo: string;
-    destWhCd: string;
-    desiredDate: string;
-    requester: string;
-    memo: string;
-    details: Array<{
-        detailNo: number;
-        itemCode: string;
-        itemName: string;
-        storageQty: number | null;
-        usedQty: number | null;
-        lostDamagedQty: number | null;
-        disposalQty: number | null;
-        palletNo: string;
-    }>;
-}
-
-/** 画面の移動依頼詳細 */
-const toRequest = (detail: TransferDetail, request?: ScanRequest | null): MoveRequestDetail => ({
-    requestNo: request?.requestNo || detail.requestNo,
-    destinationLabel: request?.destinationLabel || detail.destWarehouse || detail.destWhCd || '',
-    requester: request?.requester || detail.requester || '',
-    desiredDate: request?.desiredDate || detail.desiredDate || '',
-    remark: request?.remark || detail.memo || '',
-});
-
-/** 読取行を画面の品目にする。在庫行が無いときは依頼明細を使う */
-const toMoveLines = (
-    scanLines: ScanLine[] | undefined,
-    detail: TransferDetail,
-    palletNo: string
-): MoveLine[] => {
-    const source = (scanLines ?? []).filter((line) => line.itemCode);
-    if (source.length > 0) {
-        return source.map((line) => ({
-            id: line.id,
-            itemCode: line.itemCode,
-            itemName: line.itemName ?? '',
-            category: line.category === '1' ? '1' : '3',
-            moveQty: Number(line.moveQty ?? line.storageQty ?? 0),
-            storageQty: Number(line.storageQty ?? 0),
-            palletNo: line.palletNo || palletNo,
-            storagePlace: line.storagePlace ?? '',
-            request: line.request?.requestNo ? toRequest(detail, line.request) : null,
-        }));
-    }
-    return (detail.details ?? [])
-        .filter((line) => !line.palletNo || line.palletNo === palletNo)
-        .map((line) => ({
-            id: `${detail.requestNo}-${line.detailNo}`,
-            itemCode: line.itemCode,
-            itemName: line.itemName ?? '',
-            category: '3' as const,
-            moveQty: Number(line.usedQty ?? line.storageQty ?? 0),
-            storageQty: Number(line.storageQty ?? 0),
-            palletNo: line.palletNo || palletNo,
-            storagePlace: '',
-            request: toRequest(detail, null),
-        }));
+/** 読み取った移動情報を画面のパレットにする */
+const toScannedPallet = (move: ScanMove): ScannedPallet => {
+    const details = move.details ?? [];
+    const lines: MoveLine[] = details.map((line) => ({
+        id: `${move.transferNo}-${line.detailNo}`,
+        itemCode: line.itemCode,
+        itemName: line.itemName ?? '',
+        category: line.classificationCode === '1' ? '1' : '3',
+        moveQty: Number(line.moveQty ?? 0),
+        storageQty: Number(line.storageQty ?? line.moveQty ?? 0),
+        palletNo: line.destPalletNo || move.destPalletNo || '',
+        storagePlace: '',
+        // 移動依頼がある場合はカード内で依頼情報を確認できるようにする
+        request: line.transferRequestNo
+            ? {
+                requestNo: line.transferRequestNo,
+                destinationLabel: move.destWarehouse || move.destWhCd || '',
+                requester: move.registrar || '',
+                desiredDate: '',
+                remark: move.memo || '',
+            }
+            : null,
+    }));
+    return {
+        palletNo: move.destPalletNo || lines[0]?.palletNo || '',
+        dependent: lines.some((line) => line.request),
+        lines,
+        inbound: {
+            moveNo: move.transferNo,
+            destinationWh: move.destWhCd || '',
+            destinationWhNm: move.destWarehouse || move.destWhCd || '',
+            destinationLoc: move.destLocCd || '',
+            remark: move.memo || '',
+            registrar: move.registrar || '',
+        },
+    };
 };
 
 const backButtonStyle: React.CSSProperties = {
@@ -379,8 +336,8 @@ const ReceiveResult: React.FC<{
                         <div key={line.id} style={palletLineStyle}>
                             <Field label="品目コード">{line.itemCode}</Field>
                             <Field label="品目名">{line.itemName}</Field>
-                            <Field label={line.request ? '移動数量' : '保管数量'}>
-                                {line.request ? line.moveQty : line.storageQty}
+                            <Field label={'移動数量'}>
+                                {line.moveQty}
                             </Field>
                             {line.request ? (
                                 <RequestDetail
@@ -416,9 +373,8 @@ const ReceiveResult: React.FC<{
  *
  * 設計書：③移動管理 2. パレットを受け取る場合（移動先）
  *   パレット番号表を複数読み、未完了の移動があるパレットだけカードにする。
- *   読取は GET /api/pallet/scan/{palletNo}。移動依頼があるとき
- *   GET /api/transfer/detail で移動先を取り、カードにする。
- *   移動完了は POST /api/transfer/update。明細は依頼の全行を返し、他パレットを消さない。
+ *   読取は GET /api/transfer/receive/scan。移動管理（bss_transfer／bss_transfer_detail）を参照する。
+ *   移動完了は POST /api/transfer/complete。移動管理の明細をもとに在庫を更新する。
  *   移動番号がない番号はカードにせず、画面下の通知で知らせる。
  */
 const SP406: React.FC = () => {
@@ -438,8 +394,6 @@ const SP406: React.FC = () => {
     const scannedNosRef = useRef<Set<string>>(new Set());
     const lastCameraCodeRef = useRef('');
     const onCodeRef = useRef<(value: string) => void>(() => undefined);
-    // 移動完了で依頼全体を更新するための、読取時の依頼内容
-    const orderByPalletRef = useRef<Map<string, TransferOrderSnapshot>>(new Map());
 
     const [codeSvg, setCodeSvg] = useState('');
     const [cameraOpen, setCameraOpen] = useState(false);
@@ -508,83 +462,30 @@ const SP406: React.FC = () => {
             if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
             return;
         }
-        scannedNosRef.current.add(trimmed);
         setCodeSvg(buildBarcodeSvg(trimmed));
         try {
             const result = await request(
                 'get',
-                `api/pallet/scan/${encodeURIComponent(trimmed)}`,
+                'api/transfer/receive/scan',
                 {},
-                {},
+                { palletNo: trimmed },
                 true,
                 false
             );
             if (!result || result.code !== 200 || !result.data) {
                 scannedNosRef.current.delete(trimmed);
+                notify('移動登録情報を確認できません。', { type: 'error' });
                 return;
             }
-            const scan = result.data as PalletScanResult;
-            const requestNo = (scan.lines ?? []).find((line) => line.request?.requestNo)?.request?.requestNo;
-            if (!requestNo) {
+            const move = result.data as ScanMove;
+            const pallet = toScannedPallet(move);
+            const palletNo = pallet.palletNo;
+            if (!palletNo || !pallet.inbound?.destinationWh) {
                 scannedNosRef.current.delete(trimmed);
                 notify('移動登録情報を確認できません。', { type: 'error' });
                 return;
             }
-            const detailResult = await request(
-                'get',
-                'api/transfer/detail',
-                {},
-                { requestNo },
-                true,
-                false
-            );
-            if (!detailResult || detailResult.code !== 200) {
-                scannedNosRef.current.delete(trimmed);
-                return;
-            }
-            const detail = detailResult.data as TransferDetail | null;
-            if (!detail?.requestNo || !detail.destWhCd) {
-                scannedNosRef.current.delete(trimmed);
-                notify('移動登録情報を確認できません。', { type: 'error' });
-                return;
-            }
-            const palletNo = scan.palletNo || trimmed;
-            if (scannedNosRef.current.has(palletNo) && palletNo !== trimmed) {
-                scannedNosRef.current.delete(trimmed);
-                if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
-                return;
-            }
-            const lines = toMoveLines(scan.lines, detail, palletNo);
-            const pallet: ScannedPallet = {
-                palletNo,
-                dependent: lines.some((line) => line.request),
-                lines,
-                inbound: {
-                    moveNo: detail.requestNo,
-                    destinationWh: detail.destWhCd,
-                    destinationWhNm: detail.destWarehouse || detail.destWhCd,
-                    destinationLoc: '',
-                    remark: detail.memo || '',
-                    registrar: detail.requester || '',
-                },
-            };
-            orderByPalletRef.current.set(palletNo, {
-                requestNo: detail.requestNo,
-                destWhCd: detail.destWhCd,
-                desiredDate: detail.desiredDate || '',
-                requester: detail.requester || '',
-                memo: detail.memo || '',
-                details: (detail.details ?? []).map((line) => ({
-                    detailNo: line.detailNo,
-                    itemCode: line.itemCode,
-                    itemName: line.itemName ?? '',
-                    storageQty: line.storageQty ?? null,
-                    usedQty: line.usedQty ?? null,
-                    lostDamagedQty: line.lostDamagedQty ?? null,
-                    disposalQty: line.disposalQty ?? null,
-                    palletNo: line.palletNo ?? '',
-                })),
-            });
+            const lines = pallet.lines;
             scannedNosRef.current.add(palletNo);
             setScannedPallets((prev) => (prev.some((item) => item.palletNo === palletNo) ? prev : [...prev, pallet]));
             setLocations((prev) => (prev[palletNo] ? prev : { ...prev, [palletNo]: '' }));
@@ -596,7 +497,7 @@ const SP406: React.FC = () => {
                 return next;
             });
             setInboundDone(false);
-            void ensureLocationOptions(detail.destWhCd);
+            void ensureLocationOptions(pallet.inbound.destinationWh);
         } catch {
             scannedNosRef.current.delete(trimmed);
         }
@@ -620,7 +521,6 @@ const SP406: React.FC = () => {
             return next;
         });
         scannedNosRef.current.delete(palletNo);
-        orderByPalletRef.current.delete(palletNo);
         if (lastCameraCodeRef.current === palletNo) lastCameraCodeRef.current = '';
     };
 
@@ -832,26 +732,26 @@ const SP406: React.FC = () => {
         }
         const sent = new Set<string>();
         for (const pallet of scannedPallets) {
-            const order = orderByPalletRef.current.get(pallet.palletNo);
-            if (!order || sent.has(order.requestNo)) continue;
-            sent.add(order.requestNo);
+            if (!pallet.inbound) continue;
+            if (sent.has(pallet.inbound.moveNo)) continue;
+            sent.add(pallet.inbound.moveNo);
             const result = await request(
                 'post',
-                'api/transfer/update',
+                'api/transfer/complete',
                 {
-                    requestNo: order.requestNo,
-                    destWhCd: order.destWhCd,
-                    destLocCd: locations[pallet.palletNo],
-                    desiredDate: order.desiredDate,
-                    requester: order.requester,
-                    memo: order.memo,
-                    details: order.details,
+                    transferNo: pallet.inbound.moveNo,
+                    destinationWhCd: pallet.inbound.destinationWh,
+                    destinationLocCd: locations[pallet.palletNo],
+                    completionMemo: pallet.inbound.remark,
                 },
                 {},
                 true,
                 false
             );
-            if (!result || result.code !== 200) return;
+            if (!result || result.code !== 200) {
+                notify(result?.msg || '移動完了に失敗しました。', { type: 'error' });
+                return;
+            }
         }
         setInboundDone(true);
         notify('移動完了にしました。', { type: 'success' });
