@@ -1,15 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import { SimpleForm, useNotify } from 'react-admin';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DecodeHintType, MultiFormatReader } from '@zxing/library';
 
+import useApiRequest from '../adapters/apiUtil';
 import FormInput from '../compontent/FormInput';
 import { spFormInputSx, spSx, spSquareInputStyle, SP_INPUT_HEIGHT } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
+import type { OptionItem } from '../utils/palletData';
 import { buildBarcodeSvg } from '../utils/palletNumberSheet';
-import { MOVE_LOCATION_CHOICES, MOVE_WAREHOUSE_CHOICES, findScannedPallet } from '../utils/moveData';
-import type { MoveLine, ScannedPallet } from '../utils/moveData';
+import type { MoveLine, MoveRequestDetail, ScannedPallet } from '../utils/moveData';
 
 /** 読み取りライブラリ（ZXing）のモジュール型 */
 type ZxingModule = typeof import('@zxing/library');
@@ -110,6 +111,120 @@ const linkSx = {
     cursor: 'pointer',
 };
 
+/** 移動読取 API の依頼 */
+interface ScanRequest {
+    requestNo?: string;
+    destinationLabel?: string;
+    requester?: string;
+    desiredDate?: string;
+    remark?: string;
+}
+
+/** 移動読取 API の品目 */
+interface ScanLine {
+    id: string;
+    itemCode: string;
+    itemName?: string;
+    category?: string;
+    moveQty?: number;
+    storageQty?: number;
+    palletNo?: string;
+    storagePlace?: string;
+    request?: ScanRequest | null;
+}
+
+/** GET /api/pallet/scan/{palletNo} */
+interface PalletScanResult {
+    palletNo?: string;
+    lines?: ScanLine[];
+}
+
+/** GET /api/transfer/detail の明細 */
+interface TransferDetailLine {
+    detailNo: number;
+    itemCode: string;
+    itemName?: string;
+    storageQty?: number | null;
+    usedQty?: number | null;
+    lostDamagedQty?: number | null;
+    disposalQty?: number | null;
+    palletNo?: string;
+}
+
+/** GET /api/transfer/detail */
+interface TransferDetail {
+    requestNo: string;
+    destWhCd?: string;
+    destWarehouse?: string;
+    desiredDate?: string;
+    requester?: string;
+    memo?: string;
+    details?: TransferDetailLine[];
+}
+
+/** POST /api/transfer/update に返す依頼。明細は依頼の全行 */
+interface TransferOrderSnapshot {
+    requestNo: string;
+    destWhCd: string;
+    desiredDate: string;
+    requester: string;
+    memo: string;
+    details: Array<{
+        detailNo: number;
+        itemCode: string;
+        itemName: string;
+        storageQty: number | null;
+        usedQty: number | null;
+        lostDamagedQty: number | null;
+        disposalQty: number | null;
+        palletNo: string;
+    }>;
+}
+
+/** 画面の移動依頼詳細 */
+const toRequest = (detail: TransferDetail, request?: ScanRequest | null): MoveRequestDetail => ({
+    requestNo: request?.requestNo || detail.requestNo,
+    destinationLabel: request?.destinationLabel || detail.destWarehouse || detail.destWhCd || '',
+    requester: request?.requester || detail.requester || '',
+    desiredDate: request?.desiredDate || detail.desiredDate || '',
+    remark: request?.remark || detail.memo || '',
+});
+
+/** 読取行を画面の品目にする。在庫行が無いときは依頼明細を使う */
+const toMoveLines = (
+    scanLines: ScanLine[] | undefined,
+    detail: TransferDetail,
+    palletNo: string
+): MoveLine[] => {
+    const source = (scanLines ?? []).filter((line) => line.itemCode);
+    if (source.length > 0) {
+        return source.map((line) => ({
+            id: line.id,
+            itemCode: line.itemCode,
+            itemName: line.itemName ?? '',
+            category: line.category === '1' ? '1' : '3',
+            moveQty: Number(line.moveQty ?? line.storageQty ?? 0),
+            storageQty: Number(line.storageQty ?? 0),
+            palletNo: line.palletNo || palletNo,
+            storagePlace: line.storagePlace ?? '',
+            request: line.request?.requestNo ? toRequest(detail, line.request) : null,
+        }));
+    }
+    return (detail.details ?? [])
+        .filter((line) => !line.palletNo || line.palletNo === palletNo)
+        .map((line) => ({
+            id: `${detail.requestNo}-${line.detailNo}`,
+            itemCode: line.itemCode,
+            itemName: line.itemName ?? '',
+            category: '3' as const,
+            moveQty: Number(line.usedQty ?? line.storageQty ?? 0),
+            storageQty: Number(line.storageQty ?? 0),
+            palletNo: line.palletNo || palletNo,
+            storagePlace: '',
+            request: toRequest(detail, null),
+        }));
+};
+
 const backButtonStyle: React.CSSProperties = {
     flex: 1,
     maxWidth: '180px',
@@ -176,10 +291,22 @@ const ReceiveResult: React.FC<{
     location: string;
     done: boolean;
     openRequestIds: Set<string>;
+    warehouseChoices: OptionItem[];
+    locationChoices: OptionItem[];
     onToggleRequest: (lineId: string) => void;
     onLocationChange: (value: string) => void;
     onRemove: () => void;
-}> = ({ pallet, location, done, openRequestIds, onToggleRequest, onLocationChange, onRemove }) => {
+}> = ({
+    pallet,
+    location,
+    done,
+    openRequestIds,
+    warehouseChoices,
+    locationChoices,
+    onToggleRequest,
+    onLocationChange,
+    onRemove,
+}) => {
     if (!pallet.inbound) return null;
     const inbound = pallet.inbound;
     return (
@@ -212,7 +339,7 @@ const ReceiveResult: React.FC<{
                                 label="移動先"
                                 structure="top-bottom"
                                 sx={spFormInputSx}
-                                choices={MOVE_WAREHOUSE_CHOICES}
+                                choices={warehouseChoices}
                                 disabled
                             />
                         </div>
@@ -223,7 +350,7 @@ const ReceiveResult: React.FC<{
                                 label="ロケ番"
                                 structure="top-bottom"
                                 sx={spFormInputSx}
-                                choices={MOVE_LOCATION_CHOICES.gyoda}
+                                choices={locationChoices}
                                 disabled={done}
                                 onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
                             />
@@ -279,15 +406,16 @@ const ReceiveResult: React.FC<{
  * パレット受取のバーコード読み取り画面（SP406）
  *
  * 設計書：③移動管理 2. パレットを受け取る場合（移動先）
- *   パレット番号表を複数読み、移動番号があるパレットだけカードにする。
+ *   パレット番号表を複数読み、未完了の移動があるパレットだけカードにする。
+ *   読取は GET /api/pallet/scan/{palletNo}。移動依頼があるとき
+ *   GET /api/transfer/detail で移動先を取り、カードにする。
+ *   移動完了は POST /api/transfer/update。明細は依頼の全行を返し、他パレットを消さない。
  *   移動番号がない番号はカードにせず、画面下の通知で知らせる。
- *   カメラが使えない確認は /SP406?pallet=B261010-001（移動あり）
- *   または /SP406?pallet=B261010-002（移動番号なし）。
- *   もう 1 件は B261010-003。
  */
 const SP406: React.FC = () => {
     const navigate = useNavigate();
     const notify = useNotify();
+    const { request } = useApiRequest();
     const [searchParams] = useSearchParams();
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -301,6 +429,8 @@ const SP406: React.FC = () => {
     const scannedNosRef = useRef<Set<string>>(new Set());
     const lastCameraCodeRef = useRef('');
     const onCodeRef = useRef<(value: string) => void>(() => undefined);
+    // 移動完了で依頼全体を更新するための、読取時の依頼内容
+    const orderByPalletRef = useRef<Map<string, TransferOrderSnapshot>>(new Map());
 
     const [codeSvg, setCodeSvg] = useState('');
     const [cameraOpen, setCameraOpen] = useState(false);
@@ -308,6 +438,7 @@ const SP406: React.FC = () => {
     // 移動番号があるパレットだけ積む
     const [scannedPallets, setScannedPallets] = useState<ScannedPallet[]>([]);
     const [locations, setLocations] = useState<Record<string, string>>({});
+    const [locationOptions, setLocationOptions] = useState<Record<string, OptionItem[]>>({});
     const [openRequestIds, setOpenRequestIds] = useState<Set<string>>(() => new Set());
     const [inboundDone, setInboundDone] = useState(false);
     // TODO 削除: 開発完了後に消す。カメラの代わりにバーコードを手入力して同じ読取処理を通す
@@ -334,12 +465,27 @@ const SP406: React.FC = () => {
         setCameraOpen(false);
     };
 
+    /** 移動先倉庫のロケ番を読み込む */
+    const ensureLocationOptions = useCallback(async (whCd: string) => {
+        if (!whCd) return;
+        const result = await request(
+            'get',
+            `api/common/${encodeURIComponent(whCd)}/location/options`,
+            {},
+            {},
+            false,
+            false
+        );
+        const options = (result?.data || []) as OptionItem[];
+        setLocationOptions((prev) => ({ ...prev, [whCd]: options }));
+    }, [request]);
+
     /**
      * 読み取り結果をカードへ足す。
      * 移動番号がない場合はカードを出さず、画面下の通知だけ出す。
      * カメラ読取のときは閉じずに次の番号も読めるようにする。
      */
-    const applyScanResult = (value: string, fromCamera = false) => {
+    const applyScanResult = useCallback(async (value: string, fromCamera = false) => {
         const trimmed = value.trim();
         if (!trimmed) return;
         if (fromCamera) {
@@ -353,27 +499,99 @@ const SP406: React.FC = () => {
             if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
             return;
         }
-        setCodeSvg(buildBarcodeSvg(trimmed));
-        const pallet = findScannedPallet(trimmed);
-        if (!pallet?.inbound) {
-            notify('移動登録情報を確認できません。', { type: 'error' });
-            return;
-        }
         scannedNosRef.current.add(trimmed);
-        scannedNosRef.current.add(pallet.palletNo);
-        setScannedPallets((prev) => (prev.some((item) => item.palletNo === pallet.palletNo) ? prev : [...prev, pallet]));
-        setLocations((prev) => (
-            prev[pallet.palletNo] ? prev : { ...prev, [pallet.palletNo]: pallet.inbound?.destinationLoc || '' }
-        ));
-        setOpenRequestIds((current) => {
-            const requestIds = pallet.lines.filter((line) => line.request).map((line) => line.id);
-            if (requestIds.every((id) => current.has(id))) return current;
-            const next = new Set(current);
-            requestIds.forEach((id) => next.add(id));
-            return next;
-        });
-        setInboundDone(false);
-    };
+        setCodeSvg(buildBarcodeSvg(trimmed));
+        try {
+            const result = await request(
+                'get',
+                `api/pallet/scan/${encodeURIComponent(trimmed)}`,
+                {},
+                {},
+                true,
+                false
+            );
+            if (!result || result.code !== 200 || !result.data) {
+                scannedNosRef.current.delete(trimmed);
+                return;
+            }
+            const scan = result.data as PalletScanResult;
+            const requestNo = (scan.lines ?? []).find((line) => line.request?.requestNo)?.request?.requestNo;
+            if (!requestNo) {
+                scannedNosRef.current.delete(trimmed);
+                notify('移動登録情報を確認できません。', { type: 'error' });
+                return;
+            }
+            const detailResult = await request(
+                'get',
+                'api/transfer/detail',
+                {},
+                { requestNo },
+                true,
+                false
+            );
+            if (!detailResult || detailResult.code !== 200) {
+                scannedNosRef.current.delete(trimmed);
+                return;
+            }
+            const detail = detailResult.data as TransferDetail | null;
+            if (!detail?.requestNo || !detail.destWhCd) {
+                scannedNosRef.current.delete(trimmed);
+                notify('移動登録情報を確認できません。', { type: 'error' });
+                return;
+            }
+            const palletNo = scan.palletNo || trimmed;
+            if (scannedNosRef.current.has(palletNo) && palletNo !== trimmed) {
+                scannedNosRef.current.delete(trimmed);
+                if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+                return;
+            }
+            const lines = toMoveLines(scan.lines, detail, palletNo);
+            const pallet: ScannedPallet = {
+                palletNo,
+                dependent: lines.some((line) => line.request),
+                lines,
+                inbound: {
+                    moveNo: detail.requestNo,
+                    destinationWh: detail.destWhCd,
+                    destinationWhNm: detail.destWarehouse || detail.destWhCd,
+                    destinationLoc: '',
+                    remark: detail.memo || '',
+                    registrar: detail.requester || '',
+                },
+            };
+            orderByPalletRef.current.set(palletNo, {
+                requestNo: detail.requestNo,
+                destWhCd: detail.destWhCd,
+                desiredDate: detail.desiredDate || '',
+                requester: detail.requester || '',
+                memo: detail.memo || '',
+                details: (detail.details ?? []).map((line) => ({
+                    detailNo: line.detailNo,
+                    itemCode: line.itemCode,
+                    itemName: line.itemName ?? '',
+                    storageQty: line.storageQty ?? null,
+                    usedQty: line.usedQty ?? null,
+                    lostDamagedQty: line.lostDamagedQty ?? null,
+                    disposalQty: line.disposalQty ?? null,
+                    palletNo: line.palletNo ?? '',
+                })),
+            });
+            scannedNosRef.current.add(palletNo);
+            setScannedPallets((prev) => (prev.some((item) => item.palletNo === palletNo) ? prev : [...prev, pallet]));
+            setLocations((prev) => (prev[palletNo] ? prev : { ...prev, [palletNo]: '' }));
+            setOpenRequestIds((current) => {
+                const requestIds = lines.filter((line) => line.request).map((line) => line.id);
+                if (requestIds.every((id) => current.has(id))) return current;
+                const next = new Set(current);
+                requestIds.forEach((id) => next.add(id));
+                return next;
+            });
+            setInboundDone(false);
+            void ensureLocationOptions(detail.destWhCd);
+        } catch {
+            scannedNosRef.current.delete(trimmed);
+        }
+    }, [ensureLocationOptions, notify, request]);
 
     /** 読み取ったパレットを一覧から外す */
     const handleRemovePallet = (palletNo: string) => {
@@ -393,6 +611,7 @@ const SP406: React.FC = () => {
             return next;
         });
         scannedNosRef.current.delete(palletNo);
+        orderByPalletRef.current.delete(palletNo);
         if (lastCameraCodeRef.current === palletNo) lastCameraCodeRef.current = '';
     };
 
@@ -592,15 +811,38 @@ const SP406: React.FC = () => {
         setCameraOpen(true);
     };
 
-    /** ロケ番を確定し、移動完了にする（画面内だけで状態を変える） */
-    const handleReceiveComplete = () => {
-        if (scannedPallets.length === 0) {
+    /** ロケ番を確定し、移動完了をサーバへ送る */
+    const handleReceiveComplete = async () => {
+        if (scannedPallets.length === 0 || scannedPallets.some((pallet) => !pallet.inbound)) {
             notify('移動登録情報を確認できません。', { type: 'error' });
             return;
         }
         if (scannedPallets.some((pallet) => !locations[pallet.palletNo])) {
             notify('ロケ番を選択してください。', { type: 'warning' });
             return;
+        }
+        const sent = new Set<string>();
+        for (const pallet of scannedPallets) {
+            const order = orderByPalletRef.current.get(pallet.palletNo);
+            if (!order || sent.has(order.requestNo)) continue;
+            sent.add(order.requestNo);
+            const result = await request(
+                'post',
+                'api/transfer/update',
+                {
+                    requestNo: order.requestNo,
+                    destWhCd: order.destWhCd,
+                    destLocCd: locations[pallet.palletNo],
+                    desiredDate: order.desiredDate,
+                    requester: order.requester,
+                    memo: order.memo,
+                    details: order.details,
+                },
+                {},
+                true,
+                false
+            );
+            if (!result || result.code !== 200) return;
         }
         setInboundDone(true);
         notify('移動完了にしました。', { type: 'success' });
@@ -784,6 +1026,17 @@ const SP406: React.FC = () => {
                             location={locations[pallet.palletNo] || ''}
                             done={inboundDone}
                             openRequestIds={openRequestIds}
+                            warehouseChoices={
+                                pallet.inbound
+                                    ? [{
+                                        key: pallet.inbound.destinationWh,
+                                        value: pallet.inbound.destinationWhNm || pallet.inbound.destinationWh,
+                                    }]
+                                    : []
+                            }
+                            locationChoices={
+                                pallet.inbound ? locationOptions[pallet.inbound.destinationWh] || [] : []
+                            }
                             onToggleRequest={handleToggleRequest}
                             onLocationChange={(value) =>
                                 setLocations((prev) => ({ ...prev, [pallet.palletNo]: value }))

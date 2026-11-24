@@ -4,6 +4,7 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import { parse, format as dateFnsFormat, isValid } from 'date-fns';
 import { SelectChangeEvent } from '@mui/material/Select';
 import { useInput } from 'react-admin';
+import { FORM_INPUT_MIN_WIDTH } from '../styles/inputSx';
 
 interface CustomDateInputProps {
     inputRef?: React.Ref<HTMLInputElement>;
@@ -424,16 +425,16 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
       );
     };
 
-    // ラベルと横並びで使うため width: 100% ではなく flex: 1 で残り幅を埋める。
-    // 100% を指定すると flex アイテムの基準幅が親いっぱいになり、ラベル枠（150px）が
-    // flex-shrink で縮んで日付入力欄だけが右へ広がる。minWidth: 0 で入力側を縮められるようにする。
+    // 日付欄とカレンダーボタンを合わせた幅を、他の入力枠と同じ最小幅にする。
+    // 入力欄側は 0 まで縮め、ボタン分が最小幅の外へはみ出さないようにする。
     const mergedSx = {
       display: 'flex',
       alignItems: 'center',
       flex: 1,
-      minWidth: 0,
+      boxSizing: 'border-box',
+      minWidth: FORM_INPUT_MIN_WIDTH,
       ...sx?.input,
-      '& .MuiTextField-root': { flex: 1 },
+      '& .MuiTextField-root': { flex: 1, minWidth: 0 },
     };
 
     return (
@@ -447,7 +448,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
             disabled={disabled || readOnly}
             helperText={helperText === false ? '' : helperText}
             slotProps={slotProps}
-            sx={sx}
+            sx={{ ...sx, minWidth: 0, flex: 1 }}
             ref={inputTextRef}
             error={validate ? validate(inputValue)?.length > 0 : false}
         />
@@ -456,7 +457,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
           <>
             <IconButton
               size="small"
-              sx={{ color: 'rgba(0, 0, 0, 0.54)', cursor: 'pointer', padding: 0, border: '1px solid #CBCBCB', borderRadius: 0 }}
+              sx={{ color: 'rgba(0, 0, 0, 0.54)', cursor: 'pointer', padding: 0, border: '1px solid #CBCBCB', borderRadius: 0, flex: 'none' }}
               onClick={handlePopoverOpen}
             >
               <CalendarTodayIcon  />

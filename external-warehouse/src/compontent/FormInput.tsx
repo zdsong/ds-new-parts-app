@@ -7,6 +7,7 @@ import {
 } from 'react-admin';
 import CustomImageInput from './CustomImageInput';
 import CustomDateInput from './DateSelect';
+import { FORM_INPUT_MIN_WIDTH } from '../styles/inputSx';
 
 // カスタム入力コンポーネントProps型定義
 interface CustomInputProps {
@@ -50,6 +51,7 @@ export interface FormInputRefHandle {
 // 入力コンテナ基本スタイル
 const inputContainer = {
     flex: 1,
+    minWidth: FORM_INPUT_MIN_WIDTH,
     marginTop: 0,
     '& .MuiFormHelperText-sizeSmall': {
         display: 'none'
@@ -75,8 +77,9 @@ const dateSelectSx = {
     '& .MuiInputBase-root': { borderRadius: '0' },
     '& .Mui-disabled': { backgroundColor: 'gainsboro' },
     '& .MuiFormHelperText-root': { display: 'none' },
+    ...inputContainer,
+    // 入力欄自体は縮め、最小幅はカレンダーボタンを含めた外側で持つ
     minWidth: 0,
-    ...inputContainer
 }
 
 // セレクトボックススタイル
@@ -101,6 +104,8 @@ const filterSelectInputSx = {
     '& .MuiFormHelperText-root': { display: 'none' },
     '& .MuiAutocomplete-input': {padding: '0 5px !important'},
     '& .MuiAutocomplete-tag': {margin: '0 3px !important'},
+    // 候補選択の既定最小幅（160px）を共通の最小幅へ揃える
+    '& .RaAutocompleteInput-textField': { minWidth: FORM_INPUT_MIN_WIDTH },
     ...inputContainer
 }
 

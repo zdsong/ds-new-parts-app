@@ -61,9 +61,13 @@ export interface ScannedPallet {
     inbound: {
         moveNo: string;
         destinationWh: string;
+        /** 移動先倉庫の表示名 */
+        destinationWhNm?: string;
         destinationLoc: string;
         remark: string;
         registrar: string;
+        /** 移動依頼の楽観ロック */
+        version?: number;
     } | null;
 }
 

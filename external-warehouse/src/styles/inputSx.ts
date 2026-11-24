@@ -1,5 +1,11 @@
 import React from 'react';
 
+/**
+ * 入力枠の最小幅。
+ * 日付入力はカレンダーボタンを含めた全体の幅とする。
+ */
+export const FORM_INPUT_MIN_WIDTH = '100px';
+
 export const baseInputStyle = {
     baseInputStyle : {
       width: '100%',
