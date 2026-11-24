@@ -701,7 +701,7 @@ const P405: React.FC = () => {
                         <FormInput type={'text'} source="requester" label="依頼者" />
                         <FormInput type={'input-date'} source="desiredDate" label="移動希望日" />
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <FormInput type={'text'} source="remark" label="備考" multiline />
+                            <FormInput type={'text'} source="remark" label="備考" multiline inputHeight={80} />
                         </div>
                     </div>
                 </SimpleForm>

@@ -324,20 +324,39 @@ const P403: React.FC = () => {
             >
                 <div style={formSx.form2}>
                     <FormInput type={'text'} source="moveNo" label="移動番号" />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+                    <div
+                        style={{
+                            display: 'grid',
+                            gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
+                            columnGap: '0.75rem',
+                            alignItems: 'center',
+                            width: '100%',
+                            minWidth: 0,
+                        }}
+                    >
                         <FormInput
                             type={'filter-select'}
                             source="sourceWarehouse"
                             label="移動先"
                             choices={warehouseOptions}
-                            sx={{ flex: '1.35 1 0', label: { width: '150px' } }}
+                            sx={{
+                                display: 'contents',
+                                label: { width: '150px', flexShrink: 0 },
+                                input: { width: '100%', minWidth: 0 },
+                            }}
                         />
                         <FormInput
                             type={'filter-select'}
                             source="destWarehouse"
                             label={false}
                             choices={warehouseOptions}
-                            sx={{ flex: '1 1 0', minWidth: 0 }}
+                            sx={{
+                                width: '100%',
+                                minWidth: 0,
+                                flex: 'none',
+                                marginTop: 0,
+                                input: { width: '100%', minWidth: 0 },
+                            }}
                         />
                     </div>
                     <FormInput type={'text'} source="itemCode" label="品目コード" />

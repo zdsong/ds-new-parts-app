@@ -239,10 +239,15 @@ const ResultGrid = <T extends { id: string | number }>({
                     noRowsShow={noRowsShow}
                 />
             </div>
+            {/* 行が無いときも1行分の高さを残す */}
             <style>{`
                 .result-grid .ag-center-cols-viewport,
                 .result-grid .ag-center-cols-clipper {
-                    min-height: 0 !important;
+                    min-height: ${rowHeight}px !important;
+                }
+                .result-grid .ag-overlay-no-rows-center > div {
+                    padding: 0 !important;
+                    line-height: ${rowHeight}px;
                 }
             `}</style>
 

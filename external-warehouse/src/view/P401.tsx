@@ -617,19 +617,40 @@ const P401: React.FC = () => {
                             label="移動状況"
                             readOnly
                         />
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
+                                columnGap: '0.75rem',
+                                alignItems: 'center',
+                                width: '100%',
+                                minWidth: 0,
+                            }}
+                        >
                             <FormInput
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
                                 choices={warehouseOptions}
                                 onChange={(value) => setDestWhCd(normalizeChoiceValue(value))}
+                                sx={{
+                                    display: 'contents',
+                                    label: { width: '150px', flexShrink: 0 },
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                             <FormInput
                                 type={'filter-select'}
                                 source="locationNo"
-                                label="ロケ番"
+                                label={false}
                                 choices={locationOptions}
+                                sx={{
+                                    width: '100%',
+                                    minWidth: 0,
+                                    flex: 'none',
+                                    marginTop: 0,
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                         </div>
                         <FormInput
@@ -649,6 +670,7 @@ const P401: React.FC = () => {
                                 source="remark"
                                 label="備考"
                                 multiline
+                                inputHeight={80}
                                 placeholder="入力してください"
                             />
                         </div>

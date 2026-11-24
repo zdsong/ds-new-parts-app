@@ -486,20 +486,39 @@ const P406: React.FC = () => {
                          * 設計書では移動依頼番号の右側に移動先が並ぶ（左右配置）。
                          * 移動先の右隣はラベルの無い入力欄（ロケ番）で、2 つの入力欄が横並びになる。
                          */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
+                                columnGap: '0.75rem',
+                                alignItems: 'center',
+                                width: '100%',
+                                minWidth: 0,
+                            }}
+                        >
                             <FormInput
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
                                 choices={DEST_CHOICES}
-                                // sx={{ flex: '1.35 1 0', label: { width: '' } }}
+                                sx={{
+                                    display: 'contents',
+                                    label: { width: '150px', flexShrink: 0 },
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                             <FormInput
                                 type={'filter-select'}
                                 source="locationNo"
-                                // label="ロケ番"
+                                label={false}
                                 choices={LOCATION_CHOICES}
-                                sx={{ flex: '1 1 0' }}
+                                sx={{
+                                    width: '100%',
+                                    minWidth: 0,
+                                    flex: 'none',
+                                    marginTop: 0,
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                         </div>
                         <FormInput
@@ -519,6 +538,7 @@ const P406: React.FC = () => {
                                 source="remark"
                                 label="備考"
                                 multiline
+                                inputHeight={80}
                                 placeholder="入力してください"
                             />
                         </div>

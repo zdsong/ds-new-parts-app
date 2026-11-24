@@ -530,19 +530,39 @@ const P404: React.FC = () => {
                     <div style={formSx.form2}>
                         <FormInput type={'text'} source="requestNo" label="移動依頼番号" readOnly />
                         <FormInput type={'text'} source="status" label="依頼状況" readOnly />
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: '150px minmax(0, 1fr) minmax(0, 1fr)',
+                                columnGap: '0.75rem',
+                                alignItems: 'center',
+                                width: '100%',
+                                minWidth: 0,
+                            }}
+                        >
                             <FormInput
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
                                 choices={DEST_CHOICES}
-                                sx={{ flex: '1.35 1 0', label: { width: '4.5rem' } }}
+                                sx={{
+                                    display: 'contents',
+                                    label: { width: '150px', flexShrink: 0 },
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                             <FormInput
                                 type={'filter-select'}
                                 source="locationNo"
+                                label={false}
                                 choices={LOCATION_CHOICES}
-                                sx={{ flex: '1 1 0' }}
+                                sx={{
+                                    width: '100%',
+                                    minWidth: 0,
+                                    flex: 'none',
+                                    marginTop: 0,
+                                    input: { width: '100%', minWidth: 0 },
+                                }}
                             />
                         </div>
                         <FormInput type={'input-date'} source="desiredDate" label="移動希望日" />
@@ -550,7 +570,7 @@ const P404: React.FC = () => {
                         {/* 設計書では依頼者の右側は空欄 */}
                         <div />
                         <div style={{ gridColumn: '1 / -1' }}>
-                            <FormInput type={'text'} source="remark" label="備考" multiline />
+                            <FormInput type={'text'} source="remark" label="備考" multiline inputHeight={80} />
                         </div>
                     </div>
                 </SimpleForm>

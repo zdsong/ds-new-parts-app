@@ -12,11 +12,8 @@ import {
     DialogContent,
     DialogContentText,
     DialogTitle,
-    FormControl,
-    MenuItem,
     Modal,
     Paper,
-    Select,
     Table,
     TableBody,
     TableCell,
@@ -32,7 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import deleteIcon from '../assets/icons/delete-icon.png';
@@ -85,10 +82,9 @@ const P601: React.FC = () => {
 
     // 検索結果
     const [rows, setRows] = useState<LocationRow[]>([]);
-    const [total, setTotal] = useState<number>(0);
-    // ページング
+    // ページング（一覧の切り分けは ResultGrid が行う）
     const [pageNum, setPageNum] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(10);
+    const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_CHOICES[0]);
     // 検索条件とフォーム再描画用の世代番号
     const [searchForm, setSearchForm] = useState<SearchForm>({ whCd: '', locCd: '' });
     const [formVersion, setFormVersion] = useState<number>(0);
@@ -126,8 +122,8 @@ const P601: React.FC = () => {
             try {
                 const response = await request('get', 'api/master/location/list', {
                     ...searchForm,
-                    pageNum,
-                    pageSize,
+                    pageNum: 1,
+                    pageSize: 100000,
                 });
                 if (response?.code === 200) {
                     const list: LocationRow[] = (response.rows || []).map((item: any) => ({
@@ -139,15 +135,13 @@ const P601: React.FC = () => {
                         version: item.version,
                     }));
                     setRows(list);
-                    setTotal(response.total || 0);
                 }
             } catch (error) {
                 setRows([]);
-                setTotal(0);
             }
         };
         fetchList();
-    }, [pageNum, pageSize, searchForm, refreshKey]);
+    }, [searchForm, refreshKey]);
 
     /** 検索を実行する */
     const handleSearch = (values: any) => {
@@ -167,12 +161,6 @@ const P601: React.FC = () => {
         setRefreshKey((key) => key + 1);
     };
 
-    /** ページ変更処理 */
-    const handlePageChange = (current: number, size: number) => {
-        setPageNum(current || 1);
-        setPageSize(size || 10);
-    };
-
     /** 削除を確定する */
     const handleConfirmDelete = async () => {
         if (!deleteTarget) return;
@@ -183,12 +171,7 @@ const P601: React.FC = () => {
             });
             setDeleteTarget(null);
             if (response?.code >= 200 && response?.code < 300) {
-                // 最終ページの最後の1件を削除した場合は前のページへ戻す
-                if (rows.length === 1 && pageNum > 1) {
-                    setPageNum(pageNum - 1);
-                } else {
-                    setRefreshKey((key) => key + 1);
-                }
+                setRefreshKey((key) => key + 1);
             }
         } catch (error) {
             setDeleteTarget(null);
@@ -242,11 +225,6 @@ const P601: React.FC = () => {
             // エラー通知は API 呼び出し側で表示する
         }
     };
-
-    /** 表示範囲の開始位置 */
-    const startRow = total === 0 ? 0 : (pageNum - 1) * pageSize + 1;
-    /** 表示範囲の終了位置 */
-    const endRow = Math.min(pageNum * pageSize, total);
 
     const columnDefs: ColDef<LocationRow>[] = [
         { headerName: '倉庫', field: 'whNm', flex: 1, minWidth: 140 },
@@ -333,14 +311,23 @@ const P601: React.FC = () => {
                             label="ロケ番"
                             placeholder="入力してください"
                         />
-                        <div style={buttonSx.buttonBar}>
-                            <button style={buttonSx.button} type="button" onClick={handleClear}>
-                                クリア
-                            </button>
-                            <button style={buttonSx.button} type="submit">
-                                検索
-                            </button>
-                        </div>
+                    </div>
+                    <div
+                        style={{
+                            width: '100%',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            gap: '30px',
+                            marginTop: '20px',
+                            marginBottom: '22px',
+                        }}
+                    >
+                        <button style={buttonSx.button} type="button" onClick={handleClear}>
+                            クリア
+                        </button>
+                        <button style={buttonSx.button} type="submit">
+                            検索
+                        </button>
                     </div>
                 </SimpleForm>
             </CustomCard>
@@ -394,56 +381,24 @@ const P601: React.FC = () => {
 
             {/* 検索結果一覧 */}
             <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="検索結果一覧" border={false}>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '0.5rem',
-                        margin: '5px 0 8px 0',
+                <ResultGrid<LocationRow>
+                    columnDefs={columnDefs}
+                    rowData={rows}
+                    rowUniqueKey="id"
+                    rowHeight={38}
+                    showResultSummary
+                    showPageSize
+                    showBottomPagination
+                    pageSizeChoices={PAGE_SIZE_CHOICES}
+                    page={pageNum}
+                    pageSize={pageSize}
+                    onPageChange={setPageNum}
+                    onPageSizeChange={(next) => {
+                        setPageSize(next);
+                        setPageNum(1);
                     }}
-                >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>表示件</span>
-                        <FormControl size="small" sx={{ minWidth: 80 }}>
-                            <Select
-                                value={pageSize}
-                                onChange={(event) => {
-                                    setPageSize(Number(event.target.value));
-                                    setPageNum(1);
-                                }}
-                            >
-                                {PAGE_SIZE_CHOICES.map((size) => (
-                                    <MenuItem key={size} value={size}>
-                                        {size}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <span>件</span>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <span>{`検索結果：${total}件`}</span>
-                        <span>{`${startRow} - ${endRow}件を表示`}</span>
-                    </Box>
-                </Box>
-
-                <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<LocationRow>
-                        columnDefs={columnDefs}
-                        rowData={rows}
-                        rowTotal={total}
-                        pagination
-                        page={pageNum}
-                        pageSize={pageSize}
-                        onPageChange={handlePageChange}
-                        rowUniqueKey="id"
-                        selectionMode="none"
-                        rowHeight={38}
-                        noRowsShow="該当するロケ番がありません。"
-                    />
-                </div>
+                    noRowsShow="該当するロケ番がありません。"
+                />
             </CustomCard>
 
             {/* 操作ボタン */}
