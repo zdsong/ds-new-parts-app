@@ -146,7 +146,7 @@ const SP302: React.FC = () => {
     /** 確認：積載明細を引き継いで次の画面へ進む */
     const handleConfirm = () => {
         if (details.length === 0) {
-            notify('積載する品目を追加してください。', { type: 'warning' });
+            notify('notify.pallet.add_items', { type: 'warning' });
             return;
         }
         const nextState = { category, details, pallet: state.pallet };

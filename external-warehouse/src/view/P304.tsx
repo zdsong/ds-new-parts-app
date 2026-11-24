@@ -428,7 +428,7 @@ const P304: React.FC = () => {
     /** 選択したパレットの番号表を印刷する（パレット 1 件につき 1 枚） */
     const handlePrintLabels = () => {
         if (selectedPallets.length === 0) {
-            notify('番号表を印刷するパレットを選択してください。', { type: 'warning' });
+            notify('notify.pallet.select_pallets_to_print', { type: 'warning' });
             return;
         }
 
@@ -444,9 +444,9 @@ const P304: React.FC = () => {
 
         const printed = printPalletNumberSheet(labels);
         if (printed) {
-            notify(`${labels.length} 枚のパレット番号表を印刷します。`, { type: 'success' });
+            notify('notify.pallet.print_sheet_count', { type: 'success', messageArgs: { count: labels.length } });
         } else {
-            notify('印刷用ウィンドウを開けませんでした。ポップアップブロックを解除してください。', {
+            notify('notify.pallet.print_window_popup_failed', {
                 type: 'warning',
             });
         }

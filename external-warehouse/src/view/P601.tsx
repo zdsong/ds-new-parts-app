@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import { SimpleForm, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, useNotify } from 'react-admin';
 import {
     Box,
     Button,
@@ -101,7 +101,6 @@ const P601: React.FC = () => {
     const [importErrorOpen, setImportErrorOpen] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const notify = useNotify();
-    const translate = useTranslate();
 
     /** 倉庫コンボボックスを取得する */
     useEffect(() => {
@@ -185,7 +184,7 @@ const P601: React.FC = () => {
             return;
         }
         if (!file.name.toLowerCase().endsWith('.csv')) {
-            notify(translate('ra.message.csv_not_select'), { type: 'error', raw: true });
+            notify('notify.csv.not_select', { type: 'error' });
             event.target.value = '';
             setImportFile(null);
             setFilePath('');
@@ -198,7 +197,7 @@ const P601: React.FC = () => {
     /** インポートを実行する */
     const handleImport = async () => {
         if (!importFile) {
-            notify(translate('ra.message.csv_not_select'), { type: 'error', raw: true });
+            notify('notify.csv.not_select', { type: 'error' });
             return;
         }
         try {
@@ -209,7 +208,7 @@ const P601: React.FC = () => {
             if (result?.errorList && result.errorList.length > 0) {
                 setImportErrorList(result.errorList);
                 setImportErrorOpen(true);
-                notify(translate('ra.message.import_failed'), { type: 'error' });
+                notify('notify.csv.import_failed', { type: 'error' });
                 return;
             }
 

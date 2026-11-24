@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { SimpleForm, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, useNotify } from 'react-admin';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 import CustomCard from '../compontent/CustomCard'
@@ -52,7 +52,6 @@ const S040: React.FC = () => {
     const { request } = useApiRequest();
     const notify = useNotify();
     const operTimeRef = useRef(null);
-    const translate = useTranslate();
     
     const defaultSearchForm = {
         operIp: '',
@@ -113,7 +112,7 @@ const S040: React.FC = () => {
     const handleSearch = async(searchData: any) => {
         if(searchForm.operTime && searchForm.operTime.startDate && searchForm.operTime.endDate){
             if ((new Date(searchForm.operTime.endDate)) < (new Date(searchForm.operTime.startDate))) {
-                notify(translate('ra.message.error_date_range'), {type: 'error'})
+                notify('notify.common.error_date_range', { type: 'error' })
                 if (operTimeRef.current) {
                     (operTimeRef.current as any).focus();
                 }

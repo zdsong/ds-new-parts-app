@@ -16,7 +16,7 @@ import CustomModal from '../compontent/CustomModal';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
-import { buildPalletLabels, hasNonPositiveQuantity, QUANTITY_MUST_BE_POSITIVE } from '../utils/palletData';
+import { buildPalletLabels, hasNonPositiveQuantity } from '../utils/palletData';
 
 /**
  * パレット情報詳細画面（P305）
@@ -361,7 +361,7 @@ const P305: React.FC = () => {
     /** パレット情報を取得する（遷移元からパレット番号を受け取った場合） */
     useEffect(() => {
         if (!initialPalletNo) {
-            notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
+            notify('notify.pallet.number_not_specified_from_list', {
                 type: 'warning',
             });
             return;
@@ -402,7 +402,7 @@ const P305: React.FC = () => {
         setCategory(nextCategory);
         if (details.length > 0) {
             setDetails([]);
-            notify('区分を変更したため、積載明細をクリアしました。', { type: 'warning' });
+            notify('notify.pallet.classification_changed_cleared', { type: 'warning' });
         }
     };
 
@@ -419,23 +419,23 @@ const P305: React.FC = () => {
         const locationCd = normalizeChoiceValue(values?.locationNo);
 
         if (!palletNo) {
-            notify('パレット番号が指定されていません。', { type: 'warning' });
+            notify('notify.pallet.number_not_specified', { type: 'warning' });
             return;
         }
         if (!classification) {
-            notify('区分を選択してください。', { type: 'warning' });
+            notify('notify.pallet.select_category', { type: 'warning' });
             return;
         }
         if (!warehouse) {
-            notify('保管場所を選択してください。', { type: 'warning' });
+            notify('notify.pallet.select_storage', { type: 'warning' });
             return;
         }
         if (!locationCd) {
-            notify('ロケ番を選択してください。', { type: 'warning' });
+            notify('notify.common.select_location', { type: 'warning' });
             return;
         }
         if (hasNonPositiveQuantity(details)) {
-            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
+            notify('notify.pallet.quantity_must_be_positive', { type: 'warning' });
             return;
         }
 
@@ -463,7 +463,7 @@ const P305: React.FC = () => {
                 return;
             }
 
-            notify('パレット情報を更新しました。', { type: 'success' });
+            notify('notify.pallet.updated', { type: 'success' });
             // 更新後の状態（version・更新日時・明細ID）をサーバから取り直す
             await loadPallet(palletNo);
         } catch (error) {
@@ -478,11 +478,11 @@ const P305: React.FC = () => {
      */
     const handlePrint = () => {
         if (!formData.palletNo) {
-            notify('パレット番号が採番されていません。', { type: 'warning' });
+            notify('notify.pallet.number_not_issued', { type: 'warning' });
             return;
         }
         if (details.length === 0) {
-            notify('印刷対象の積載明細がありません。', { type: 'warning' });
+            notify('notify.pallet.no_print_details', { type: 'warning' });
             return;
         }
 
@@ -500,19 +500,19 @@ const P305: React.FC = () => {
         ]);
 
         if (!printPalletNumberSheet(labels)) {
-            notify('印刷ウィンドウを開けませんでした。ポップアップのブロックを解除してください。', {
+            notify('notify.pallet.print_window_failed', {
                 type: 'warning',
             });
             return;
         }
-        notify('パレット番号表を印刷します。', { type: 'info' });
+        notify('notify.pallet.print_sheet', { type: 'info' });
     };
 
     /** 削除処理（パレット情報を削除して発番画面へ戻る） */
     const handleDelete = async () => {
         const palletNo = formData.palletNo;
         if (!palletNo) {
-            notify('パレット番号が指定されていません。', { type: 'warning' });
+            notify('notify.pallet.number_not_specified', { type: 'warning' });
             return;
         }
         if (!window.confirm('このパレット情報を削除してもよろしいですか？')) return;
@@ -522,7 +522,7 @@ const P305: React.FC = () => {
             if (result?.code !== 200) {
                 return;
             }
-            notify('パレット情報を削除しました。', { type: 'success' });
+            notify('notify.pallet.deleted', { type: 'success' });
             navigate('/P303');
         } catch (error) {
             console.error(error);

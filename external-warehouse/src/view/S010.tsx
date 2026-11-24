@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { SimpleForm, TextInput, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, TextInput, useNotify } from 'react-admin';
 import CustomCard from '../compontent/CustomCard'
 import { ColDef } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
@@ -38,7 +38,6 @@ const S010: React.FC = () => {
     const gridRef = useRef<DataGridRef<ParamData> | null>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
-    const translate = useTranslate();
 
     const fetchData = async () => {
         try {
@@ -87,7 +86,7 @@ const S010: React.FC = () => {
         if (selectedRows.length > 0) {
             const hasBuiltIn = selectedRows.some((row: ParamData) => row.configTypeLabel === 'はい');
             if (hasBuiltIn) {
-                notify(translate('ra.message.built_in_cannot_delete'), { type: 'error' });
+                notify('notify.common.built_in_cannot_delete', { type: 'error' });
                 return;
             }
             

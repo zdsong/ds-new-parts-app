@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { SimpleForm, useNotify, useTranslate} from 'react-admin';
+import { SimpleForm, useNotify} from 'react-admin';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 import CustomCard from '../compontent/CustomCard'
@@ -56,7 +56,6 @@ const S030: React.FC = () => {
     const gridRef = useRef<DataGridRef<LoginLogData>>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
-    const translate = useTranslate();
     const loginTimeRef = useRef(null);
     
     useEffect(() => {
@@ -103,7 +102,7 @@ const S030: React.FC = () => {
     const handleSearch = async(searchData: any) => {
         if(searchForm.loginTime && searchForm.loginTime.startDate && searchForm.loginTime.endDate){
             if ((new Date(searchForm.loginTime.endDate)) < (new Date(searchForm.loginTime.startDate))) {
-                notify(translate('ra.message.error_date_range'), {type: 'error'})
+                notify('notify.common.error_date_range', { type: 'error' })
                 if (loginTimeRef.current) {
                     (loginTimeRef.current as any).focus();
                 }

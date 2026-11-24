@@ -483,7 +483,7 @@ const P405: React.FC = () => {
             );
 
             if (nextValue < 0) {
-                notify('0 以上の数値を入力してください。', { type: 'warning' });
+                notify('notify.common.non_negative_number', { type: 'warning' });
             }
         },
         [notify]
@@ -529,7 +529,7 @@ const P405: React.FC = () => {
     /** 検索結果から明細を追加する */
     const handleAddDetail = (item: SearchItem) => {
         if (addedPalletNos.includes(item.palletNo)) {
-            notify('すでに品目一覧に追加されています。', { type: 'warning' });
+            notify('notify.transfer.already_added', { type: 'warning' });
             return;
         }
         setDetails((prev) => [
@@ -556,7 +556,7 @@ const P405: React.FC = () => {
         setFormData({ ...initialForm });
         setFormVersion((version) => version + 1);
         setDetails(initialDetails.map((detail) => ({ ...detail })));
-        notify('編集内容をクリアしました。', { type: 'info' });
+        notify('notify.common.edit_cleared', { type: 'info' });
     };
 
     /** 前画面（移動依頼一覧）へ戻る */
@@ -568,17 +568,17 @@ const P405: React.FC = () => {
     /** 更新前の数量チェックを行い、移動依頼を更新する */
     const handleUpdate = async (values: any) => {
         if (details.length === 0) {
-            notify('移動する品目が登録されていません。「品目追加」から選択してください。', {
+            notify('notify.transfer.no_items_select', {
                 type: 'warning',
             });
             return;
         }
         if (details.some((detail) => detail.moveQty <= 0)) {
-            notify('移動数は 1 以上を入力してください。', { type: 'warning' });
+            notify('notify.transfer.move_qty_min', { type: 'warning' });
             return;
         }
         if (overStockRows.length > 0) {
-            notify('移動数が保管数を超えている明細があります。数量を確認してください。', {
+            notify('notify.transfer.move_qty_over_stock', {
                 type: 'warning',
             });
             return;
@@ -587,11 +587,11 @@ const P405: React.FC = () => {
         const requestNo = values?.requestNo || formData.requestNo;
         const destWarehouse = normalizeChoiceValue(values?.destWarehouse);
         if (!requestNo) {
-            notify('移動依頼番号が指定されていません。', { type: 'warning' });
+            notify('notify.transfer.request_no_missing', { type: 'warning' });
             return;
         }
         if (!destWarehouse) {
-            notify('移動先を選択してください。', { type: 'warning' });
+            notify('notify.transfer.select_destination', { type: 'warning' });
             return;
         }
 
@@ -616,15 +616,15 @@ const P405: React.FC = () => {
         try {
             const response = await request('post', 'api/transfer/update', payload, {}, true, false);
             if (response?.code >= 200 && response?.code < 300) {
-                notify('移動依頼を更新しました。', { type: 'success' });
+                notify('notify.transfer.updated', { type: 'success' });
                 // 登録した明細番号を反映するため再取得する
                 await loadDetail();
             } else {
-                notify(response?.message || '移動依頼の更新に失敗しました。', { type: 'error' });
+                notify(response?.message || 'notify.transfer.update_failed', { type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            notify('移動依頼の更新に失敗しました。', { type: 'error' });
+            notify('notify.transfer.update_failed', { type: 'error' });
         }
     };
 

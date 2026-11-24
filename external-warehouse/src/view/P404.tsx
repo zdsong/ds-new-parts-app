@@ -389,7 +389,7 @@ const P404: React.FC = () => {
             );
 
             if (nextValue < 0) {
-                notify('0 以上の数値を入力してください。', { type: 'warning' });
+                notify('notify.common.non_negative_number', { type: 'warning' });
             }
         },
         [notify]
@@ -435,7 +435,7 @@ const P404: React.FC = () => {
     /** 検索結果から明細を追加する */
     const handleAddDetail = (item: SearchItem) => {
         if (addedPalletNos.includes(item.palletNo)) {
-            notify('すでに品目一覧に追加されています。', { type: 'warning' });
+            notify('notify.transfer.already_added', { type: 'warning' });
             return;
         }
         setDetails((prev) => [
@@ -462,7 +462,7 @@ const P404: React.FC = () => {
         setFormData({ ...initialForm });
         setFormVersion((version) => version + 1);
         setDetails(initialDetails.map((detail) => ({ ...detail })));
-        notify('編集内容をクリアしました。', { type: 'info' });
+        notify('notify.common.edit_cleared', { type: 'info' });
     };
 
     /** 前画面（移動依頼一覧）へ戻る */

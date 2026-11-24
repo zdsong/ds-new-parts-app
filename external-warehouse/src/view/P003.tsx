@@ -4,7 +4,7 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
+import { Button, LoginFormClasses, SimpleForm, required, useNotify } from 'react-admin';
 import LabelInput from '../compontent/LabelInput';
 import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
 import { useNavigate, useParams } from 'react-router';
@@ -18,7 +18,6 @@ const P003 = () => {
 
     const [loading, setLoading] = React.useState(false);
     const notify = useNotify();
-    const translate = useTranslate();
     const navigate = useNavigate()
 
     const { type } = useParams<{ type: string }>()
@@ -53,7 +52,7 @@ const P003 = () => {
         setLoading(true)
         try{
             await authProvider.resendCode()
-            notify(translate('ra.message.send_success'), { type: 'success' })
+            notify('notify.common.send_success', { type: 'success' })
         }catch(e){
             if(e instanceof Error){
                 notify(e.message, { type: 'error' })

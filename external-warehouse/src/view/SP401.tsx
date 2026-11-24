@@ -188,7 +188,7 @@ const SP401: React.FC = () => {
             lastCameraCodeRef.current = trimmed;
         }
         if (scannedNosRef.current.has(trimmed)) {
-            if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+            if (!fromCamera) notify('notify.pallet.already_scanned', { type: 'warning' });
             return;
         }
         scannedNosRef.current.add(trimmed);
@@ -197,7 +197,7 @@ const SP401: React.FC = () => {
             const result = await request('get', `api/pallet/scan/${encodeURIComponent(trimmed)}`, {}, {}, true, false);
             if (!result || result.code !== 200 || !result.data) {
                 scannedNosRef.current.delete(trimmed);
-                notify(result?.message || 'パレット情報は存在しません。', { type: 'warning' });
+                notify(result?.message || 'notify.pallet.not_found', { type: 'warning' });
                 return;
             }
             const data = result.data as {
@@ -235,14 +235,14 @@ const SP401: React.FC = () => {
             }));
             if (!lines.length && !data.transferRequested) {
                 scannedNosRef.current.delete(trimmed);
-                const message = data.warningMessage || '在庫情報が存在しません。';
+                const message = data.warningMessage || 'notify.pallet.stock_not_found';
                 notify(message, { type: 'warning' });
                 return;
             }
             const palletNo = data.palletNo || trimmed;
             if (scannedNosRef.current.has(palletNo) && palletNo !== trimmed) {
                 scannedNosRef.current.delete(trimmed);
-                if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+                if (!fromCamera) notify('notify.pallet.already_scanned', { type: 'warning' });
                 return;
             }
             // 最初に読み取ったパレットと依存有無が違う場合は、混在させず読み取りを取り消す
@@ -251,7 +251,7 @@ const SP401: React.FC = () => {
             if (dependentMode !== null && dependentMode !== dependent) {
                 scannedNosRef.current.delete(trimmed);
                 scannedNosRef.current.delete(palletNo);
-                const message = '依存のあるパレットと依存のないパレットは混在できません。';
+                const message = 'notify.pallet.dependent_mix';
                 notify(message, { type: 'warning' });
                 return;
             }
@@ -261,7 +261,7 @@ const SP401: React.FC = () => {
             if (category && categoryMode !== null && categoryMode !== category) {
                 scannedNosRef.current.delete(trimmed);
                 scannedNosRef.current.delete(palletNo);
-                const message = '製品と部品は混載できません。';
+                const message = 'notify.pallet.category_mix';
                 notify(message, { type: 'warning' });
                 return;
             }
@@ -290,7 +290,7 @@ const SP401: React.FC = () => {
             setErrorMessage('');
         } catch {
             scannedNosRef.current.delete(trimmed);
-            notify('パレット情報は存在しません。', { type: 'warning' });
+            notify('notify.pallet.not_found', { type: 'warning' });
         }
     }, [notify, request]);
 
@@ -354,7 +354,7 @@ const SP401: React.FC = () => {
     const handleAddScanned = (line: MoveLine) => {
         if (candidates.some((item) => item.id === line.id)) return;
         if (!canMixCategory(candidates, line.category)) {
-            notify('製品と部品は混載できません。', { type: 'warning' });
+            notify('notify.pallet.category_mix', { type: 'warning' });
             return;
         }
         setCandidates((prev) => [...prev, { ...line, request: line.request ? { ...line.request } : null }]);
@@ -603,7 +603,7 @@ const SP401: React.FC = () => {
     const handleConfirm = () => {
         // 追加品目があるときだけ内容確認へ進める。無い場合は通知で知らせる
         if (candidates.length === 0) {
-            notify('移動候補の品目を追加してください。', { type: 'warning' });
+            notify('notify.transfer.add_candidates', { type: 'warning' });
             return;
         }
         setErrorMessage('');
@@ -652,7 +652,7 @@ const SP401: React.FC = () => {
         }
         setErrorMessage('');
         setInboundDone(true);
-        notify('移動完了にしました。', { type: 'success' });
+        notify('notify.transfer.move_completed', { type: 'success' });
     };
 
     // カメラが使えない確認用。?pallet=番号 で読み取り後の画面を開く

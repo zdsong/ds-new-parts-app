@@ -339,7 +339,7 @@ const P406: React.FC = () => {
             );
 
             if (nextValue < 0) {
-                notify('0 以上の数値を入力してください。', { type: 'warning' });
+                notify('notify.common.non_negative_number', { type: 'warning' });
             }
         },
         [notify]
@@ -375,7 +375,7 @@ const P406: React.FC = () => {
     /** 検索結果から明細を追加する */
     const handleAddDetail = (item: SearchItem) => {
         if (addedPalletNos.includes(item.palletNo)) {
-            notify('すでに品目一覧に追加されています。', { type: 'warning' });
+            notify('notify.transfer.already_added', { type: 'warning' });
             return;
         }
         setDetails((prev) => [
@@ -403,7 +403,7 @@ const P406: React.FC = () => {
         });
         setFormVersion((version) => version + 1);
         setDetails([]);
-        notify('入力内容をクリアしました。', { type: 'info' });
+        notify('notify.common.input_cleared', { type: 'info' });
     };
 
     /** 前画面（移動依頼一覧）へ戻る */
@@ -423,8 +423,9 @@ const P406: React.FC = () => {
 
         setFormData(nextFormData);
         setFormVersion((version) => version + 1);
-        notify(`移動依頼 ${requestNo} を登録しました（デモのため送信はしていません）。`, {
+        notify('notify.transfer.registered_demo', {
             type: 'success',
+            messageArgs: { requestNo },
         });
     };
 

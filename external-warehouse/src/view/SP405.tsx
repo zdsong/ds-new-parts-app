@@ -70,10 +70,10 @@ const SP405: React.FC = () => {
                 },
             ],
             null,
-            () => notify('この端末では印刷ダイアログを開けません。', { type: 'warning' })
+            () => notify('notify.pallet.print_dialog_unavailable', { type: 'warning' })
         );
         if (count === 0) {
-            notify('印刷できるパレットがありません。', { type: 'warning' });
+            notify('notify.pallet.no_printable_pallet', { type: 'warning' });
         }
     };
 

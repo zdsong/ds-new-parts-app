@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { Button, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
+import { Button, SimpleForm, required, useNotify } from 'react-admin';
 import LabelInput from '../compontent/LabelInput';
 import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
 import { useNavigate } from 'react-router-dom';
@@ -20,7 +20,6 @@ const N001: React.FC<LoginPageDatas> = () => {
     const notify = useNotify();
 
     const navigate = useNavigate()
-    const translate = useTranslate();
 
 
     useEffect(() => {
@@ -37,7 +36,7 @@ const N001: React.FC<LoginPageDatas> = () => {
         setLoading(true)
         try{
             await authProvider.logSend(values)
-            notify(translate('ra.message.send_success'), { type: 'success' })
+            notify('notify.common.send_success', { type: 'success' })
             navigateP003()
         }catch(e){
             if(e instanceof Error){

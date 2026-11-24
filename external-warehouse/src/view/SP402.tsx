@@ -118,29 +118,29 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
 
     const handleSubmit = async () => {
         if (!warehouse) {
-            notify('移動先の倉庫を選択してください。', { type: 'warning' });
+            notify('notify.transfer.select_dest_warehouse', { type: 'warning' });
             warehouseRef.current?.focus();
             return;
         }
         if (!location) {
-            notify('移動先のロケ番を選択してください。', { type: 'warning' });
+            notify('notify.transfer.select_dest_location', { type: 'warning' });
             locationRef.current?.focus();
             return;
         }
         if (lines.length === 0) {
-            notify('移動する品目を追加してください。', { type: 'warning' });
+            notify('notify.transfer.add_move_items', { type: 'warning' });
             return;
         }
         if (lines.some((line) => line.moveQty <= 0)) {
-            notify('移動数量を入力してください。', { type: 'warning' });
+            notify('notify.transfer.enter_move_qty', { type: 'warning' });
             return;
         }
         if (lines.some((line) => line.moveQty > line.storageQty)) {
-            notify('移動数量が保管数量を超えています。', { type: 'warning' });
+            notify('notify.transfer.move_qty_over_storage', { type: 'warning' });
             return;
         }
         if (!registrar.trim()) {
-            notify('移動登録者を入力してください。', { type: 'warning' });
+            notify('notify.transfer.enter_registrar', { type: 'warning' });
             registrarRef.current?.focus();
             return;
         }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ColDef } from 'ag-grid-community';
-import { SimpleForm, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, useNotify } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
@@ -42,7 +42,6 @@ const P008: React.FC<SearchFormProps> = () => {
   const [classificationOptions, setClassificationOptions] = useState<any[]>([]);
   const navigate = useNavigate();
   const notify = useNotify();
-  const translate = useTranslate();
 
   /**
    * 品目名クリック時の処理
@@ -127,7 +126,7 @@ const P008: React.FC<SearchFormProps> = () => {
   // ファイルインポート処理
   const handleImport = async () => {
     if (!fileInputRef.current?.files?.[0]) {
-      notify(translate('ra.message.csv_not_select'), { type: 'error', raw: true });
+      notify('notify.csv.not_select', { type: 'error' });
       return;
     }
     const file = fileInputRef.current.files[0];
@@ -142,7 +141,7 @@ const P008: React.FC<SearchFormProps> = () => {
         if (result.errorList && result.errorList.length > 0) {
           setErrorList(result.errorList);
           setShowErrorModal(true);
-          notify(translate('ra.message.import_failed'), { type: 'error'});
+          notify('notify.csv.import_failed', { type: 'error' });
         } else {
           handleClear()
         }
@@ -297,7 +296,7 @@ const P008: React.FC<SearchFormProps> = () => {
               if (fileName.endsWith('.csv') && fileName.includes('item')) {
                 setFilePath(file.name);
               } else {
-                notify(translate('ra.message.error_item_csv_name'), { type: 'error' });
+                notify('notify.csv.item_name', { type: 'error' });
               }
           }}
         />

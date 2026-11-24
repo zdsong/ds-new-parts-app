@@ -160,7 +160,7 @@ const P407: React.FC = () => {
             setDetail(result?.data || null);
         } catch (error) {
             console.error(error);
-            notify('移動情報の取得に失敗しました。', { type: 'error' });
+            notify('notify.transfer.fetch_failed', { type: 'error' });
         }
     }, [moveNo, notify, request]);
 

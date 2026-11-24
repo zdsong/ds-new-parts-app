@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect} from 'react';
-import { SimpleForm, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, useNotify } from 'react-admin';
 import CustomCard from '../compontent/CustomCard';
 import { ColDef } from 'ag-grid-community';
 import PageContainer from '../compontent/PageContainer';
@@ -57,7 +57,6 @@ const S095: React.FC = () => {
     const navigate = useNavigate();
     const notify = useNotify();
     const createTimeRef = useRef(null);
-    const translate = useTranslate();
 
     const fetchLogList = async (searchParamsArg?: any, pagination?: any) => {        
         try {
@@ -96,7 +95,7 @@ const S095: React.FC = () => {
     const handleSearch = async(searchData: any) => {
         if(searchParams.createTime && searchParams.createTime.startDate && searchParams.createTime.endDate){
             if ((new Date(searchParams.createTime.endDate)) < (new Date(searchParams.createTime.startDate))) {
-                notify(translate('ra.message.error_date_range'), {type: 'error'})
+                notify('notify.common.error_date_range', { type: 'error' })
                 if (createTimeRef.current) {
                     (createTimeRef.current as any).focus();
                 }

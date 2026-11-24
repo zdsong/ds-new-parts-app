@@ -208,7 +208,7 @@ const P403: React.FC = () => {
             registeredRange.endDate &&
             digitsOnly(registeredRange.startDate) > digitsOnly(registeredRange.endDate)
         ) {
-            notify('移動登録日の範囲が正しくありません。開始日と終了日を確認してください。', {
+            notify('notify.transfer.register_date_range', {
                 type: 'warning',
             });
             return;
@@ -218,7 +218,7 @@ const P403: React.FC = () => {
             completedRange.endDate &&
             digitsOnly(completedRange.startDate) > digitsOnly(completedRange.endDate)
         ) {
-            notify('移動完了日の範囲が正しくありません。開始日と終了日を確認してください。', {
+            notify('notify.transfer.complete_date_range', {
                 type: 'warning',
             });
             return;

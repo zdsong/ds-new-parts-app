@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
-import { SimpleForm, required, useNotify, useTranslate } from 'react-admin';
+import { SimpleForm, required, useNotify } from 'react-admin';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
@@ -22,7 +22,6 @@ interface SearchFormProps {
 const C015: React.FC<SearchFormProps> = () => {
   const { request } = useApiRequest();
   const notify = useNotify();
-  const translate = useTranslate();
   const navigate = useNavigate();
   const { cd } = useParams<{ cd: string }>();
   const [editFlg, setEditFlg] = useState(false);
@@ -62,7 +61,7 @@ const C015: React.FC<SearchFormProps> = () => {
     const isDataChanged = !deepEqual(data, originalCardData); 
 
     if (!isDataChanged) {
-      notify(translate('ra.message.data_not_change'), {type: 'error'})
+      notify('notify.common.data_not_change', { type: 'error' })
       if (!editFlg) navigate(-1);
       return;
     }

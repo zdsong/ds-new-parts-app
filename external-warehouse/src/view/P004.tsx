@@ -4,7 +4,7 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
 import { Box, Typography, CircularProgress, styled } from '@mui/material';
-import { Button, LoginFormClasses, SimpleForm, required, useNotify, useTranslate } from 'react-admin';
+import { Button, LoginFormClasses, SimpleForm, required, useNotify } from 'react-admin';
 import LabelInput from '../compontent/LabelInput';
 import LoginShell, { FLUID, fluidInputSx, fluidLoginButtonSx } from '../compontent/LoginShell';
 import { authProvider } from '../adapters/authProvider';
@@ -40,14 +40,13 @@ const P004 = () => {
     const [loading, setLoading] = React.useState(false);
     const notify = useNotify();
     const navigate = useNavigate()
-    const translate = useTranslate();
     const { request } = useApiRequest();
 
     const submitResetPassword = async (values: any) => {
         setLoading(true)
         const response = await request('post', 'api/auth/resetPwd', values, {}, false, false)
         if(response.code === 200 ){
-            notify(translate('ra.message.password_change_success'), { type: 'success' })
+            notify('notify.common.password_change_success', { type: 'success' })
             try{
                 await authProvider.checkAuth(response.data)
             }catch(e){

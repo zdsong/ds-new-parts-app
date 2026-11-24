@@ -459,7 +459,7 @@ const SP406: React.FC = () => {
             setCameraOpen(false);
         }
         if (scannedNosRef.current.has(trimmed)) {
-            if (!fromCamera) notify('このパレットは読み取り済みです。', { type: 'warning' });
+            if (!fromCamera) notify('notify.pallet.already_scanned', { type: 'warning' });
             return;
         }
         setCodeSvg(buildBarcodeSvg(trimmed));
@@ -474,7 +474,7 @@ const SP406: React.FC = () => {
             );
             if (!result || result.code !== 200 || !result.data) {
                 scannedNosRef.current.delete(trimmed);
-                notify('移動登録情報を確認できません。', { type: 'error' });
+                notify('notify.transfer.registration_not_found', { type: 'error' });
                 return;
             }
             const move = result.data as ScanMove;
@@ -482,7 +482,7 @@ const SP406: React.FC = () => {
             const palletNo = pallet.palletNo;
             if (!palletNo || !pallet.inbound?.destinationWh) {
                 scannedNosRef.current.delete(trimmed);
-                notify('移動登録情報を確認できません。', { type: 'error' });
+                notify('notify.transfer.registration_not_found', { type: 'error' });
                 return;
             }
             const lines = pallet.lines;
@@ -723,11 +723,11 @@ const SP406: React.FC = () => {
     /** ロケ番を確定し、移動完了をサーバへ送る */
     const handleReceiveComplete = async () => {
         if (scannedPallets.length === 0 || scannedPallets.some((pallet) => !pallet.inbound)) {
-            notify('移動登録情報を確認できません。', { type: 'error' });
+            notify('notify.transfer.registration_not_found', { type: 'error' });
             return;
         }
         if (scannedPallets.some((pallet) => !locations[pallet.palletNo])) {
-            notify('ロケ番を選択してください。', { type: 'warning' });
+            notify('notify.common.select_location', { type: 'warning' });
             return;
         }
         const sent = new Set<string>();
@@ -749,12 +749,12 @@ const SP406: React.FC = () => {
                 false
             );
             if (!result || result.code !== 200) {
-                notify(result?.msg || '移動完了に失敗しました。', { type: 'error' });
+                notify(result?.msg || 'notify.transfer.move_complete_failed', { type: 'error' });
                 return;
             }
         }
         setInboundDone(true);
-        notify('移動完了にしました。', { type: 'success' });
+        notify('notify.transfer.move_completed', { type: 'success' });
     };
 
     const handleToggleRequest = (lineId: string) => {

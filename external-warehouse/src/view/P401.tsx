@@ -361,7 +361,7 @@ const P401: React.FC = () => {
             );
 
             if (nextValue < 0) {
-                notify('0 以上の数値を入力してください。', { type: 'warning' });
+                notify('notify.common.non_negative_number', { type: 'warning' });
             }
         },
         [notify]
@@ -442,7 +442,7 @@ const P401: React.FC = () => {
     const handleAddDetail = (item: SearchItem) => {
         // 追加済みかどうかは在庫明細単位で判定する（同じパレットでも品目が違えば追加できる）
         if (addedInventoryIds.includes(item.id)) {
-            notify('すでに品目一覧に追加されています。', { type: 'warning' });
+            notify('notify.transfer.already_added', { type: 'warning' });
             return;
         }
         setDetails((prev) => [
@@ -476,7 +476,7 @@ const P401: React.FC = () => {
         setDestWhCd(DEFAULT_DEST_WH_CD);
         setFormVersion((version) => version + 1);
         setDetails([]);
-        notify('入力内容をクリアしました。', { type: 'info' });
+        notify('notify.common.input_cleared', { type: 'info' });
     };
 
     /** 前画面（移動依頼一覧）へ戻る */
@@ -487,24 +487,24 @@ const P401: React.FC = () => {
         const destWarehouse = normalizeChoiceValue(values?.destWarehouse);
         const destLocation = normalizeChoiceValue(values?.locationNo);
         if (!destWarehouse) {
-            notify('移動先を選択してください。', { type: 'warning' });
+            notify('notify.transfer.select_destination', { type: 'warning' });
             return;
         }
         if (!destLocation) {
-            notify('ロケ番を選択してください。', { type: 'warning' });
+            notify('notify.common.select_location', { type: 'warning' });
             return;
         }
         if (details.length === 0) {
-            notify('移動する品目を追加してください。', { type: 'warning' });
+            notify('notify.transfer.add_move_items', { type: 'warning' });
             return;
         }
         if (details.some((detail) => detail.useQty <= 0)) {
-            notify('使用数は 1 以上を入力してください。', { type: 'warning' });
+            notify('notify.transfer.use_qty_min', { type: 'warning' });
             return;
         }
         if (details.some(isOverStock)) {
             notify(
-                '使用数・紛失／破損数・破棄数の合計が在庫の引当可能数（数量 − 割り当て数量）を超えている明細があります。',
+                'notify.transfer.qty_over_available',
                 { type: 'warning' }
             );
             return;
@@ -543,13 +543,13 @@ const P401: React.FC = () => {
                 });
                 setFormVersion((version) => version + 1);
                 setDetails([]);
-                notify(`移動依頼 ${requestNo} を登録しました。`, { type: 'success' });
+                notify('notify.transfer.registered', { type: 'success', messageArgs: { requestNo } });
             } else {
-                notify(response?.message || '移動依頼の登録に失敗しました。', { type: 'error' });
+                notify(response?.message || 'notify.transfer.register_failed', { type: 'error' });
             }
         } catch (error) {
             console.error(error);
-            notify('移動依頼の登録に失敗しました。', { type: 'error' });
+            notify('notify.transfer.register_failed', { type: 'error' });
         }
     };
 

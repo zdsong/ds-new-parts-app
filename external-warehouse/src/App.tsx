@@ -12,6 +12,7 @@ import { Navigate, Outlet, Route } from 'react-router-dom';
 import { authProvider } from './adapters/authProvider';
 import { dataProvider } from './adapters/dataProvider';
 import japaneseMessages from './i18n/jp';
+import notifyMessages from './i18n/notify';
 import { Layout } from './layout';
 import { createTheme } from '@mui/material/styles';
 
@@ -80,7 +81,7 @@ import P603 from './view/P603';
 import P001 from './view/P001';
 
 
-const i18nProvider = polyglotI18nProvider(() => japaneseMessages, 'jp');
+const i18nProvider = polyglotI18nProvider(() => ({ ...japaneseMessages, notify: notifyMessages }), 'jp');
 const store = localStorageStore(undefined, 'ECommerce');
 
 const theme = createTheme({

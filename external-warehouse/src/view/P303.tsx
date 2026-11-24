@@ -284,7 +284,7 @@ const P303: React.FC = () => {
         setCategory(nextCategory);
         if (details.length > 0) {
             setDetails([]);
-            notify('区分を変更したため、積載明細をクリアしました。', { type: 'warning' });
+            notify('notify.pallet.classification_changed_cleared', { type: 'warning' });
         }
     };
 
@@ -300,15 +300,15 @@ const P303: React.FC = () => {
         const location = normalizeChoiceValue(values?.locationNo);
 
         if (!classification) {
-            notify('区分を選択してください。', { type: 'warning' });
+            notify('notify.pallet.select_category', { type: 'warning' });
             return;
         }
         if (!warehouse) {
-            notify('保管場所を選択してください。', { type: 'warning' });
+            notify('notify.pallet.select_storage', { type: 'warning' });
             return;
         }
         if (!location) {
-            notify('ロケ番を選択してください。', { type: 'warning' });
+            notify('notify.common.select_location', { type: 'warning' });
             return;
         }
 
@@ -349,7 +349,7 @@ const P303: React.FC = () => {
             setFormData(nextFormData);
             setCategory(classification);
             setFormVersion((version) => version + 1);
-            notify(`パレット番号 ${palletNo} を発番しました。`, { type: 'success' });
+            notify('notify.pallet.issued', { type: 'success', messageArgs: { palletNo } });
 
             // 発番後はパレット情報詳細画面へ遷移する（発番内容と積載明細を引き継ぐ）
             navigate('/P305', {

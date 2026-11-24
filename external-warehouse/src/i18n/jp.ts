@@ -1,6 +1,8 @@
 
 import { TranslationMessages } from 'ra-core';
 
+import notifyMessages from './notify';
+
 const japaneseMessages: TranslationMessages = {
     ra: {
         action: {
@@ -107,16 +109,16 @@ const japaneseMessages: TranslationMessages = {
             select_all_limit_reached: 'すべて選択の制限に達しました',
             unsaved_changes: '保存されていない変更があります',
             placeholder_data_warning: 'これはプレースホルダーデータです',
-            connection_failed: '接続に失敗しました',
-            send_success: '送信成功',
-            built_in_cannot_delete: 'システム組み込みパラメータは削除できません',
-            password_change_success: 'パスワードの変更に成功しました',
-            error_date_range: '終了日は開始日より前にはできません',
-            csv_not_select: 'CSVファイルを選択してください',
-            import_failed: 'インポートに失敗しました',
-            error_item_csv_name: '名前に"item"を含むCSVファイルを選択してください',
+            connection_failed: notifyMessages.common.connection_failed,
+            send_success: notifyMessages.common.send_success,
+            built_in_cannot_delete: notifyMessages.common.built_in_cannot_delete,
+            password_change_success: notifyMessages.common.password_change_success,
+            error_date_range: notifyMessages.common.error_date_range,
+            csv_not_select: notifyMessages.csv.not_select,
+            import_failed: notifyMessages.csv.import_failed,
+            error_item_csv_name: notifyMessages.csv.item_name,
             error_customer_csv_name: '名前に"customer"を含むCSVファイルを選択してください',
-            data_not_change: 'データは変更されていません',
+            data_not_change: notifyMessages.common.data_not_change,
             tabel_not_initialized: 'テーブルが初期化されていません',
             insufficient_data: '少なくとも1つのデータを選択してください',
         },

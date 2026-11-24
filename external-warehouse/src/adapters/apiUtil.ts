@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from 'react';
-import { useNotify, useTranslate } from 'react-admin';
+import { useNotify } from 'react-admin';
 import { customApiCall } from './dataProvider';
 import { useLoadingService } from '../layout/LoadingService';
 import { useNavigate } from 'react-router';
@@ -34,8 +34,6 @@ const useApiRequest = (): ApiRequestHook => {
   const notify = useNotify();
 
   const navigate = useNavigate();
-
-  const translate = useTranslate();
 
   // ローディングサービスを使用
   const loadingService = useLoadingService();
@@ -83,7 +81,7 @@ const useApiRequest = (): ApiRequestHook => {
       setResponse(apiResponse);
 
       if(!apiResponse){
-        notifyShow ? notify(translate('ra.message.connection_failed'), { type: 'error' }) : '';
+        notifyShow ? notify('notify.common.connection_failed', { type: 'error' }) : '';
       }else if (apiResponse.code >= 200 && apiResponse.code < 300) {
         // GET以外のリクエストで、成功レスポンスの場合、成功通知を表示
         if(type !== 'get' && notifyShow && apiResponse.message){
@@ -102,7 +100,7 @@ const useApiRequest = (): ApiRequestHook => {
       return apiResponse;
     } catch (error) {
       // エラー発生時の処理
-      const errorMessage = error instanceof Error ? error.message : '要求に失敗しました';
+      const errorMessage = error instanceof Error ? error.message : 'notify.common.request_failed';
       notify(errorMessage, { type: 'error' });
       throw error;
     } finally {

@@ -151,7 +151,7 @@ const SP303: React.FC = () => {
     /** 発番する（サーバ側で採番してパレット情報を登録する） */
     const handleIssue = async (values: any) => {
         if (details.length === 0) {
-            notify('積載する品目を追加してください。', { type: 'warning' });
+            notify('notify.pallet.add_items', { type: 'warning' });
             return;
         }
 
@@ -160,15 +160,15 @@ const SP303: React.FC = () => {
         const locCd = normalizeChoiceValue(values?.locationNo) || pallet.locationNo;
 
         if (!classification) {
-            notify('区分は必須選択項目です。', { type: 'warning' });
+            notify('notify.pallet.category_required', { type: 'warning' });
             return;
         }
         if (!whCd) {
-            notify('保管倉庫は必須入力項目です。', { type: 'warning' });
+            notify('notify.pallet.warehouse_required', { type: 'warning' });
             return;
         }
         if (!locCd) {
-            notify('保管エリア（ロケ番）は必須入力項目です。', { type: 'warning' });
+            notify('notify.pallet.location_required', { type: 'warning' });
             return;
         }
 
@@ -190,12 +190,12 @@ const SP303: React.FC = () => {
             );
 
             if (result?.code !== 200) {
-                notify(result?.message || 'パレット番号の発番に失敗しました。', { type: 'error' });
+                notify(result?.message || 'notify.pallet.issue_failed', { type: 'error' });
                 return;
             }
 
             const palletNo = result?.palletNo || result?.data || '';
-            notify(`パレット番号 ${palletNo} を発番しました。`, { type: 'success' });
+            notify('notify.pallet.issued', { type: 'success', messageArgs: { palletNo } });
             // 発番後はパレット情報詳細へ遷移する（詳細はサーバから取得する）
             navigate('/SP305', { state: { palletNo } });
         } catch (error) {
@@ -206,7 +206,7 @@ const SP303: React.FC = () => {
     /** 番号表を印刷する（発番済みの場合のみ。パレット 1 件につき 1 枚） */
     const handlePrint = () => {
         if (!pallet.palletNo) {
-            notify('発番後に番号表を印刷できます。', { type: 'warning' });
+            notify('notify.pallet.print_after_issue', { type: 'warning' });
             return;
         }
         const count = printPalletLabels(
@@ -224,13 +224,13 @@ const SP303: React.FC = () => {
             undefined,
             () => {
                 notify(
-                    'この端末では印刷画面を開けませんでした。ブラウザ（Safari / Chrome）で開いてください。',
+                    'notify.pallet.print_page_unavailable',
                     { type: 'warning' }
                 );
             }
         );
         if (count === 0) {
-            notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
+            notify('notify.pallet.print_start_failed', {
                 type: 'warning',
             });
         }

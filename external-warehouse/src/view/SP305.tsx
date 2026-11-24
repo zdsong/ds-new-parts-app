@@ -12,7 +12,6 @@ import {
     hasNonPositiveQuantity,
     normalizeChoiceValue,
     printPalletLabels,
-    QUANTITY_MUST_BE_POSITIVE,
     toApiDetail,
 } from '../utils/palletData';
 import type {
@@ -188,7 +187,7 @@ const SP305: React.FC = () => {
     /** パレット情報を取得する */
     useEffect(() => {
         if (!palletNo) {
-            notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
+            notify('notify.pallet.number_not_specified_from_list', {
                 type: 'warning',
             });
             return;
@@ -207,7 +206,7 @@ const SP305: React.FC = () => {
                 if (cancelled) return;
                 const apiPallet: ApiPallet | null = result?.data || null;
                 if (!apiPallet) {
-                    notify('パレット情報を取得できませんでした。', { type: 'error' });
+                    notify('notify.pallet.fetch_failed', { type: 'error' });
                     return;
                 }
                 // 品目検索から戻った明細、または画面で削除・変更した明細をサーバの古い応答で上書きしない
@@ -301,15 +300,15 @@ const SP305: React.FC = () => {
      */
     const submitPallet = async (values?: any, options?: { silent?: boolean }): Promise<ApiPallet | null> => {
         if (!palletNo) {
-            notify('パレット番号が指定されていません。', { type: 'warning' });
+            notify('notify.pallet.number_not_specified', { type: 'warning' });
             return null;
         }
         if (printed) {
-            notify('パレット番号表を印刷済みのため、変更できません。', { type: 'warning' });
+            notify('notify.pallet.printed_cannot_change', { type: 'warning' });
             return null;
         }
         if (version === null) {
-            notify('パレット情報を取得できていないため更新できません。', { type: 'error' });
+            notify('notify.pallet.not_loaded_cannot_update', { type: 'error' });
             return null;
         }
 
@@ -318,21 +317,21 @@ const SP305: React.FC = () => {
         const locCd = normalizeChoiceValue(values?.locationNo) || pallet.locationNo;
 
         if (!classification) {
-            notify('区分は必須選択項目です。', { type: 'warning' });
+            notify('notify.pallet.category_required', { type: 'warning' });
             return null;
         }
         if (!whCd) {
-            notify('保管倉庫は必須入力項目です。', { type: 'warning' });
+            notify('notify.pallet.warehouse_required', { type: 'warning' });
             return null;
         }
         if (!locCd) {
-            notify('保管エリア（ロケ番）は必須入力項目です。', { type: 'warning' });
+            notify('notify.pallet.location_required', { type: 'warning' });
             return null;
         }
         // 削除した明細を含めず、いま画面にある明細だけを保存する
         const currentDetails = detailsRef.current;
         if (hasNonPositiveQuantity(currentDetails)) {
-            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
+            notify('notify.pallet.quantity_must_be_positive', { type: 'warning' });
             return null;
         }
 
@@ -357,12 +356,12 @@ const SP305: React.FC = () => {
             );
 
             if (result?.code !== 200) {
-                notify(result?.message || 'パレット情報の更新に失敗しました。', { type: 'error' });
+                notify(result?.message || 'notify.pallet.update_failed', { type: 'error' });
                 return null;
             }
 
             if (!options?.silent) {
-                notify('パレット情報を更新しました。', { type: 'success' });
+                notify('notify.pallet.updated', { type: 'success' });
             }
             // 更新後のバージョン・日時を取得し直す
             const refreshed = await request('get', `api/pallet/${palletNo}`, {}, {}, false, false);
@@ -385,7 +384,7 @@ const SP305: React.FC = () => {
     const markPrinted = async (): Promise<boolean> => {
         const result = await request('put', `api/pallet/${palletNo}/printed`, {}, {}, false, false);
         if (result?.code !== 200) {
-            notify(result?.message || '印刷フラグの更新に失敗しました。', { type: 'error' });
+            notify(result?.message || 'notify.pallet.print_flag_failed', { type: 'error' });
             return false;
         }
         // 印刷済みになった状態（バージョン・更新日時）を取得し直す
@@ -404,18 +403,18 @@ const SP305: React.FC = () => {
     const handlePrint = async () => {
         if (printing) return;
         if (!palletNo) {
-            notify('パレット番号が指定されていません。パレット番号一覧から選択してください。', {
+            notify('notify.pallet.number_not_specified_from_list', {
                 type: 'warning',
             });
             return;
         }
         if (version === null) {
-            notify('パレット情報を取得できていないため印刷できません。', { type: 'error' });
+            notify('notify.pallet.not_loaded_cannot_print', { type: 'error' });
             return;
         }
         // 未印刷の印刷は保存を伴うため、数量が 0 以下のときは印刷も保存もしない
         if (!printed && hasNonPositiveQuantity(detailsRef.current)) {
-            notify(QUANTITY_MUST_BE_POSITIVE, { type: 'warning' });
+            notify('notify.pallet.quantity_must_be_positive', { type: 'warning' });
             return;
         }
 
@@ -425,17 +424,17 @@ const SP305: React.FC = () => {
                 // 先にパレット情報を保存する（印刷済みにすると更新できなくなるため）
                 const apiPallet = await submitPallet(undefined, { silent: true });
                 if (!apiPallet) {
-                    notify('印刷前のパレット情報の保存に失敗しました。', { type: 'error' });
+                    notify('notify.pallet.save_before_print_failed', { type: 'error' });
                     return;
                 }
                 // 在庫を登録してから印刷済みにする
                 if (!(await markPrinted())) {
-                    notify('印刷前の在庫登録に失敗しました。', { type: 'error' });
+                    notify('notify.pallet.stock_before_print_failed', { type: 'error' });
                     return;
                 }
             } catch (error) {
                 console.error(error);
-                notify('印刷前の保存に失敗しました。', { type: 'error' });
+                notify('notify.pallet.save_before_print_generic_failed', { type: 'error' });
                 return;
             } finally {
                 setPrinting(false);
@@ -450,22 +449,22 @@ const SP305: React.FC = () => {
             },
         ]);
         if (count === 0) {
-            notify('印刷を開始できませんでした。ブラウザの印刷機能をご確認ください。', {
+            notify('notify.pallet.print_start_failed', {
                 type: 'warning',
             });
             return;
         }
-        notify('1 枚のパレット番号表を印刷します。', { type: 'success' });
+        notify('notify.pallet.print_one_sheet', { type: 'success' });
     };
 
     /** 削除処理（パレット情報を削除して一覧へ戻る） */
     const handleDelete = async () => {
         if (!palletNo) {
-            notify('パレット番号が指定されていません。', { type: 'warning' });
+            notify('notify.pallet.number_not_specified', { type: 'warning' });
             return;
         }
         if (printed) {
-            notify('パレット番号表を印刷済みのため、削除できません。', { type: 'warning' });
+            notify('notify.pallet.printed_cannot_delete', { type: 'warning' });
             return;
         }
         if (!window.confirm('このパレット情報を削除してもよろしいですか？')) return;
@@ -473,10 +472,10 @@ const SP305: React.FC = () => {
         try {
             const result = await request('delete', `api/pallet/${palletNo}`, {}, {}, false, false);
             if (result?.code !== 200) {
-                notify(result?.message || 'パレット情報の削除に失敗しました。', { type: 'error' });
+                notify(result?.message || 'notify.pallet.delete_failed', { type: 'error' });
                 return;
             }
-            notify('パレット情報を削除しました。', { type: 'success' });
+            notify('notify.pallet.deleted', { type: 'success' });
             navigate('/SP304');
         } catch (error) {
             console.error(error);
