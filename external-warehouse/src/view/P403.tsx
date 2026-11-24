@@ -298,24 +298,7 @@ const P403: React.FC = () => {
                     </span>
                 ),
             },
-            {
-                headerName: '移動状況',
-                field: 'statusLabel',
-                width: 120,
-                cellRenderer: (params: { data?: MoveRequestRow; value?: string }) => (
-                    <span
-                        style={linkStyle}
-                        onClick={() => {
-                            if (!params.data) return;
-                            // 移動完了だけ完了画面、それ以外は登録済みの移動情報を開く
-                            const status = params.data.status === 'TF_F' ? 'complete' : 'registered';
-                            navigate(`/P407?status=${status}&requestNo=${encodeURIComponent(params.data.requestNo)}`);
-                        }}
-                    >
-                        {params.value}
-                    </span>
-                ),
-            },
+            { headerName: '移動状況', field: 'statusLabel', width: 120 },
             { headerName: '移動元', field: 'sourceWarehouse', width: 140 },
             { headerName: '移動先', field: 'destWarehouse', width: 140 },
             { headerName: '移動依頼者', field: 'requester', width: 140 },
