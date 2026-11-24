@@ -77,6 +77,15 @@ const palletHeaderStyle: React.CSSProperties = {
 const palletNumberStyle: React.CSSProperties = {
     flex: 1,
     minWidth: 0,
+    border: 'none',
+};
+
+const palletLineStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    borderTop: '1px solid #e0e0e0',
+    paddingTop: '8px',
 };
 
 const palletDeleteStyle: React.CSSProperties = {
@@ -284,7 +293,7 @@ const RequestDetail: React.FC<{ line: MoveLine; open: boolean; onToggle: () => v
 
 /**
  * 入庫で移動番号があるパレット 1 件。
- * パレット番号はカードの中に置き、品目は 1 件ずつ枠で分ける。
+ * パレット番号はカードの中に置き、品目は横線で分ける。
  */
 const ReceiveResult: React.FC<{
     pallet: ScannedPallet;
@@ -367,7 +376,7 @@ const ReceiveResult: React.FC<{
                     <Field label="移動登録者">{inbound.registrar}</Field>
                     {done ? <Field label="移動状況">移動完了</Field> : null}
                     {pallet.lines.map((line) => (
-                        <div key={line.id} style={spSx.listCard}>
+                        <div key={line.id} style={palletLineStyle}>
                             <Field label="品目コード">{line.itemCode}</Field>
                             <Field label="品目名">{line.itemName}</Field>
                             <Field label={line.request ? '移動数量' : '保管数量'}>

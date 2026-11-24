@@ -815,7 +815,7 @@ const SP401: React.FC = () => {
                             <div key={pallet.palletNo} style={spSx.listCard}>
                                 <div style={palletHeaderStyle}>
                                     <div style={palletNumberStyle}>
-                                        <Field label="パレット番号">{pallet.palletNo}</Field>
+                                        <Field label="パレット番号" emphasize>{pallet.palletNo}</Field>
                                     </div>
                                     <button
                                         type="button"
@@ -1062,10 +1062,21 @@ const primaryButtonStyle: React.CSSProperties = {
     backgroundColor: '#0b5cab',
 };
 
-/** カード内の項目名と値 */
-const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+/** カード内の項目名と値。emphasize のとき項目名を太字にする */
+const Field: React.FC<{ label: string; children: React.ReactNode; emphasize?: boolean }> = ({
+    label,
+    children,
+    emphasize = false,
+}) => (
     <div style={spSx.field}>
-        <span style={spSx.fieldLabel}>{label}</span>
+        <span
+            style={{
+                ...spSx.fieldLabel,
+                ...(emphasize ? { color: '#212121', fontWeight: 700 } : {}),
+            }}
+        >
+            {label}
+        </span>
         <span style={spSx.fieldValue}>{children}</span>
     </div>
 );
@@ -1117,7 +1128,7 @@ const ReceiveResult: React.FC<{
     return (
         <div style={spSx.listCard}>
             <Field label="移動番号">{inbound.moveNo}</Field>
-            <Field label="パレット番号">{pallet.palletNo}</Field>
+            <Field label="パレット番号" emphasize>{pallet.palletNo}</Field>
             <SimpleForm
                 toolbar={false}
                 sx={{ width: '100%', padding: '0', paddingBottom: '0 !important' }}
