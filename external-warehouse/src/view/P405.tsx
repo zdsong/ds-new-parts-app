@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -8,6 +8,7 @@ import { Box, Typography } from '@mui/material';
 import { CellValueChangedEvent, ColDef } from 'ag-grid-community';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import useApiRequest from '../adapters/apiUtil';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
@@ -52,14 +53,60 @@ export interface MoveRequestDetailState {
 /** 品目明細の型（入庫：移動数を編集する） */
 interface DetailRow {
     id: string;
+    /** 明細番号（登録済みの明細のみ。画面で追加した明細は未設定） */
+    detailNo?: number;
     itemCode: string;
     itemName: string;
     /** 保管数（移動元の在庫数） */
     stockQty: number;
     /** 移動数 */
     moveQty: number;
+    /** 紛失／破損数 */
+    lostQty: number;
+    /** 破棄数 */
+    discardQty: number;
     palletNo: string;
 }
+
+/** 移動依頼詳細 API の明細行 */
+interface ApiTransferDetailLine {
+    detailNo?: number;
+    itemCode?: string;
+    itemName?: string;
+    storageQty?: number | string;
+    usedQty?: number | string;
+    lostDamagedQty?: number | string;
+    disposalQty?: number | string;
+    palletNo?: string;
+}
+
+/** 移動依頼詳細 API のレスポンス */
+interface ApiTransferDetail {
+    requestNo?: string;
+    status?: string;
+    statusLabel?: string;
+    sourceWhCd?: string;
+    sourceWarehouse?: string;
+    destWhCd?: string;
+    destWarehouse?: string;
+    requestDate?: string;
+    desiredDate?: string;
+    requester?: string;
+    memo?: string;
+    details?: ApiTransferDetailLine[];
+}
+
+/** 倉庫コードから画面の選択肢キーへの変換表 */
+const LEGACY_WAREHOUSE: Record<string, string> = {
+    '10': '1',
+    '20': '2',
+};
+
+/** 画面の選択肢キーから倉庫コードへの変換表 */
+const WAREHOUSE_BY_LEGACY: Record<string, string> = {
+    '1': '10',
+    '2': '20',
+};
 
 /** 品目検索の検索結果行 */
 interface SearchItem {
@@ -225,6 +272,8 @@ const buildInitialDetails = (state: Partial<MoveRequestDetailState>): DetailRow[
         itemName: item.itemName,
         stockQty: 100,
         moveQty: index === 0 ? 50 : 100,
+        lostQty: 0,
+        discardQty: 0,
         palletNo: `B261010-${String(index + 1).padStart(3, '0')}`,
     }));
 };
@@ -233,6 +282,7 @@ const P405: React.FC = () => {
     const notify = useNotify();
     const navigate = useNavigate();
     const location = useLocation();
+    const { request } = useApiRequest();
 
     /** 一覧（P403）から渡された移動依頼の内容 */
     const state = (location.state || {}) as Partial<MoveRequestDetailState>;
@@ -245,9 +295,9 @@ const P405: React.FC = () => {
     const defaultStorage = '2';
 
     // 基本情報の初期値（クリア時に戻す先）
-    const [initialForm] = useState(() => buildFormDefaults(state));
+    const [initialForm, setInitialForm] = useState(() => buildFormDefaults(state));
     // 明細の初期値（クリア時に戻す先）
-    const [initialDetails] = useState(() => buildInitialDetails(state));
+    const [initialDetails, setInitialDetails] = useState(() => buildInitialDetails(state));
 
     const [formData, setFormData] = useState(initialForm);
     // フォームを初期値で再描画するための世代番号
@@ -258,6 +308,60 @@ const P405: React.FC = () => {
     const [details, setDetails] = useState<DetailRow[]>(() =>
         initialDetails.map((detail) => ({ ...detail }))
     );
+
+    /** 移動依頼番号から詳細（ヘッダ・明細）を取得して画面へ反映する */
+    const loadDetail = useCallback(async () => {
+        const requestNo = state.requestNo;
+        if (!requestNo) return;
+
+        try {
+            const response = await request(
+                'get',
+                'api/transfer/detail',
+                { requestNo },
+                {},
+                false,
+                false
+            );
+            const data: ApiTransferDetail | undefined = response?.data;
+            if (!data) return;
+
+            const nextForm = {
+                requestNo: data.requestNo || requestNo,
+                destWarehouse: LEGACY_WAREHOUSE[data.destWhCd || ''] || data.destWhCd || '',
+                locationNo: initialForm.locationNo,
+                desiredDate: normalizeDate(data.desiredDate),
+                requester: normalizeRequester(data.requester),
+                remark: data.memo || '',
+            };
+            // 移動数は移動依頼明細の使用数を表示する
+            const nextDetails: DetailRow[] = (data.details || []).map((row, index) => ({
+                id: `detail-${index + 1}`,
+                detailNo: row.detailNo,
+                itemCode: row.itemCode || '',
+                itemName: row.itemName || '',
+                stockQty: Number(row.storageQty ?? 0),
+                moveQty: Number(row.usedQty ?? 0),
+                lostQty: Number(row.lostDamagedQty ?? 0),
+                discardQty: Number(row.disposalQty ?? 0),
+                palletNo: row.palletNo || '',
+            }));
+
+            setInitialForm(nextForm);
+            setFormData(nextForm);
+            setFormVersion((version) => version + 1);
+            setInitialDetails(nextDetails);
+            setDetails(nextDetails.map((detail) => ({ ...detail })));
+        } catch (error) {
+            console.error(error);
+        }
+        // 画面表示時に一度だけ取得する
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.requestNo, request, initialForm.locationNo]);
+
+    useEffect(() => {
+        loadDetail();
+    }, [loadDetail]);
 
     // 品目検索モーダル
     const [itemModalOpen, setItemModalOpen] = useState(false);
@@ -332,6 +436,20 @@ const P405: React.FC = () => {
                         Boolean(params.data) &&
                         (params.data as DetailRow).moveQty > (params.data as DetailRow).stockQty,
                 },
+            },
+            {
+                headerName: '紛失／破損数',
+                field: 'lostQty',
+                width: 140,
+                valueFormatter: (params) => `${params.value ?? 0} 個`,
+                cellStyle: { justifyContent: 'flex-end' },
+            },
+            {
+                headerName: '破棄数',
+                field: 'discardQty',
+                width: 110,
+                valueFormatter: (params) => `${params.value ?? 0} 個`,
+                cellStyle: { justifyContent: 'flex-end' },
             },
             { headerName: 'パレット番号', field: 'palletNo', width: 150 },
             {
@@ -422,6 +540,8 @@ const P405: React.FC = () => {
                 itemName: item.itemName,
                 stockQty: item.quantity,
                 moveQty: 0,
+                lostQty: 0,
+                discardQty: 0,
                 palletNo: item.palletNo,
             },
         ]);
@@ -444,6 +564,69 @@ const P405: React.FC = () => {
 
     /** 保管数を超えて入力されている明細 */
     const overStockRows = details.filter(isOverStock);
+
+    /** 更新前の数量チェックを行い、移動依頼を更新する */
+    const handleUpdate = async (values: any) => {
+        if (details.length === 0) {
+            notify('移動する品目が登録されていません。「品目追加」から選択してください。', {
+                type: 'warning',
+            });
+            return;
+        }
+        if (details.some((detail) => detail.moveQty <= 0)) {
+            notify('移動数は 1 以上を入力してください。', { type: 'warning' });
+            return;
+        }
+        if (overStockRows.length > 0) {
+            notify('移動数が保管数を超えている明細があります。数量を確認してください。', {
+                type: 'warning',
+            });
+            return;
+        }
+
+        const requestNo = values?.requestNo || formData.requestNo;
+        const destWarehouse = normalizeChoiceValue(values?.destWarehouse);
+        if (!requestNo) {
+            notify('移動依頼番号が指定されていません。', { type: 'warning' });
+            return;
+        }
+        if (!destWarehouse) {
+            notify('移動先を選択してください。', { type: 'warning' });
+            return;
+        }
+
+        const payload = {
+            requestNo,
+            destWhCd: WAREHOUSE_BY_LEGACY[destWarehouse] || destWarehouse,
+            desiredDate: values?.desiredDate || '',
+            requester: values?.requester || '',
+            memo: values?.remark || '',
+            details: details.map((detail) => ({
+                detailNo: detail.detailNo,
+                itemCode: detail.itemCode,
+                itemName: detail.itemName,
+                storageQty: detail.stockQty,
+                usedQty: detail.moveQty,
+                lostDamagedQty: detail.lostQty,
+                disposalQty: detail.discardQty,
+                palletNo: detail.palletNo,
+            })),
+        };
+
+        try {
+            const response = await request('post', 'api/transfer/update', payload, {}, true, false);
+            if (response?.code >= 200 && response?.code < 300) {
+                notify('移動依頼を更新しました。', { type: 'success' });
+                // 登録した明細番号を反映するため再取得する
+                await loadDetail();
+            } else {
+                notify(response?.message || '移動依頼の更新に失敗しました。', { type: 'error' });
+            }
+        } catch (error) {
+            console.error(error);
+            notify('移動依頼の更新に失敗しました。', { type: 'error' });
+        }
+    };
 
     // 品目検索結果の列定義（追加のみ。検索結果側は編集しない）
     const searchColumnDefs: ColDef<SearchItem>[] = [
@@ -497,27 +680,24 @@ const P405: React.FC = () => {
                     key={formVersion}
                     id={formId}
                     sx={formSx.formContainer}
-                    onSubmit={() => undefined}
+                    onSubmit={handleUpdate}
                     toolbar={false}
                     defaultValues={formData}
                 >
                     <div style={formSx.form2}>
                         <FormInput type={'text'} source="requestNo" label="移動依頼番号" readOnly />
-                        <div style={{ display: 'flex', gap: '1rem' }}>
-                            <FormInput
-                                type={'filter-select'}
-                                source="destWarehouse"
-                                label="移動先"
-                                choices={DEST_CHOICES}
-                                sx={{ flex: '1.35 1 0', label: { width: '4.5rem' } }}
-                            />
-                            <FormInput
-                                type={'filter-select'}
-                                source="locationNo"
-                                choices={LOCATION_CHOICES}
-                                sx={{ flex: '1 1 0' }}
-                            />
-                        </div>
+                        <FormInput
+                            type={'filter-select'}
+                            source="destWarehouse"
+                            label="移動先"
+                            choices={DEST_CHOICES}
+                        />
+                        <FormInput
+                            type={'filter-select'}
+                            source="locationNo"
+                            label="ロケ番"
+                            choices={LOCATION_CHOICES}
+                        />
                         <FormInput type={'text'} source="requester" label="依頼者" />
                         <FormInput type={'input-date'} source="desiredDate" label="移動希望日" />
                         <div style={{ gridColumn: '1 / -1' }}>
@@ -583,8 +763,8 @@ const P405: React.FC = () => {
                         クリア
                     </button>
                 </div>
-                {/* 更新は設計書の配置のみ（保存 API が未実装のため画面内の動作は未実装） */}
-                <button style={buttonSx.button} type="button" title="更新機能は未実装です">
+                {/* 更新はヘッダ・明細の内容を保存する */}
+                <button style={buttonSx.button} type="submit" form={formId}>
                     更新
                 </button>
             </div>
