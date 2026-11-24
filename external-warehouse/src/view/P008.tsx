@@ -7,7 +7,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { Modal, Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
 import deleteIcon from '../assets/icons/delete-icon.png';
 
@@ -24,16 +24,17 @@ interface ItemRow {
 
 interface SearchFormProps { }
 
+const PAGE_SIZE_CHOICES = [10, 20, 50];
+
 const P008: React.FC<SearchFormProps> = () => {
   const [data, setData] = useState<ItemRow[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pageNum, setPageNum] = useState(1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_CHOICES[0]);
   const [searchForm, setSearchForm] = useState<any>({});
   const { request } = useApiRequest();
   const [formKey, setFormKey] = useState(0);
   const [filePath, setFilePath] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const newGridRef = useRef<DataGridRef<ItemRow> | null>(null);
   // エラー情報表示用の状態
   const [errorList, setErrorList] = useState<any[]>([]);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -83,9 +84,9 @@ const P008: React.FC<SearchFormProps> = () => {
     [classificationOptions]
   );
 
-  const searchData = async (searchData: Record<string, any>, pagination: Record<string, any>) => {
+  const searchData = async (condition: Record<string, any>) => {
     // チェックボックスの選択値をカンマ区切りに変換する
-    const params = { ...searchData };
+    const params = { ...condition };
     if (Array.isArray(params.prhnmx)) {
       const classification = params.prhnmx.filter((value: string) => !!value).join(',');
       if (classification) {
@@ -94,21 +95,20 @@ const P008: React.FC<SearchFormProps> = () => {
         delete params.prhnmx;
       }
     }
-    const result = await request('get', 'api/item/list', params, pagination)
-    // 一覧の行識別子として品目コードを設定する
-    setData((result.rows || []).map((row: ItemRow) => ({ ...row, id: row.itemCode })))
-    setTotal(result.total)
-  }
-
-  const handleSearch = async (searchForm: Record<string, any>) => {
-    setSearchForm(searchForm)
-    setPageNum(1)
-    searchData(searchForm, { current: 1, pageSize: newGridRef.current?.getPageSize() })
+    // ページ分割は ResultGrid 側で行うため、条件に合う行をまとめて取得する
+    const result = await request('get', 'api/item/list', params, { current: 1, pageSize: 100000 });
+    setData((result.rows || []).map((row: ItemRow) => ({ ...row, id: row.itemCode })));
   };
 
-  const handlePageChange = async (current: number, pageSize: number) => {
-    setPageNum(current)
-    searchData(searchForm, { current: current, pageSize: pageSize })
+  const handleSearch = async (form: Record<string, any>) => {
+    setSearchForm(form);
+    setPage(1);
+    searchData(form);
+  };
+
+  const handlePageSizeChange = (next: number) => {
+    setPageSize(next);
+    setPage(1);
   };
 
   /**
@@ -119,10 +119,9 @@ const P008: React.FC<SearchFormProps> = () => {
     setSearchForm({});
     setFormKey((prevKey: number) => prevKey + 1);
     setData([]);
-    setTotal(0);
-    setPageNum(1);
-    const defaultPageSize = newGridRef.current?.getPageSize();
-    await searchData({}, { current: 1, pageSize: defaultPageSize });
+    setPage(1);
+    setPageSize(PAGE_SIZE_CHOICES[0]);
+    await searchData({});
   };
 
   // ファイルインポート処理
@@ -172,7 +171,7 @@ const P008: React.FC<SearchFormProps> = () => {
 
   useEffect(() => {
     fetchClassificationOptions();
-    searchData({}, { current: 1, pageSize: newGridRef.current?.getPageSize() });
+    searchData({});
   }, [])
 
   return (
@@ -235,6 +234,7 @@ const P008: React.FC<SearchFormProps> = () => {
               justifyContent: 'center',
               gap: '30px',
               marginTop: '20px',
+              marginBottom: '22px',
             }}>
               <button style={{ ...buttonSx.button, width: '300px' }} type="submit">
                 検索
@@ -303,17 +303,19 @@ const P008: React.FC<SearchFormProps> = () => {
         />
       </div>
 
-      <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-        <DataGrid<ItemRow>
-          ref={newGridRef}
-          columnDefs={columnDefs}
-          rowData={data}
-          rowTotal={total}
-          page={pageNum}
-          pagination={true}
-          onPageChange={handlePageChange}
-        />
-      </div>
+      <ResultGrid<ItemRow>
+        columnDefs={columnDefs}
+        rowData={data}
+        showResultSummary
+        showPageSize
+        showBottomPagination
+        pageSizeChoices={PAGE_SIZE_CHOICES}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
+        noRowsShow="該当する品目がありません。"
+      />
       {/* エラー情報表示モーダル */}
       <Modal
         open={showErrorModal}
