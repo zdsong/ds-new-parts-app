@@ -620,6 +620,8 @@ const SP401: React.FC = () => {
                 // 内容確認からはパレット番号を引き継がない
                 palletNo: '',
                 lines: candidates,
+                // 内容確定からは数量を編集可
+                readOnlyQty: false,
             },
         });
     };
@@ -639,6 +641,8 @@ const SP401: React.FC = () => {
                 dependent: only ? only.dependent : lines.some((line) => line.request),
                 palletNo: only && !only.dependent ? only.palletNo : '',
                 lines,
+                // パレット毎移動するからは数量を編集禁止
+                readOnlyQty: true,
             },
         });
     };

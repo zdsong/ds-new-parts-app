@@ -54,6 +54,7 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
     const notify = useNotify();
     const { request } = useApiRequest();
     const dependent = initial.dependent;
+    const readOnlyQty = Boolean(initial.readOnlyQty);
     const [lines, setLines] = useState<MoveLine[]>(initial.lines.map((line) => ({ ...line })));
     const [warehouse, setWarehouse] = useState('');
     const [location, setLocation] = useState('');
@@ -257,9 +258,11 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                     <div key={line.id} style={spSx.listCard}>
                         <div style={spSx.itemHeader}>
                             <span style={spSx.itemTitle}>{line.itemCode}</span>
-                            <span style={spSx.linkDanger} onClick={() => handleRemove(line.id)}>
-                                削除
-                            </span>
+                            {readOnlyQty ? null : (
+                                <span style={spSx.linkDanger} onClick={() => handleRemove(line.id)}>
+                                    削除
+                                </span>
+                            )}
                         </div>
                         <Field label="品目名">{line.itemName}</Field>
                         <div style={spSx.field}>
@@ -274,6 +277,7 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
                                     <SpQuantityInput
                                         value={line.moveQty}
                                         min={1}
+                                        disabled={readOnlyQty}
                                         onChange={(value) =>
                                             setLines((prev) =>
                                                 prev.map((item) =>
@@ -385,6 +389,7 @@ const SP402: React.FC = () => {
         remark?: string;
         registrar?: string;
         lines?: MoveLine[];
+        readOnlyQty?: boolean;
     };
 
     // 仮データでの確認用。依存あり / 依存なしを直接開く
@@ -407,6 +412,8 @@ const SP402: React.FC = () => {
                     dependent: Boolean(state.dependent),
                     palletNo: state.palletNo || '',
                     lines: state.lines,
+                    // SP401 の「パレット毎移動する」からは数量編集禁止、「内容確定」からは編集可
+                    readOnlyQty: Boolean(state.readOnlyQty),
                 }}
             />
         );

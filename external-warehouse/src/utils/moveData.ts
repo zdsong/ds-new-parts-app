@@ -83,6 +83,8 @@ export interface MoveRegisterState {
     dependent: PalletDependency;
     palletNo: string;
     lines: MoveLine[];
+    /** true: SP401 からパレット毎移動するで遷移してきたため、数量の変更・削除・追加を禁止する */
+    readOnlyQty?: boolean;
 }
 
 /** 移動登録完了画面へ渡す内容 */
