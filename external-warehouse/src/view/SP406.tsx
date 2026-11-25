@@ -255,7 +255,6 @@ const RequestDetail: React.FC<{ line: MoveLine; open: boolean; onToggle: () => v
 const ReceiveResult: React.FC<{
     pallet: ScannedPallet;
     location: string;
-    done: boolean;
     openRequestIds: Set<string>;
     warehouseChoices: OptionItem[];
     locationChoices: OptionItem[];
@@ -265,7 +264,6 @@ const ReceiveResult: React.FC<{
 }> = ({
     pallet,
     location,
-    done,
     openRequestIds,
     warehouseChoices,
     locationChoices,
@@ -317,7 +315,6 @@ const ReceiveResult: React.FC<{
                                 structure="top-bottom"
                                 sx={spFormInputSx}
                                 choices={locationChoices}
-                                disabled={done}
                                 onChange={(value) => onLocationChange(normalizeChoiceValue(value))}
                             />
                         </div>
@@ -331,7 +328,6 @@ const ReceiveResult: React.FC<{
                         disabled
                     />
                     <Field label="移動登録者">{inbound.registrar}</Field>
-                    {done ? <Field label="移動状況">移動完了</Field> : null}
                     {pallet.lines.map((line) => (
                         <div key={line.id} style={palletLineStyle}>
                             <Field label="品目コード">{line.itemCode}</Field>
@@ -403,7 +399,6 @@ const SP406: React.FC = () => {
     const [locations, setLocations] = useState<Record<string, string>>({});
     const [locationOptions, setLocationOptions] = useState<Record<string, OptionItem[]>>({});
     const [openRequestIds, setOpenRequestIds] = useState<Set<string>>(() => new Set());
-    const [inboundDone, setInboundDone] = useState(false);
     const [processing, setProcessing] = useState(false);
     // TODO 削除: 開発完了後に消す。カメラの代わりにバーコードを手入力して同じ読取処理を通す
     const [testBarcode, setTestBarcode] = useState('');
@@ -500,7 +495,6 @@ const SP406: React.FC = () => {
                 requestIds.forEach((id) => next.add(id));
                 return next;
             });
-            setInboundDone(false);
             void ensureLocationOptions(pallet.inbound.destinationWh);
         } catch {
             scannedNosRef.current.delete(trimmed);
@@ -764,7 +758,18 @@ const SP406: React.FC = () => {
                     return;
                 }
             }
-            setInboundDone(true);
+            // 移動完了後は初期状態へ戻し、続けて読み取れるようにする
+            stopCamera();
+            setCameraOpen(false);
+            setCodeSvg('');
+            setErrorMessage('');
+            setTestBarcode('');
+            setScannedPallets([]);
+            setLocations({});
+            setLocationOptions({});
+            setOpenRequestIds(new Set());
+            scannedNosRef.current.clear();
+            lastCameraCodeRef.current = '';
             notify('notify.transfer.move_completed', { type: 'success' });
         } finally {
             setProcessing(false);
@@ -804,7 +809,7 @@ const SP406: React.FC = () => {
                 }}
             >
                 <Box sx={{ padding: '12px 14px 10px', fontSize: 'clamp(13px, 3.6vw, 15px)', color: '#212121' }}>
-                    バーコード読み取り
+                    バーコード読み取り(入庫)
                 </Box>
 
                 <Box
@@ -947,7 +952,6 @@ const SP406: React.FC = () => {
                             key={pallet.palletNo}
                             pallet={pallet}
                             location={locations[pallet.palletNo] || ''}
-                            done={inboundDone}
                             openRequestIds={openRequestIds}
                             warehouseChoices={
                                 pallet.inbound
@@ -977,7 +981,7 @@ const SP406: React.FC = () => {
                         type="button"
                         style={primaryButtonStyle}
                         onClick={handleReceiveComplete}
-                        disabled={inboundDone || processing}
+                        disabled={processing}
                     >
                         移動完了
                     </button>

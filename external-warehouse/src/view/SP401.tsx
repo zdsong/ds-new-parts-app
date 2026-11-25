@@ -1003,7 +1003,7 @@ const SP401: React.FC = () => {
                         }}
                     >
                         <Box component="span" sx={{ fontSize: '15px', fontWeight: 600 }}>
-                            バーコード読み取り
+                            バーコード読み取り(移動)
                         </Box>
                         <button
                             type="button"
