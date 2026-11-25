@@ -488,7 +488,10 @@ const SP406: React.FC = () => {
             const lines = pallet.lines;
             scannedNosRef.current.add(palletNo);
             setScannedPallets((prev) => (prev.some((item) => item.palletNo === palletNo) ? prev : [...prev, pallet]));
-            setLocations((prev) => (prev[palletNo] ? prev : { ...prev, [palletNo]: '' }));
+            // 移動登録時の移動先ロケ番を初期値として保持する
+            setLocations((prev) =>
+                prev[palletNo] ? prev : { ...prev, [palletNo]: pallet.inbound?.destinationLoc || '' }
+            );
             setOpenRequestIds((current) => {
                 const requestIds = lines.filter((line) => line.request).map((line) => line.id);
                 if (requestIds.every((id) => current.has(id))) return current;
