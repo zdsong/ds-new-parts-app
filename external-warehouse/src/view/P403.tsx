@@ -411,7 +411,7 @@ const P403: React.FC = () => {
                 onPageSizeChange={handlePageSizeChange}
                 noRowsShow="該当する移動依頼がありません。"
                 bottomLeft={
-                    <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                    <button type="button" style={buttonSx.backButton} onClick={() => navigate(-1)}>
                         戻る
                     </button>
                 }
@@ -439,11 +439,6 @@ const outlineButtonStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
     color: '#1a73c7',
     border: '1px solid #1a73c7',
-};
-
-const backButtonStyle: React.CSSProperties = {
-    ...buttonSx.button,
-    backgroundColor: '#5b9bd5',
 };
 
 const linkStyle: React.CSSProperties = {

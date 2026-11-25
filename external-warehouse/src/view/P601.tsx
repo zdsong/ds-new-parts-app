@@ -398,7 +398,7 @@ const P601: React.FC = () => {
 
             {/* 操作ボタン */}
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '10px' }}>
-                <button style={buttonSx.button} type="button" onClick={() => navigate(-1)}>
+                <button style={buttonSx.backButton} type="button" onClick={() => navigate(-1)}>
                     戻る
                 </button>
             </div>

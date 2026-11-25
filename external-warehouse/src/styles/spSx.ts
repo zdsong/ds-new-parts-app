@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 
+import { BACK_BUTTON_COLOR } from './commonSX';
+
 /**
  * SP（スマートフォン）画面向けの共通スタイル
  *
@@ -382,8 +384,7 @@ export const spSx = {
     },
     /**
      * 画面下部の戻るボタン
-     * 設計書ではページ番号の下に青地・白文字の横長ボタンとして示されている。
-     * 幅は画面幅に追従させつつ、PC 幅でも間延びしないよう上限を設ける。
+     * 色は SP401 と同じ淡い青。幅は画面幅に追従させつつ、PC 幅でも間延びしないよう上限を設ける。
      */
     backButton: {
         width: 'clamp(120px, 45%, 170px)',
@@ -391,7 +392,7 @@ export const spSx = {
         flexShrink: 0,
         border: 'none',
         borderRadius: '5px',
-        backgroundColor: 'var(--mui-page-header-color)',
+        backgroundColor: BACK_BUTTON_COLOR,
         color: 'white',
         fontSize: '15px',
         fontWeight: 600,
@@ -399,10 +400,25 @@ export const spSx = {
         lineHeight: 1,
         cursor: 'pointer',
         '&:hover': {
-            backgroundColor:
-                'color-mix(in srgb, var(--mui-page-header-color) 85%, black 15%)',
+            backgroundColor: '#5b8dc1',
         },
     },
+    /**
+     * 主ボタンと横並びの戻る（SP401）
+     * 大きさは主ボタンに合わせ、色だけ一段薄くする。
+     */
+    actionBackButton: {
+        flex: 1,
+        maxWidth: '180px',
+        height: '46px',
+        border: 'none',
+        borderRadius: '5px',
+        backgroundColor: BACK_BUTTON_COLOR,
+        color: 'white',
+        fontSize: 'clamp(14px, 4vw, 17px)',
+        fontWeight: 600,
+        cursor: 'pointer',
+    } as CSSProperties,
     /**
      * 検索結果のカード（SP402／SP403）
      *
@@ -496,7 +512,7 @@ export const spSx = {
         flexShrink: 0,
         border: 'none',
         borderRadius: '5px',
-        backgroundColor: '#6f9fd0',
+        backgroundColor: BACK_BUTTON_COLOR,
         color: 'white',
         fontSize: '15px',
         fontWeight: 600,

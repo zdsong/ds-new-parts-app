@@ -78,11 +78,6 @@ const outlineButtonStyle: React.CSSProperties = {
     border: '1px solid #1a73c7',
 };
 
-const backButtonStyle: React.CSSProperties = {
-    ...buttonSx.button,
-    backgroundColor: '#5b9bd5',
-};
-
 const linkStyle: React.CSSProperties = {
     ...(tableSx.linkFontColumn as React.CSSProperties),
     color: '#1a73c7',
@@ -300,7 +295,7 @@ const P501: React.FC = () => {
                 onPageSizeChange={handlePageSizeChange}
                 noRowsShow="該当する在庫がありません。"
                 bottomLeft={
-                    <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                    <button type="button" style={buttonSx.backButton} onClick={() => navigate(-1)}>
                         戻る
                     </button>
                 }

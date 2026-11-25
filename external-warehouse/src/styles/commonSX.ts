@@ -1,3 +1,15 @@
+/** 戻るボタンの淡い青。主ボタンより一段薄く、SP401 に合わせる */
+export const BACK_BUTTON_COLOR = '#6f9fd0';
+
+const baseButton = {
+    padding: '0.5rem 1rem',
+    color: 'white',
+    border: 'none',
+    width: '150px',
+    borderRadius: '5px',
+    cursor: 'pointer',
+};
+
 export const buttonSx = {
     buttonBar : {
         margin: '5px 0',
@@ -28,23 +40,20 @@ export const buttonSx = {
     },
                         
     button : {
+        ...baseButton,
         backgroundColor: 'var(--mui-page-header-color)',
-        padding: '0.5rem 1rem',
-        color: 'white',
-        border: 'none',
-        width: '150px',
-        borderRadius: '5px',
-        cursor: 'pointer',
+    },
+
+    /** 戻る。大きさは通常ボタンと同じで、色だけ一段薄くする */
+    backButton: {
+        ...baseButton,
+        backgroundColor: BACK_BUTTON_COLOR,
     },
 
     disabledButton: {
+        ...baseButton,
         backgroundColor: '#CCCCCC',
-        padding: '0.5rem 1rem',
         color: '#666666',
-        border: 'none',
-        width: '150px',
-        borderRadius: '5px',
-        cursor: 'pointer',
     }
 }
 

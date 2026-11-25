@@ -290,7 +290,7 @@ const C015: React.FC<SearchFormProps> = () => {
           </div>
           <div style={buttonSx.buttonBar}>
             <button
-              style={buttonSx.button}
+              style={buttonSx.backButton}
               onClick={() => { navigate(-1) }}
               type='button'
             >

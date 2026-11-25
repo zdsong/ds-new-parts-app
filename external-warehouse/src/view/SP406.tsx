@@ -191,21 +191,8 @@ const toScannedPallet = (move: ScanMove): ScannedPallet => {
     };
 };
 
-const backButtonStyle: React.CSSProperties = {
-    flex: 1,
-    maxWidth: '180px',
-    height: '46px',
-    border: 'none',
-    borderRadius: '5px',
-    backgroundColor: '#6f9fd0',
-    color: 'white',
-    fontSize: 'clamp(14px, 4vw, 17px)',
-    fontWeight: 600,
-    cursor: 'pointer',
-};
-
 const primaryButtonStyle: React.CSSProperties = {
-    ...backButtonStyle,
+    ...spSx.actionBackButton,
     backgroundColor: '#0b5cab',
 };
 
@@ -973,14 +960,18 @@ const SP406: React.FC = () => {
                 </Box>
 
                 <Box sx={{ display: 'flex', gap: '14px', padding: '12px 14px 18px' }}>
-                    <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                    <button type="button" style={spSx.actionBackButton} onClick={() => navigate(-1)}>
                         戻る
                     </button>
                     <button
                         type="button"
-                        style={primaryButtonStyle}
+                        style={
+                            scannedPallets.length === 0 || processing
+                                ? { ...primaryButtonStyle, ...spSx.buttonDisabled }
+                                : primaryButtonStyle
+                        }
                         onClick={handleReceiveComplete}
-                        disabled={processing}
+                        disabled={scannedPallets.length === 0 || processing}
                     >
                         移動完了
                     </button>

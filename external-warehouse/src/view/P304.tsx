@@ -614,7 +614,7 @@ const P304: React.FC = () => {
 
             {/* 操作ボタン（設計書どおり画面左下に戻るを配置する） */}
             <div style={footerStyle}>
-                <button style={buttonSx.button} type="button" onClick={() => navigate(-1)}>
+                <button style={buttonSx.backButton} type="button" onClick={() => navigate(-1)}>
                     戻る
                 </button>
             </div>

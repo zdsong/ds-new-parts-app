@@ -943,7 +943,7 @@ const SP401: React.FC = () => {
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '12px 14px 18px' }}>
                     <Box sx={{ display: 'flex', gap: '14px' }}>
-                        <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                        <button type="button" style={spSx.actionBackButton} onClick={() => navigate(-1)}>
                             戻る
                         </button>
                         {kind === 'receive' ? (
@@ -1144,21 +1144,8 @@ const palletLineStyle: React.CSSProperties = {
     paddingTop: '8px',
 };
 
-const backButtonStyle: React.CSSProperties = {
-    flex: 1,
-    maxWidth: '180px',
-    height: '46px',
-    border: 'none',
-    borderRadius: '5px',
-    backgroundColor: '#6f9fd0',
-    color: 'white',
-    fontSize: 'clamp(14px, 4vw, 17px)',
-    fontWeight: 600,
-    cursor: 'pointer',
-};
-
 const primaryButtonStyle: React.CSSProperties = {
-    ...backButtonStyle,
+    ...spSx.actionBackButton,
     backgroundColor: '#0b5cab',
 };
 

@@ -77,7 +77,7 @@ const S041: React.FC = () => {
             <CustomCard plain sx={{ width: '100%' }} titleVariant={'body1'} title="操作ログの詳細" border={false}>
                 <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'flex-end' }}>
                     <button 
-                        style={buttonSx.button}
+                        style={buttonSx.backButton}
                         type="button"
                         onClick={handleBack}
                     >

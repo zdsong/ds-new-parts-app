@@ -450,7 +450,7 @@ const S095: React.FC = () => {
                         空にする
                     </button>
                     <button 
-                        style={buttonSx.button}  
+                        style={buttonSx.backButton}  
                         type="button"
                         onClick={() => navigate('/S090')}
                     >

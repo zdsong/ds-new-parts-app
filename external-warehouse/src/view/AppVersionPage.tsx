@@ -1,6 +1,7 @@
 
 import { Box, Typography, Button, Container } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { BACK_BUTTON_COLOR } from '../styles/commonSX';
 
 const AppVersionPage = () => {
   const navigate = useNavigate();
@@ -23,8 +24,8 @@ const AppVersionPage = () => {
        
         <Button
           variant="contained"
-          color="primary"
           onClick={() => navigate('/')}
+          sx={{ backgroundColor: BACK_BUTTON_COLOR, '&:hover': { backgroundColor: '#5b8dc1' } }}
         >
           ホームに戻る
         </Button>

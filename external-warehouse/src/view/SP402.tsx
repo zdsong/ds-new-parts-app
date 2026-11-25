@@ -357,7 +357,7 @@ const MoveRegister: React.FC<{ initial: MoveRegisterState }> = ({ initial }) => 
             </Box>
 
             <Box sx={{ display: 'flex', gap: '12px' }}>
-                <button type="button" style={spSx.secondaryButton} onClick={() => navigate(-1)}>
+                <button type="button" style={spSx.actionBackButton} onClick={() => navigate(-1)}>
                     戻る
                 </button>
                 <button

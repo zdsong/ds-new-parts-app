@@ -87,7 +87,7 @@ const C014: React.FC<SearchFormProps> = () => {
             </CustomCard>
             <div style={buttonSx.buttonBar}>
                 <button 
-                    style={buttonSx.button}  
+                    style={buttonSx.backButton}  
                     onClick={()=>{navigate(-1)}}
                 >
                     戻る

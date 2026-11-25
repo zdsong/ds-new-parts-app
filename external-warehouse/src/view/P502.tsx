@@ -106,11 +106,6 @@ const linkStyle: React.CSSProperties = {
     color: '#1a73c7',
 };
 
-const backButtonStyle: React.CSSProperties = {
-    ...buttonSx.button,
-    backgroundColor: '#5b9bd5',
-};
-
 const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <div style={infoItemStyle}>
         <span>{label}</span>
@@ -283,7 +278,7 @@ const P502: React.FC = () => {
             ))}
 
             <div style={{ marginTop: '8px' }}>
-                <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                <button type="button" style={buttonSx.backButton} onClick={() => navigate(-1)}>
                     戻る
                 </button>
             </div>

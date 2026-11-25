@@ -110,7 +110,7 @@ const SP405: React.FC = () => {
                 <Field label="移動登録者">{result.registrar}</Field>
             </Box>
             <Box sx={{ display: 'flex', gap: '12px' }}>
-                <button type="button" style={spSx.secondaryButton} onClick={() => navigate(HOME_ROUTE)}>
+                <button type="button" style={spSx.actionBackButton} onClick={() => navigate(HOME_ROUTE)}>
                     TOPに戻る
                 </button>
                 <button type="button" style={spSx.primaryButton} onClick={() => navigate('/SP401')}>

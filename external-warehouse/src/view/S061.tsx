@@ -470,7 +470,7 @@ const S061: React.FC = () => {
                             {isEditMode ? '更新' : '登録'}
                         </button>
                         <button 
-                            style={buttonSx.button}
+                            style={buttonSx.backButton}
                             type="button"
                             onClick={handleBack}
                         >

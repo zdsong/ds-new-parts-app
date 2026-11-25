@@ -107,12 +107,6 @@ const panelButtonStyle: React.CSSProperties = {
     backgroundColor: '#333333',
 };
 
-/** 戻る（設計書の薄い青） */
-const backButtonStyle: React.CSSProperties = {
-    ...buttonSx.button,
-    backgroundColor: '#5b9bd5',
-};
-
 /** 枠内の「項目名＋文言」 */
 const InfoText: React.FC<{ label: string; value: string }> = ({ label, value }) => (
     <div style={infoRowStyle}>
@@ -399,7 +393,7 @@ const P407: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px' }}>
-                <button type="button" style={backButtonStyle} onClick={() => navigate(-1)}>
+                <button type="button" style={buttonSx.backButton} onClick={() => navigate(-1)}>
                     戻る
                 </button>
                 <button type="button" style={buttonSx.button} title="更新機能は未実装です" disabled>

@@ -15,6 +15,7 @@
  * 遅延や画面の描き換えを挟むと、プレビューが出ずに直接印刷される。
  */
 
+import { BACK_BUTTON_COLOR } from '../styles/commonSX';
 import { isIosDevice, prefersHandheldPrint } from './deviceUtil';
 
 /** パレット番号表 1 枚分の印字内容 */
@@ -441,7 +442,7 @@ const SHEET_SCREEN_STYLE = `
         padding: 0 8px;
         border: none;
         border-radius: 0;
-        background: #6f9fd0;
+        background: ${BACK_BUTTON_COLOR};
         color: #ffffff;
         font-size: 16px;
         font-weight: 700;

@@ -2,6 +2,7 @@
 import { Box, Typography, Button, Container } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { useTranslate } from 'react-admin';
+import { BACK_BUTTON_COLOR } from '../styles/commonSX';
 
 const UnauthorizedPage = () => {
   const translate = useTranslate();
@@ -30,8 +31,8 @@ const UnauthorizedPage = () => {
         </Typography>
         <Button
           variant="contained"
-          color="primary"
           onClick={() => navigate('/')}
+          sx={{ backgroundColor: BACK_BUTTON_COLOR, '&:hover': { backgroundColor: '#5b8dc1' } }}
         >
           ホームに戻る
         </Button>

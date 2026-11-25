@@ -244,7 +244,7 @@ const P603: React.FC = () => {
             {/* 操作ボタン（左：戻る・クリア／右：更新） */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button style={buttonSx.button} type="button" onClick={handleBack}>
+                    <button style={buttonSx.backButton} type="button" onClick={handleBack}>
                         戻る
                     </button>
                     <button style={buttonSx.button} type="button" onClick={handleClear}>
