@@ -119,13 +119,24 @@ export const gridStyles = `
   }
   .ew-editing-grid .ag-cell-focus,
   .ew-editing-grid .ag-cell-focus-outline,
-  .ew-editing-grid .ag-cell-range-selected,
-  .ew-editing-grid .ag-row-selected,
-  .ew-editing-grid .ag-row-hover,
-  .ew-editing-grid .ag-row-focus {
+  .ew-editing-grid .ag-cell-range-selected {
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
+  }
+  /* 編集テーブルは縞模様にせず、行の下線はホバーでも残す */
+  .ew-editing-grid .ag-row,
+  .ew-editing-grid .ag-row-odd,
+  .ew-editing-grid .ag-row-even {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #d0d0d0 !important;
+  }
+  .ew-editing-grid .ag-row-hover,
+  .ew-editing-grid .ag-row-hover .ag-cell {
+    background-color: #f9f9f9 !important;
+  }
+  .ew-editing-grid .ag-row-hover {
+    border-bottom: 1px solid #d0d0d0 !important;
   }
   .ag-theme-alpine .ew-editing-grid .ew-cell-editor:focus {
     border-color: #9e9e9e;
