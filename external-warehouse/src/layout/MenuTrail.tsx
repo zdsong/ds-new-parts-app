@@ -18,37 +18,78 @@ export interface MenuTitleMaps {
   parent: Record<string, string>;
 }
 
-/** パンくずの 1 項目。path が無い項目はディレクトリで、遷移しない */
+/** パンくずの 1 項目 */
 interface MenuTrailItem {
   title: string;
   path?: string;
 }
 
-/** 子を持たない画面だけ遷移先にする（ディレクトリは画面が無い） */
-const screenPathOf = (item: MenuTrailNode): string | undefined => {
-  if (item.children && item.children.length > 0) return undefined;
-  if (!item.name || item.name.includes('/')) return undefined;
-  return `/${item.name}`;
+/** メニューから開いた画面。この画面をパンくずの起点にする */
+const MENU_ENTRY_KEY = 'ewMenuTrailEntry';
+
+/** 実際に遷移した画面の順（親子メニューは含まない） */
+const TRAIL_STEPS_KEY = 'ewMenuTrailSteps';
+
+interface TrailStep {
+  screenId: string;
+  path: string;
+}
+
+/** メニュー項目をクリックしたときに呼ぶ。次の画面をパンくずの先頭にする */
+export const markMenuTrailEntry = (routeName: string) => {
+  try {
+    sessionStorage.setItem(MENU_ENTRY_KEY, routeName);
+    window.dispatchEvent(new Event('ew-menu-entry'));
+  } catch {
+    // 保存できない場合は遷移後の追記だけ行う
+  }
 };
 
-/** 表示中の画面までのメニュー階層を、根から順に返す */
-const findMenuTrail = (items: MenuTrailNode[], routeName: string): MenuTrailItem[] => {
-  const walk = (list: MenuTrailNode[]): MenuTrailItem[] | null => {
-    for (const item of list) {
-      const title = item.meta?.title;
-      if (item.name === routeName) {
-        return title ? [{ title, path: screenPathOf(item) }] : [];
-      }
-      if (item.children) {
-        const nested = walk(item.children);
-        if (nested) {
-          return title ? [{ title, path: screenPathOf(item) }, ...nested] : nested;
-        }
-      }
-    }
-    return null;
-  };
-  return walk(items) || [];
+const readSteps = (): TrailStep[] => {
+  try {
+    const raw = sessionStorage.getItem(TRAIL_STEPS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as TrailStep[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((step) => step && step.screenId && step.path);
+  } catch {
+    return [];
+  }
+};
+
+const writeSteps = (steps: TrailStep[]) => {
+  try {
+    sessionStorage.setItem(TRAIL_STEPS_KEY, JSON.stringify(steps));
+  } catch {
+    // 保存できない場合は画面内の状態だけ使う
+  }
+};
+
+/** パスから画面 ID を取り出す。詳細ルートは末尾の画面 ID を使う */
+const screenIdOf = (pathname: string): string => {
+  const parts = pathname.split('/').filter(Boolean);
+  const coded = [...parts].reverse().find((part) => /^[A-Za-z]+[0-9]+$/.test(part));
+  return coded || parts[0] || '';
+};
+
+const isHomePath = (pathname: string): boolean => {
+  const screenId = screenIdOf(pathname);
+  return screenId === '' || screenId === 'P001';
+};
+
+/** メニュー起点ならパンくずをその画面だけにし、画面内遷移なら末尾へ足す */
+const nextSteps = (pathname: string, previous: TrailStep[], entry: string): TrailStep[] => {
+  if (isHomePath(pathname)) return [];
+  const screenId = screenIdOf(pathname);
+  const step: TrailStep = { screenId, path: pathname };
+  if (entry && (entry === screenId || pathname === `/${entry}` || pathname.startsWith(`/${entry}/`))) {
+    return [step];
+  }
+  const index = previous.findIndex((item) => item.screenId === screenId);
+  if (index >= 0) {
+    return [...previous.slice(0, index), step];
+  }
+  return [...previous, step];
 };
 
 /**
@@ -67,101 +108,79 @@ const SCREEN_TITLES: Record<string, string> = {
   P603: 'ロケ番更新',
 };
 
-/** メニューに無い詳細画面が、どのメニュー画面から開かれるか */
-const SCREEN_PARENT: Record<string, string> = {
-  P010: 'P008',
-  P305: 'P304',
-  P404: 'P403',
-  P405: 'P403',
-  P407: 'P403',
-  P502: 'P501',
-  P503: 'P501',
-  P602: 'P601',
-  P603: 'P601',
-};
-
-/** 直前に表示していたメニュー階層（詳細画面へ進んでも消さない） */
-const TRAIL_ANCHOR_KEY = 'ewMenuTrailAnchor';
-
-interface TrailAnchor {
-  parentTitle: string;
-  trail: MenuTrailItem[];
-}
-
-const readTrailAnchor = (): TrailAnchor | null => {
-  try {
-    const raw = sessionStorage.getItem(TRAIL_ANCHOR_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as TrailAnchor;
-    if (!parsed || !Array.isArray(parsed.trail)) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
-const writeTrailAnchor = (anchor: TrailAnchor) => {
-  try {
-    sessionStorage.setItem(TRAIL_ANCHOR_KEY, JSON.stringify(anchor));
-  } catch {
-    // 保存できない場合は画面内の状態だけ使う
-  }
-};
-
-/** メニューに無い画面は、直前の階層の末尾に画面名を足す */
-const trailWithCurrentScreen = (anchor: TrailAnchor | null, routeName: string): MenuTrailItem[] => {
-  if (!anchor || anchor.trail.length === 0) return [];
-  const title = SCREEN_TITLES[routeName];
-  if (!title || anchor.trail.some((item) => item.title === title)) return anchor.trail;
-  return [...anchor.trail, { title }];
-};
-
-/** パスから画面 ID を取り出す（クエリは含めない） */
+/** パスの先頭セグメント（AppBar の見出し用） */
 const routeNameOf = (pathname: string): string => pathname.replace(/^\/+/, '').split('/')[0].split('?')[0];
 
+const readMenuEntry = (): string => {
+  try {
+    return sessionStorage.getItem(MENU_ENTRY_KEY) || '';
+  } catch {
+    return '';
+  }
+};
+
+const clearMenuEntry = () => {
+  try {
+    sessionStorage.removeItem(MENU_ENTRY_KEY);
+  } catch {
+    // 削除できない場合は次の遷移で上書きされる
+  }
+};
+
 /**
- * 表示中の画面に対応するメニュー階層と、AppBar に出す親メニュー名を求める
+ * 表示中の画面までの遷移順と、AppBar に出すメニュー名を求める。
+ * 親メニューは出さず、メニューから開いた画面を起点に、画面内の遷移を後ろへ足す。
  */
-export const useMenuTrail = (menuTree: MenuTrailNode[], menuTitles: MenuTitleMaps) => {
+export const useMenuTrail = (_menuTree: MenuTrailNode[], menuTitles: MenuTitleMaps) => {
   const location = useLocation();
   const routeName = routeNameOf(location.pathname);
-  const currentMenuTitle = menuTitles.current[routeName];
-  const mobileMenuTitle = menuTitles.parent[routeName] || currentMenuTitle;
-  const menuTrail = React.useMemo(() => findMenuTrail(menuTree, routeName), [menuTree, routeName]);
-  const [trailAnchor, setTrailAnchor] = React.useState<TrailAnchor | null>(() => readTrailAnchor());
+  const screenId = screenIdOf(location.pathname);
+  const currentMenuTitle = menuTitles.current[screenId] || menuTitles.current[routeName];
+  const mobileMenuTitle = menuTitles.parent[screenId] || menuTitles.parent[routeName] || currentMenuTitle;
+  const [steps, setSteps] = React.useState<TrailStep[]>(readSteps);
+
+  const applyPath = React.useCallback((pathname: string) => {
+    const entry = readMenuEntry();
+    if (entry) clearMenuEntry();
+    setSteps((previous) => {
+      const next = nextSteps(pathname, previous, entry);
+      writeSteps(next);
+      return next;
+    });
+  }, []);
 
   React.useEffect(() => {
-    if (menuTrail.length === 0) return;
-    const next: TrailAnchor = {
-      parentTitle: menuTitles.parent[routeName] || menuTitles.current[routeName] || '',
-      trail: menuTrail,
-    };
-    setTrailAnchor(next);
-    writeTrailAnchor(next);
-  }, [menuTrail, menuTitles, routeName]);
+    applyPath(location.pathname);
+  }, [location.pathname, location.key, applyPath]);
 
-  const isHome = routeName === 'P001' || routeName === '';
-  const parentRoute = SCREEN_PARENT[routeName];
-  const parentMenuTrail = React.useMemo(
-    () => (parentRoute ? findMenuTrail(menuTree, parentRoute) : []),
-    [menuTree, parentRoute]
-  );
-  const visibleTrail = isHome
+  React.useEffect(() => {
+    const onEntry = () => {
+      const entry = readMenuEntry();
+      const currentId = screenIdOf(location.pathname);
+      if (!entry || (entry !== currentId && location.pathname !== `/${entry}`)) return;
+      applyPath(location.pathname);
+    };
+    window.addEventListener('ew-menu-entry', onEntry);
+    return () => window.removeEventListener('ew-menu-entry', onEntry);
+  }, [location.pathname, applyPath]);
+
+  // 画面 ID そのものは出さない。メニュー名が無い画面は、メニューから入ったときの親メニュー名を引き継ぐ
+  const titleOf = (id: string) => menuTitles.current[id] || SCREEN_TITLES[id] || '';
+  const parentOf = (id: string) => menuTitles.parent[id] || '';
+  const trailParent = steps.map((step) => parentOf(step.screenId)).find((title) => title !== '') || '';
+  const visibleTrail: MenuTrailItem[] = isHomePath(location.pathname)
     ? []
-    : menuTrail.length > 0
-          ? menuTrail
-          : parentMenuTrail.length > 0
-      ? trailWithCurrentScreen({ parentTitle: '', trail: parentMenuTrail }, routeName)
-      : trailWithCurrentScreen(trailAnchor, routeName);
-  const parentMenuTitle = parentRoute
-    ? menuTitles.parent[parentRoute] || menuTitles.current[parentRoute]
-    : '';
-  const headerTitle = mobileMenuTitle || parentMenuTitle || (visibleTrail.length > 0 ? trailAnchor?.parentTitle : '') || '';
+    : steps
+        .map((step) => ({ title: titleOf(step.screenId), path: step.path }))
+        .filter((item) => item.title !== '');
+  const headerTitle = isHomePath(location.pathname)
+    ? ''
+    : parentOf(screenId) || parentOf(routeName) || mobileMenuTitle || trailParent || currentMenuTitle || '';
 
   return { routeName, visibleTrail, headerTitle };
 };
 
-/** AppBar の直下に出すメニュー階層（メニュー > 親 > 画面）。PC だけ表示する */
+/** AppBar の直下に出すメニュー階層（メニュー > 遷移した画面）。PC だけ表示する */
 const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
   const navigate = useNavigate();
   const location = useLocation();

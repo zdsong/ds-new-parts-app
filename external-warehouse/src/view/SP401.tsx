@@ -186,6 +186,9 @@ const SP401: React.FC = () => {
         if (fromCamera) {
             if (lastCameraCodeRef.current === trimmed) return;
             lastCameraCodeRef.current = trimmed;
+            // 読取できた時点でカメラを閉じる。同じ番号の連続検出で画面に留まるのを防ぐ
+            stopCamera();
+            setCameraOpen(false);
         }
         if (scannedNosRef.current.has(trimmed)) {
             if (!fromCamera) notify('notify.pallet.already_scanned', { type: 'warning' });
@@ -295,8 +298,8 @@ const SP401: React.FC = () => {
     }, [notify, request]);
 
     /**
-     * 読み取り結果を画面へ反映する
-     * 移動はカメラを閉じずに次のパレットも読めるようにする。
+     * 読み取り結果を画面へ反映する。
+     * バーコードを読めた時点でカメラ画面は閉じ、結果は一覧へ足す。
      */
     const applyScanResult = (value: string) => {
         const trimmed = value.trim();

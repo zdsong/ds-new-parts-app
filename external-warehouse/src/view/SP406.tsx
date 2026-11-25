@@ -442,7 +442,7 @@ const SP406: React.FC = () => {
     /**
      * 読み取り結果をカードへ足す。
      * 移動番号がない場合はカードを出さず、画面下の通知だけ出す。
-     * カメラ読取のときは閉じずに次の番号も読めるようにする。
+     * バーコードを読めた時点でカメラ画面は閉じ、結果は一覧へ足す。
      */
     const applyScanResult = useCallback(async (value: string, fromCamera = false) => {
         const trimmed = value.trim();
@@ -450,10 +450,9 @@ const SP406: React.FC = () => {
         if (fromCamera) {
             if (lastCameraCodeRef.current === trimmed) return;
             lastCameraCodeRef.current = trimmed;
-        } else {
-            stopCamera();
-            setCameraOpen(false);
         }
+        stopCamera();
+        setCameraOpen(false);
         if (scannedNosRef.current.has(trimmed)) {
             if (!fromCamera) notify('notify.pallet.already_scanned', { type: 'warning' });
             return;

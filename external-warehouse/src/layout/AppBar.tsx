@@ -15,6 +15,7 @@ import MenuTrail, { MenuTitleMaps, useMenuTrail } from './MenuTrail';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
 import { useIsMobile } from '../utils/deviceUtil';
 import { HOME_ROUTE } from '../utils/appRoutes';
+import { DEVICE_ROUTE_PAIRS } from '../utils/deviceRoute';
 
 import SIcon from '../assets/icons/S.png';
 import DIcon from '../assets/icons/D.png';
@@ -313,6 +314,17 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
         });
       };
       walk(items);
+      // SP 画面はメニュー上の PC 画面と同じ名称を使う（SP304 でも P304 の親メニュー名を出す）
+      DEVICE_ROUTE_PAIRS.forEach(([pcRoute, spRoute]) => {
+        if (titleMaps.current[pcRoute] && !titleMaps.current[spRoute]) {
+          titleMaps.current[spRoute] = titleMaps.current[pcRoute];
+          titleMaps.parent[spRoute] = titleMaps.parent[pcRoute];
+        }
+        if (titleMaps.current[spRoute] && !titleMaps.current[pcRoute]) {
+          titleMaps.current[pcRoute] = titleMaps.current[spRoute];
+          titleMaps.parent[pcRoute] = titleMaps.parent[spRoute];
+        }
+      });
       setMenuTitles(titleMaps);
     });
     return () => {

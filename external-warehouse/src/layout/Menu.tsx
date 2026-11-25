@@ -6,6 +6,7 @@ import Logout from '@mui/icons-material/Logout';
 import { useLogout } from 'react-admin';
 import { useNavigate } from 'react-router'
 import { usePopupControl } from './usePopupMutex';
+import { markMenuTrailEntry } from './MenuTrail';
 import Close from '@mui/icons-material/Close';
 
 // スタイル定義（集中管理）
@@ -138,6 +139,8 @@ const MenuNode: React.FC<{
       onClick={() => {
         // ディレクトリは展開専用のため画面遷移しない
         if (!isDirectory && item.name) {
+          // メニューから開いた画面は、パンくずの起点にする
+          markMenuTrailEntry(item.name);
           navigate(`/${item.name}`);
         }
         onClose();

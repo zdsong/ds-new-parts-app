@@ -211,6 +211,10 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
 },ref) => {
 
     const inputRef = useRef(null); 
+    // 候補リストが開いている間だけ true。最初のタップでは編集に入らない
+    const suggestOpenRef = useRef(false);
+    const suggestOpenedAtRef = useRef(0);
+    const [suggestEditing, setSuggestEditing] = useState(false);
 
     const startDateInputRef = useRef(null);
     const endDateInputRef = useRef(null);
@@ -306,6 +310,15 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
               },
           }
         : {};
+
+    // 候補リストが既に開いているときだけ、入力欄を編集可能にする
+    const enableSuggestEdit = (root: HTMLDivElement) => {
+        if (disabled || readOnly || !suggestOpenRef.current) return;
+        if (Date.now() - suggestOpenedAtRef.current < 400) return;
+        const input = root.querySelector('input');
+        if (input) input.readOnly = false;
+        setSuggestEditing(true);
+    };
 
     // 共通の値変更ハンドラ（数値文字列の自動変換 + 非活性時無効）
     const commonHandleComponentChange = useCallback(async (...args: any[]) => {
@@ -450,6 +463,27 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
                         slotProps={inputSlotProps}
                         noOptionsText='データがありません'
                         format={format}
+                        // フォーカス時に入力文字を選択しない。候補を開いただけでは編集に入らない
+                        selectOnFocus={false}
+                        onOpen={() => {
+                            suggestOpenRef.current = true;
+                            suggestOpenedAtRef.current = Date.now();
+                        }}
+                        onClose={() => {
+                            suggestOpenRef.current = false;
+                            setSuggestEditing(false);
+                        }}
+                        TextFieldProps={{
+                            onTouchStart: (event: React.TouchEvent<HTMLDivElement>) => {
+                                enableSuggestEdit(event.currentTarget);
+                            },
+                            onMouseDown: (event: React.MouseEvent<HTMLDivElement>) => {
+                                enableSuggestEdit(event.currentTarget);
+                            },
+                            InputProps: {
+                                readOnly: Boolean(readOnly) || !suggestEditing,
+                            },
+                        }}
                     />
                 );
 
