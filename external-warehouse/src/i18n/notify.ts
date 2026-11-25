@@ -93,6 +93,10 @@ const notifyMessages = {
         qty_over_available: '使用数・紛失／破損数・破棄数の合計が在庫の引当可能数（数量 − 割り当て数量）を超えている明細があります。',
         registered: '移動依頼 %{requestNo} を登録しました。',
         register_failed: '移動依頼の登録に失敗しました。',
+        move_canceled: '移動完了を取り消しました。',
+        move_cancel_failed: '移動完了の取消に失敗しました。',
+        move_deleted: '移動登録を削除しました。',
+        move_delete_failed: '移動登録の削除に失敗しました。',
         registered_demo: '移動依頼 %{requestNo} を登録しました（デモのため送信はしていません）。',
     },
 };

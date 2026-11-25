@@ -10,6 +10,7 @@ import { ColDef } from 'ag-grid-community';
 import useApiRequest from '../adapters/apiUtil';
 import PageContainer from '../compontent/PageContainer';
 import ResultGrid from '../compontent/ResultGrid';
+import { useConfirmDialog } from '../compontent/ConfirmDialog';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 
 /**
@@ -120,19 +121,25 @@ const InfoText: React.FC<{ label: string; value: string }> = ({ label, value }) 
     </div>
 );
 
-/** 参照専用の複数行入力枠 */
-const InfoMemo: React.FC<{ value: string }> = ({ value }) => (
-    <div
+/** 備考の入力枠 */
+const InfoMemo: React.FC<{ value: string; onChange: (value: string) => void }> = ({
+    value,
+    onChange,
+}) => (
+    <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         style={{
+            width: '100%',
             minHeight: '80px',
             border: '1px solid #bdbdbd',
             padding: '8px 10px',
-            whiteSpace: 'pre-wrap',
             backgroundColor: '#ffffff',
+            resize: 'vertical',
+            font: 'inherit',
+            boxSizing: 'border-box',
         }}
-    >
-        {value || ''}
-    </div>
+    />
 );
 
 const P407: React.FC = () => {
@@ -142,6 +149,10 @@ const P407: React.FC = () => {
     const [searchParams] = useSearchParams();
     const moveNo = (searchParams.get('moveNo') || '').trim();
     const [detail, setDetail] = useState<ApiMoveDetail | null>(null);
+    const [memo, setMemo] = useState('');
+    const [completionMemo, setCompletionMemo] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const { confirm, confirmDialog } = useConfirmDialog();
 
     /** 移動情報詳細を取得する */
     const loadDetail = useCallback(async () => {
@@ -158,6 +169,8 @@ const P407: React.FC = () => {
                 false
             );
             setDetail(result?.data || null);
+            setMemo(result?.data?.memo || '');
+            setCompletionMemo(result?.data?.completionMemo || '');
         } catch (error) {
             console.error(error);
             notify('notify.transfer.fetch_failed', { type: 'error' });
@@ -168,7 +181,87 @@ const P407: React.FC = () => {
         loadDetail();
     }, [loadDetail]);
 
+    const registered = detail?.status === 'TF_P';
     const completed = detail?.status === 'TF_F';
+
+    /** 移動完了取消を行い、移動登録完了の状態へ戻す */
+    const handleCancel = async () => {
+        if (!completed || processing) {
+            return;
+        }
+        const confirmed = await confirm({
+            title: '移動完了取消の確認',
+            message: '移動完了取消を行います。よろしいですか？',
+            description: '移動完了時に更新した在庫を移動登録直後の状態へ戻します。',
+            confirmLabel: '取消する',
+            confirmColor: 'warning',
+        });
+        if (!confirmed) {
+            return;
+        }
+        setProcessing(true);
+        try {
+            const response = await request(
+                'post',
+                'api/transfer/cancel',
+                { transferNo: moveNo },
+                {},
+                true,
+                false
+            );
+            if (response?.code >= 200 && response?.code < 300) {
+                notify('notify.transfer.move_canceled', { type: 'success' });
+                await loadDetail();
+            } else {
+                notify(response?.message || 'notify.transfer.move_cancel_failed', { type: 'error' });
+            }
+        } catch (error) {
+            console.error(error);
+            notify('notify.transfer.move_cancel_failed', { type: 'error' });
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    /** 移動登録削除を行い、移動登録前の状態へ戻す */
+    const handleDelete = async () => {
+        if (!registered || processing) {
+            return;
+        }
+        const confirmed = await confirm({
+            title: '移動登録削除の確認',
+            message: '移動登録削除を行います。よろしいですか？',
+            description:
+                '移動管理のデータと移動登録時に発番したパレットを削除し、移動登録前の状態へ戻します。この操作は取り消せません。',
+            confirmLabel: '削除する',
+            confirmColor: 'error',
+        });
+        if (!confirmed) {
+            return;
+        }
+        setProcessing(true);
+        try {
+            const response = await request(
+                'post',
+                'api/transfer/delete',
+                { transferNo: moveNo },
+                {},
+                true,
+                false
+            );
+            if (response?.code >= 200 && response?.code < 300) {
+                notify('notify.transfer.move_deleted', { type: 'success' });
+                navigate('/P402');
+            } else {
+                notify(response?.message || 'notify.transfer.move_delete_failed', { type: 'error' });
+            }
+        } catch (error) {
+            console.error(error);
+            notify('notify.transfer.move_delete_failed', { type: 'error' });
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     const detailRows = useMemo<DetailRow[]>(
         () =>
@@ -240,11 +333,16 @@ const P407: React.FC = () => {
                     <InfoText label="移動登録日時" value={detail?.registeredDate || ''} />
                     <div style={{ gridColumn: '1 / -1' }}>
                         <div style={{ ...infoLabelStyle, width: 'auto', marginBottom: '6px' }}>備考</div>
-                        <InfoMemo value={detail?.memo || ''} />
+                        <InfoMemo value={memo} onChange={setMemo} />
                     </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                    <button type="button" style={panelButtonStyle} disabled title="移動登録削除機能は未実装です">
+                    <button
+                        type="button"
+                        style={registered && !processing ? panelButtonStyle : { ...buttonSx.disabledButton, width: 'auto', minWidth: '140px' }}
+                        disabled={!registered || processing}
+                        onClick={handleDelete}
+                    >
                         移動登録削除
                     </button>
                 </div>
@@ -257,15 +355,22 @@ const P407: React.FC = () => {
                     <InfoText label="移動完了日時" value={completed ? detail?.completedDate || '' : ''} />
                     <div style={{ gridColumn: '1 / -1' }}>
                         <div style={{ ...infoLabelStyle, width: 'auto', marginBottom: '6px' }}>備考</div>
-                        <InfoMemo value={completed ? detail?.completionMemo || '' : ''} />
+                        <InfoMemo
+                            value={completionMemo}
+                            onChange={setCompletionMemo}
+                        />
                     </div>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
                     <button
                         type="button"
-                        style={completed ? panelButtonStyle : { ...buttonSx.disabledButton, width: 'auto', minWidth: '140px' }}
-                        disabled={!completed}
-                        title="移動完了取消機能は未実装です"
+                        style={
+                            completed && !processing
+                                ? panelButtonStyle
+                                : { ...buttonSx.disabledButton, width: 'auto', minWidth: '140px' }
+                        }
+                        disabled={!completed || processing}
+                        onClick={handleCancel}
                     >
                         移動完了取消
                     </button>
@@ -301,6 +406,8 @@ const P407: React.FC = () => {
                     更新
                 </button>
             </div>
+
+            {confirmDialog}
         </PageContainer>
     );
 };

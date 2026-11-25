@@ -404,6 +404,7 @@ const SP406: React.FC = () => {
     const [locationOptions, setLocationOptions] = useState<Record<string, OptionItem[]>>({});
     const [openRequestIds, setOpenRequestIds] = useState<Set<string>>(() => new Set());
     const [inboundDone, setInboundDone] = useState(false);
+    const [processing, setProcessing] = useState(false);
     // TODO 削除: 開発完了後に消す。カメラの代わりにバーコードを手入力して同じ読取処理を通す
     const [testBarcode, setTestBarcode] = useState('');
 
@@ -725,6 +726,9 @@ const SP406: React.FC = () => {
 
     /** ロケ番を確定し、移動完了をサーバへ送る */
     const handleReceiveComplete = async () => {
+        if (processing) {
+            return;
+        }
         if (scannedPallets.length === 0 || scannedPallets.some((pallet) => !pallet.inbound)) {
             notify('notify.transfer.registration_not_found', { type: 'error' });
             return;
@@ -733,31 +737,38 @@ const SP406: React.FC = () => {
             notify('notify.common.select_location', { type: 'warning' });
             return;
         }
-        const sent = new Set<string>();
-        for (const pallet of scannedPallets) {
-            if (!pallet.inbound) continue;
-            if (sent.has(pallet.inbound.moveNo)) continue;
-            sent.add(pallet.inbound.moveNo);
-            const result = await request(
-                'post',
-                'api/transfer/complete',
-                {
-                    transferNo: pallet.inbound.moveNo,
-                    destinationWhCd: pallet.inbound.destinationWh,
-                    destinationLocCd: locations[pallet.palletNo],
-                    completionMemo: pallet.inbound.remark,
-                },
-                {},
-                true,
-                false
-            );
-            if (!result || result.code !== 200) {
-                notify(result?.msg || 'notify.transfer.move_complete_failed', { type: 'error' });
-                return;
+        setProcessing(true);
+        try {
+            const sent = new Set<string>();
+            for (const pallet of scannedPallets) {
+                if (!pallet.inbound) continue;
+                if (sent.has(pallet.inbound.moveNo)) continue;
+                sent.add(pallet.inbound.moveNo);
+                const result = await request(
+                    'post',
+                    'api/transfer/complete',
+                    {
+                        transferNo: pallet.inbound.moveNo,
+                        destinationWhCd: pallet.inbound.destinationWh,
+                        destinationLocCd: locations[pallet.palletNo],
+                        completionMemo: pallet.inbound.remark,
+                    },
+                    {},
+                    true,
+                    false
+                );
+                if (!result || result.code !== 200) {
+                    notify(result?.message || result?.msg || 'notify.transfer.move_complete_failed', {
+                        type: 'error',
+                    });
+                    return;
+                }
             }
+            setInboundDone(true);
+            notify('notify.transfer.move_completed', { type: 'success' });
+        } finally {
+            setProcessing(false);
         }
-        setInboundDone(true);
-        notify('notify.transfer.move_completed', { type: 'success' });
     };
 
     const handleToggleRequest = (lineId: string) => {
@@ -966,7 +977,7 @@ const SP406: React.FC = () => {
                         type="button"
                         style={primaryButtonStyle}
                         onClick={handleReceiveComplete}
-                        disabled={inboundDone}
+                        disabled={inboundDone || processing}
                     >
                         移動完了
                     </button>
