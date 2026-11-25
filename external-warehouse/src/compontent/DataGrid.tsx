@@ -14,7 +14,8 @@ import {
   RowClassParams,
   RowStyle,
   CellValueChangedEvent,
-  CellClickedEvent
+  CellClickedEvent,
+  ICellRendererParams
 } from 'ag-grid-community';
 import Pagination from '@mui/material/Pagination';
 
@@ -84,6 +85,103 @@ export interface DataGridProps<T extends BaseItemColumn> {
   /** GridApi を受け取る。編集開始・確定・再描画などを親から制御したい場合に使う */
   onApiReady?: (api: GridApi<T>) => void;
 }
+
+type EditorKind = 'number' | 'select' | 'date' | 'text';
+
+/** 列に指定されたセルエディタから、常時表示する入力欄の種類を決める */
+const editorKindOf = (cellEditor: ColDef['cellEditor']): EditorKind => {
+  if (cellEditor === 'agNumberCellEditor') return 'number';
+  if (cellEditor === 'agSelectCellEditor') return 'select';
+  if (cellEditor === 'agDateStringCellEditor') return 'date';
+  return 'text';
+};
+
+/**
+ * 編集列を、クリックしなくても入力欄が見えるセルにする。
+ * 値の確定はフォーカスが外れたとき（選択欄は変更したとき）に行う。
+ */
+const AlwaysVisibleEditor = (params: ICellRendererParams & { alwaysEdit?: ColDef['editable'] }) => {
+  const kind = editorKindOf(params.colDef?.cellEditor);
+  const flag = params.alwaysEdit;
+  const canEdit = typeof flag === 'function' ? Boolean(flag(params as never)) : Boolean(flag);
+  const [draft, setDraft] = useState(params.value ?? '');
+
+  useEffect(() => {
+    setDraft(params.value ?? '');
+  }, [params.value]);
+
+  if (!canEdit || params.node?.rowPinned) {
+    return <span>{params.valueFormatted ?? params.value ?? ''}</span>;
+  }
+
+  const editorParams = (params.colDef?.cellEditorParams ?? {}) as {
+    min?: number;
+    max?: number;
+    values?: string[];
+  };
+
+  const commit = (raw: string) => {
+    const field = params.colDef?.field;
+    if (!field || !params.node) return;
+    let next: unknown = raw;
+    if (kind === 'number') {
+      if (raw.trim() === '') {
+        next = 0;
+      } else {
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed)) {
+          setDraft(params.value ?? '');
+          return;
+        }
+        next = parsed;
+        if (editorParams.min !== undefined && parsed < editorParams.min) next = editorParams.min;
+        if (editorParams.max !== undefined && parsed > editorParams.max) next = editorParams.max;
+      }
+    }
+    if (String(params.value ?? '') === String(next ?? '')) return;
+    params.node.setDataValue(field, next);
+  };
+
+  const stopGrid = (event: React.MouseEvent) => event.stopPropagation();
+
+  if (kind === 'select') {
+    const values = editorParams.values ?? [];
+    return (
+      <select
+        className="ew-cell-editor"
+        value={draft === null || draft === undefined ? '' : String(draft)}
+        onMouseDown={stopGrid}
+        onClick={stopGrid}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          commit(event.target.value);
+        }}
+      >
+        {values.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
+    );
+  }
+
+  return (
+    <input
+      className={kind === 'number' ? 'ew-cell-editor ew-cell-editor-number' : 'ew-cell-editor'}
+      type={kind === 'date' ? 'date' : 'text'}
+      inputMode={kind === 'number' ? 'decimal' : undefined}
+      value={draft === null || draft === undefined ? '' : String(draft)}
+      onMouseDown={stopGrid}
+      onClick={stopGrid}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={(event) => commit(event.target.value)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') {
+          commit((event.target as HTMLInputElement).value);
+        }
+      }}
+    />
+  );
+};
 
 // デフォルト列定義
 const DEFAULT_COL_DEF: ColDef = {
@@ -205,6 +303,28 @@ const DataGrid = forwardRef(
           
           if (mergedCol.width === undefined && mergedCol.flex === undefined) {
             mergedCol.flex = 1;
+          }
+
+          // 編集列はクリック前から入力欄を出しておく。独自の cellRenderer がある列は触らない。
+          if (mergedCol.editable && !mergedCol.cellRenderer) {
+            const sourceEditable = mergedCol.editable;
+            const previousClass = mergedCol.cellClass;
+            mergedCol.cellRenderer = AlwaysVisibleEditor;
+            mergedCol.cellRendererParams = {
+              ...(mergedCol.cellRendererParams ?? {}),
+              alwaysEdit: sourceEditable,
+            };
+            mergedCol.editable = false;
+            mergedCol.singleClickEdit = false;
+            mergedCol.cellClass = (params) => {
+              const base = typeof previousClass === 'function' ? previousClass(params) : previousClass;
+              const list = Array.isArray(base)
+                ? base
+                : base
+                  ? String(base).split(' ').filter(Boolean)
+                  : [];
+              return [...list, 'ew-cell-has-input'];
+            };
           }
           
           return mergedCol;

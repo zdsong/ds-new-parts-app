@@ -611,7 +611,7 @@ const P406: React.FC = () => {
                             />
                         </div>
                         <Typography variant={'body2'} sx={{ fontSize: 12, color: '#666666', mt: 1 }}>
-                            移動数はセルをクリックして直接入力できます。
+                            移動数は入力欄に直接入力できます。
                             合計 {totalMoveQty} 個
                         </Typography>
                         {overStockRows.length > 0 && (

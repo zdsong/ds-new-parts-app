@@ -60,6 +60,29 @@ export const gridStyles = `
     background-color: transparent !important;
     border: 1 solid #00b441 !important;
   }
+  .ag-theme-alpine .ag-cell.ew-cell-has-input {
+    padding: 3px 6px !important;
+  }
+  .ag-theme-alpine .ew-cell-editor {
+    width: 100%;
+    height: 26px;
+    box-sizing: border-box;
+    border: 1px solid #9e9e9e;
+    border-radius: 0;
+    background: #ffffff;
+    padding: 0 6px;
+    font-size: 14px;
+    color: #333333;
+    font-family: "Meiryo", sans-serif;
+    outline: none;
+  }
+  .ag-theme-alpine .ew-cell-editor:focus {
+    border-color: #00b441;
+  }
+  .ag-theme-alpine .ew-cell-editor-number {
+    text-align: right;
+  }
+
   .ag-theme-alpine .ag-cell-focus,
   .ag-theme-alpine .ag-cell-focus-outline {
     outline: none !important;

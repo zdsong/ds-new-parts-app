@@ -715,7 +715,7 @@ const P401: React.FC = () => {
                             />
                         </div>
                         <Typography variant={'body2'} sx={{ fontSize: 12, color: '#666666', mt: 1 }}>
-                            使用数・紛失／破損数・破棄数はセルをクリックして直接入力できます。
+                            使用数・紛失／破損数・破棄数は入力欄に直接入力できます。
                             合計 {totalMoveQty} 個
                         </Typography>
                         {overStockRows.length > 0 && (
