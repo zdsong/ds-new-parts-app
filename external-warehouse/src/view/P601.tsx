@@ -29,7 +29,7 @@ import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import ResultGrid from '../compontent/ResultGrid';
+import ResultGrid, { DEFAULT_PAGE_SIZE } from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import deleteIcon from '../assets/icons/delete-icon.png';
@@ -63,9 +63,6 @@ interface OptionItem {
     value: string;
 }
 
-/** 表示件数の選択肢 */
-const PAGE_SIZE_CHOICES = [10, 20, 50];
-
 /**
  * 選択値を文字列に正規化する
  * （選択コンポーネントは選択肢オブジェクトを返す場合があるため）
@@ -84,7 +81,7 @@ const P601: React.FC = () => {
     const [rows, setRows] = useState<LocationRow[]>([]);
     // ページング（一覧の切り分けは ResultGrid が行う）
     const [pageNum, setPageNum] = useState<number>(1);
-    const [pageSize, setPageSize] = useState<number>(PAGE_SIZE_CHOICES[0]);
+    const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE);
     // 検索条件とフォーム再描画用の世代番号
     const [searchForm, setSearchForm] = useState<SearchForm>({ whCd: '', locCd: '' });
     const [formVersion, setFormVersion] = useState<number>(0);
@@ -388,7 +385,6 @@ const P601: React.FC = () => {
                     showResultSummary
                     showPageSize
                     showBottomPagination
-                    pageSizeChoices={PAGE_SIZE_CHOICES}
                     page={pageNum}
                     pageSize={pageSize}
                     onPageChange={setPageNum}

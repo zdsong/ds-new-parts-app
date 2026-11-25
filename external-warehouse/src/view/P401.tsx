@@ -12,7 +12,7 @@ import useApiRequest from '../adapters/apiUtil';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import CustomModal from '../compontent/CustomModal';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 
@@ -702,7 +702,7 @@ const P401: React.FC = () => {
                 ) : (
                     <>
                         <div className="ag-theme-alpine p401-detail-grid" style={tableSx.tableContainer}>
-                            <DataGrid<MoveRequestDetail>
+                            <ResultGrid<MoveRequestDetail>
                                 columnDefs={detailColumnDefs}
                                 rowData={details}
                                 page={1}
@@ -800,14 +800,14 @@ const P401: React.FC = () => {
                         検索結果 {candidates.length} 件
                     </Typography>
                     <div className="ag-theme-alpine p401-search-grid" style={tableSx.tableContainer}>
-                        <DataGrid<SearchItem>
+                        <ResultGrid<SearchItem>
                             columnDefs={searchColumnDefs}
                             rowData={candidatePageRows}
                             page={searchPage}
                             pageSize={SEARCH_PAGE_SIZE}
                             rowTotal={candidates.length}
                             onPageChange={(current) => setSearchPage(current)}
-                            pagination
+                            showBottomPagination
                             rowUniqueKey="id"
                             selectionMode="none"
                             rowHeight={36}

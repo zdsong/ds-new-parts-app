@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -11,8 +11,9 @@ import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import CustomModal from '../compontent/CustomModal';
+import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 
 /**
@@ -75,31 +76,10 @@ interface SearchItem {
     quantity: number;
 }
 
-// 移動先の選択肢（入庫は行田工場向け）
-const DEST_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-// ロケ番の選択肢（⑤ロケ番マスタの形式に合わせた仮データ）
-const LOCATION_CHOICES = [
-    { key: 'A-1-2-3-4', value: 'A-1-2-3-4' },
-    { key: 'A-1-2-3-5', value: 'A-1-2-3-5' },
-    { key: 'B-1-1-1-1', value: 'B-1-1-1-1' },
-    { key: 'B-2-2-2-2', value: 'B-2-2-2-2' },
-];
-
-// 検索条件の保管倉庫（入庫は外部倉庫の在庫を探す）
-const SEARCH_STORAGE_CHOICES = [
-    { key: '1', value: '外部倉庫' },
-    { key: '2', value: '行田工場' },
-];
-
-// 製品／部品の絞り込み
-const ITEM_TYPE_CHOICES = [
-    { key: '1', value: '製品' },
-    { key: '2', value: '部品' },
-];
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 /** 移動（入庫）品目検索の仮データ（本来は在庫 API から取得する） */
 const SEARCH_ITEMS: SearchItem[] = [
@@ -218,12 +198,17 @@ const INITIAL_DETAILS: MoveInboundDetail[] = [
 const P406: React.FC = () => {
     const notify = useNotify();
     const navigate = useNavigate();
+    const { request } = useApiRequest();
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
+    const [destWhCd, setDestWhCd] = useState('10');
 
     // 基本情報（フォームの初期値）
     const [formData, setFormData] = useState<MoveInboundForm>({
         requestNo: '',
-        destWarehouse: '1',
-        locationNo: 'A-1-2-3-4',
+        destWarehouse: '10',
+        locationNo: 'A-1-1-1-1',
         desiredDate: today(),
         requester: getLoginUserName(),
         remark: '',
@@ -240,7 +225,41 @@ const P406: React.FC = () => {
         itemTypes: string[];
         itemCode: string;
         itemName: string;
-    }>({ storageLocation: '1', itemTypes: [], itemCode: '', itemName: '' });
+    }>({ storageLocation: '20', itemTypes: [], itemCode: '', itemName: '' });
+
+    /** 区分は辞書、移動先は倉庫マスタから取得する */
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const [classification, warehouse] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setClassificationOptions(classification?.data || []);
+                setWarehouseOptions(warehouse?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchOptions();
+    }, []);
+
+    /** 移動先に紐づくロケ番を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!destWhCd) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request('get', `api/common/${destWhCd}/location/options`, {}, {}, false, false);
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [destWhCd]);
 
     /** 明細に追加済みのパレット番号 */
     const addedPalletNos = useMemo(
@@ -251,18 +270,20 @@ const P406: React.FC = () => {
     /** 検索結果（保管倉庫・製品／部品・品目コード・品目名で絞り込む） */
     const searchResult = useMemo(() => {
         const storageLabel =
-            SEARCH_STORAGE_CHOICES.find((choice) => choice.key === searchCondition.storageLocation)?.value || '';
+            warehouseOptions.find((choice) => choice.key === searchCondition.storageLocation)?.value || '';
+        const typeLabels = classificationOptions
+            .filter((choice) => searchCondition.itemTypes.includes(choice.key))
+            .map((choice) => choice.value);
         const code = searchCondition.itemCode.trim();
         const name = searchCondition.itemName.trim();
         return SEARCH_ITEMS.filter(
             (item) =>
                 (!storageLabel || item.storageLocation === storageLabel) &&
-                (searchCondition.itemTypes.length === 0 ||
-                    searchCondition.itemTypes.includes(item.itemType)) &&
+                (searchCondition.itemTypes.length === 0 || typeLabels.includes(item.itemType)) &&
                 (!code || item.itemCode.includes(code)) &&
                 (!name || item.itemName.includes(name))
         );
-    }, [searchCondition]);
+    }, [searchCondition, warehouseOptions, classificationOptions]);
 
     /** 明細 1 行分の入力チェック結果（移動数が保管数を超えていないか） */
     const isOverStock = useCallback((detail: MoveInboundDetail) => {
@@ -347,7 +368,7 @@ const P406: React.FC = () => {
 
     /** 品目検索モーダルを開く */
     const handleOpenItemModal = () => {
-        setSearchCondition({ storageLocation: '1', itemTypes: [], itemCode: '', itemName: '' });
+        setSearchCondition({ storageLocation: '20', itemTypes: [], itemCode: '', itemName: '' });
         setItemModalOpen(true);
     };
 
@@ -369,7 +390,7 @@ const P406: React.FC = () => {
 
     /** 検索条件をクリアする */
     const handleSearchClear = () => {
-        setSearchCondition({ storageLocation: '1', itemTypes: [], itemCode: '', itemName: '' });
+        setSearchCondition({ storageLocation: '20', itemTypes: [], itemCode: '', itemName: '' });
     };
 
     /** 検索結果から明細を追加する */
@@ -395,8 +416,8 @@ const P406: React.FC = () => {
     const handleClear = () => {
         setFormData({
             requestNo: '',
-            destWarehouse: '1',
-            locationNo: 'A-1-2-3-4',
+            destWarehouse: '10',
+            locationNo: 'A-1-1-1-1',
             desiredDate: today(),
             requester: getLoginUserName(),
             remark: '',
@@ -501,7 +522,8 @@ const P406: React.FC = () => {
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
-                                choices={DEST_CHOICES}
+                                choices={warehouseOptions}
+                                onChange={(value) => setDestWhCd(normalizeChoiceValue(value))}
                                 sx={{
                                     display: 'contents',
                                     label: { width: '150px', flexShrink: 0 },
@@ -512,7 +534,7 @@ const P406: React.FC = () => {
                                 type={'filter-select'}
                                 source="locationNo"
                                 label={false}
-                                choices={LOCATION_CHOICES}
+                                choices={locationOptions}
                                 sx={{
                                     width: '100%',
                                     minWidth: 0,
@@ -576,7 +598,7 @@ const P406: React.FC = () => {
                 ) : (
                     <>
                         <div className="ag-theme-alpine p406-detail-grid" style={tableSx.tableContainer}>
-                            <DataGrid<MoveInboundDetail>
+                            <ResultGrid<MoveInboundDetail>
                                 columnDefs={detailColumnDefs}
                                 rowData={details}
                                 page={1}
@@ -637,7 +659,7 @@ const P406: React.FC = () => {
                         onSubmit={handleSearch}
                         toolbar={false}
                         defaultValues={{
-                            storageLocation: '1',
+                            storageLocation: '20',
                             itemTypes: [],
                             itemCode: '',
                             itemName: '',
@@ -648,13 +670,13 @@ const P406: React.FC = () => {
                                 type={'filter-select'}
                                 source="storageLocation"
                                 label="保管倉庫"
-                                choices={SEARCH_STORAGE_CHOICES}
+                                choices={warehouseOptions}
                             />
                             <FormInput
                                 type={'multiple-choice'}
                                 source="itemTypes"
                                 label="製品／部品"
-                                choices={ITEM_TYPE_CHOICES}
+                                choices={classificationOptions}
                             />
                             <FormInput type={'text'} source="itemCode" label="品目コード" />
                             <FormInput type={'text'} source="itemName" label="品目名" />
@@ -673,7 +695,7 @@ const P406: React.FC = () => {
                         検索結果 {searchResult.length} 件
                     </Typography>
                     <div className="ag-theme-alpine p406-search-grid" style={tableSx.tableContainer}>
-                        <DataGrid<SearchItem>
+                        <ResultGrid<SearchItem>
                             columnDefs={searchColumnDefs}
                             rowData={searchResult}
                             page={1}

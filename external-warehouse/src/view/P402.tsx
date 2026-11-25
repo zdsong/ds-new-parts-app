@@ -79,9 +79,6 @@ interface SearchCondition {
 /** 移動依頼状態（この画面では移動依頼を表示しない） */
 const TRANSFER_REQUEST_STATUS = 'TF';
 
-/** 表示件数の選択肢 */
-const PAGE_SIZE_CHOICES = [10, 20, 50];
-
 /** 検索条件の初期値 */
 const INITIAL_CONDITION: SearchCondition = {
     moveNo: '',
@@ -395,7 +392,6 @@ const P402: React.FC = () => {
                 showPageSize
                 showTopPagination
                 showBottomPagination
-                pageSizeChoices={PAGE_SIZE_CHOICES}
                 page={page}
                 pageSize={pageSize}
                 onPageChange={setPage}

@@ -12,7 +12,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 
 export interface LoginLogData {
     id: string;
@@ -53,7 +53,7 @@ const S030: React.FC = () => {
 
     const navigate = useNavigate();
     const location = useLocation();
-    const gridRef = useRef<DataGridRef<LoginLogData>>(null);
+    const gridRef = useRef<ResultGridRef<LoginLogData>>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
     const loginTimeRef = useRef(null);
@@ -354,13 +354,13 @@ const S030: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<LoginLogData>
+                    <ResultGrid<LoginLogData>
                         ref={gridRef}
                         columnDefs={columnDefs}
                         rowData={rowData}
                         rowTotal={total}
                         page={pageNum}
-                        pagination
+                        showBottomPagination
                         onPageChange={handlePageChange}
                         rowUniqueKey='infoId'
                         selectionMode="multiple"

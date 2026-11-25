@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box } from '@mui/material';
 import { SimpleForm } from 'react-admin';
 import { useNavigate } from 'react-router-dom';
 import FormInput from '../compontent/FormInput';
 import SpPagination from '../compontent/SpPagination';
+import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import { normalizeChoiceValue } from '../utils/palletData';
 
@@ -47,16 +48,10 @@ interface MoveRequest {
     items: MoveRequestItem[];
 }
 
-/** 移動先の選択肢 */
-const DESTINATION_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-/** コード→表示名の変換表 */
-const DESTINATION_LABELS: Record<string, string> = Object.fromEntries(
-    DESTINATION_CHOICES.map((choice) => [choice.key, choice.value])
-);
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 /** 1 ページあたりの検索結果件数（スマートフォンで見やすい件数にする） */
 const PAGE_SIZE = 5;
@@ -76,7 +71,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '1',
         requestNo: 'I-261014-002',
-        destination: '1',
+        destination: '10',
         destinationLocation: 'A-1-2-3-4',
         requester: '山田 太郎（生産管理）',
         desiredDate: '2026/10/15',
@@ -101,7 +96,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '2',
         requestNo: 'L-261013-001',
-        destination: '1',
+        destination: '10',
         destinationLocation: 'B-1-2-3-4',
         requester: '佐藤 花子（生産管理）',
         desiredDate: '2026/10/14',
@@ -119,7 +114,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '3',
         requestNo: 'L-261012-003',
-        destination: '1',
+        destination: '10',
         destinationLocation: 'C-1-1-2-3',
         requester: '鈴木 一郎（生産管理）',
         desiredDate: '2026/10/12',
@@ -144,7 +139,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '4',
         requestNo: 'L-261010-001',
-        destination: '1',
+        destination: '10',
         destinationLocation: 'A-2-1-1-1',
         requester: '高橋 美咲（生産管理）',
         desiredDate: '2026/10/10',
@@ -162,7 +157,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '5',
         requestNo: 'L-261008-004',
-        destination: '2',
+        destination: '20',
         destinationLocation: 'B-2-3-4-5',
         requester: '伊藤 健（生産管理）',
         desiredDate: '2026/10/08',
@@ -180,7 +175,7 @@ const MOVE_REQUESTS: MoveRequest[] = [
     {
         id: '6',
         requestNo: 'L-261005-002',
-        destination: '1',
+        destination: '10',
         destinationLocation: 'D-1-2-3-4',
         requester: '渡辺 由紀（生産管理）',
         desiredDate: '2026/10/05',
@@ -217,6 +212,8 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 const SP404: React.FC = () => {
     const navigate = useNavigate();
+    const { request } = useApiRequest();
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
 
     // 検索条件（確定値）
     const [condition, setCondition] = useState(INITIAL_CONDITION);
@@ -228,6 +225,19 @@ const SP404: React.FC = () => {
     const [openItems, setOpenItems] = useState<Record<string, boolean>>(() =>
         Object.fromEntries(MOVE_REQUESTS.map((request) => [request.id, true]))
     );
+
+    /** 移動先は倉庫マスタから取得する */
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            try {
+                const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+                setWarehouseOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchWarehouses();
+    }, []);
 
     /** 検索条件で絞り込んだ移動依頼 */
     const filtered = useMemo(() => {
@@ -315,7 +325,7 @@ const SP404: React.FC = () => {
                             label="移動先"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={DESTINATION_CHOICES}
+                            choices={warehouseOptions}
                         />
                         {/* 移動希望日は範囲指定（開始 ～ 終了） */}
                         <div style={spSx.field}>
@@ -379,7 +389,7 @@ const SP404: React.FC = () => {
                                     </span>
                                 </Field>
                                 <Field label="移動先">
-                                    {`${DESTINATION_LABELS[request.destination] || '－'}/${
+                                    {`${warehouseOptions.find((option) => option.key === request.destination)?.value || '－'}/${
                                         request.destinationLocation
                                     }`}
                                 </Field>

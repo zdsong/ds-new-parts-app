@@ -6,7 +6,7 @@ import FormInput from '../compontent/FormInput';
 import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
-import { CATEGORY_CHOICES, CATEGORY_LABELS, fromApiPallet, normalizeChoiceValue } from '../utils/palletData';
+import { fromApiPallet, normalizeChoiceValue } from '../utils/palletData';
 import type { ApiPallet, OptionItem, PalletRow } from '../utils/palletData';
 
 /**
@@ -76,22 +76,27 @@ const SP304: React.FC = () => {
     const [total, setTotal] = useState(0);
 
     // 倉庫・ロケ番の選択肢
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
     const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
     // 検索条件で選択中の倉庫（ロケ番の選択肢の絞り込みに使用する）
     const [formWhCd, setFormWhCd] = useState('');
 
-    /** 保管倉庫の選択肢を取得する */
+    /** 区分（辞書）と保管倉庫の選択肢を取得する */
     useEffect(() => {
-        const fetchWarehouses = async () => {
+        const fetchOptions = async () => {
             try {
-                const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
-                setWarehouseOptions(result?.data || []);
+                const [classification, warehouse] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setClassificationOptions(classification?.data || []);
+                setWarehouseOptions(warehouse?.data || []);
             } catch (error) {
                 console.error(error);
             }
         };
-        fetchWarehouses();
+        fetchOptions();
     }, []);
 
     /** 保管倉庫に紐づくロケ番の選択肢を取得する */
@@ -217,7 +222,7 @@ const SP304: React.FC = () => {
                             label="区分"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                         />
                         <FormInput
                             type={'input-date'}
@@ -284,7 +289,7 @@ const SP304: React.FC = () => {
                                     </span>
                                 </Box>
                                 <span style={{ ...spSx.link, color: '#5f5f5f', cursor: 'default' }}>
-                                    {CATEGORY_LABELS[pallet.category] || '－'}
+                                    {classificationOptions.find((option) => option.key === pallet.category)?.value || '－'}
                                 </span>
                             </div>
 

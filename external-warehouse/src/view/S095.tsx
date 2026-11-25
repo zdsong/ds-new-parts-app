@@ -8,7 +8,7 @@ import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { Schedule } from '@mui/icons-material';
 import useApiRequest from '../adapters/apiUtil';
 import { useNavigate } from 'react-router-dom';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -37,7 +37,7 @@ interface SearchForm {
     createTime:{ startDate?: string; endDate?: string };
 }
 const S095: React.FC = () => {
-    const gridRef = useRef<DataGridRef<ScheduleLogData>>(null);
+    const gridRef = useRef<ResultGridRef<ScheduleLogData>>(null);
     const [showLogDetail, setShowLogDetail] = useState(false);
     const [currentLog, setCurrentLog] = useState<ScheduleLogData | null>(null);
     const [rowData, setRowData] = useState<ScheduleLogData[]>([]);
@@ -459,13 +459,13 @@ const S095: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<ScheduleLogData>
+                    <ResultGrid<ScheduleLogData>
                     ref={gridRef}
                     columnDefs={columnDefs}
                     rowData={rowData}
                     rowTotal={total}
                     page={pageNum}
-                    pagination
+                    showBottomPagination
                     onPageChange={handlePageChange}
                     rowUniqueKey='jobLogId'
                     selectionMode="multiple"

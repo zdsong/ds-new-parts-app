@@ -8,11 +8,10 @@ import SpPagination from '../compontent/SpPagination';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx, SP_VALUE_INDENT, spSquareReadonlyStyle } from '../styles/spSx';
 import {
-    CATEGORY_CHOICES,
     DEFAULT_QUANTITY,
     createDetailFromItem,
 } from '../utils/palletData';
-import type { ItemMaster, PalletDetailItem, PalletFormData } from '../utils/palletData';
+import type { ItemMaster, OptionItem, PalletDetailItem, PalletFormData } from '../utils/palletData';
 
 /**
  * 品目検索画面（SP302）
@@ -82,9 +81,30 @@ const SP302: React.FC = () => {
     const [total, setTotal] = useState(0);
     // 現在のページ
     const [page, setPage] = useState(1);
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
 
     // 既に追加済みの品目コード
     const addedItemCodes = useMemo(() => details.map((detail) => detail.itemCode), [details]);
+
+    /** 区分の選択肢を辞書から取得する */
+    useEffect(() => {
+        const fetchClassification = async () => {
+            try {
+                const result = await request(
+                    'post',
+                    'api/common/options',
+                    { cmdOptionName: 'bss_classification' },
+                    {},
+                    false,
+                    false
+                );
+                setClassificationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchClassification();
+    }, []);
 
     /** 品目を検索する（区分は品目区分 1:製品 / 3:部品 で絞り込む） */
     useEffect(() => {
@@ -241,7 +261,7 @@ const SP302: React.FC = () => {
                             label="製品／部品"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                             defaultValue={category}
                             disabled
                         />

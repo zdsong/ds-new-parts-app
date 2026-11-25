@@ -50,8 +50,6 @@ interface SearchCondition {
     itemName: string;
 }
 
-const PAGE_SIZE_CHOICES = [10, 20, 50];
-
 const INITIAL_CONDITION: SearchCondition = {
     warehouse: '',
     location: '',
@@ -296,7 +294,6 @@ const P501: React.FC = () => {
                 showPageSize
                 showTopPagination
                 showBottomPagination
-                pageSizeChoices={PAGE_SIZE_CHOICES}
                 page={page}
                 pageSize={pageSize}
                 onPageChange={setPage}

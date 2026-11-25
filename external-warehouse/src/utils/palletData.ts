@@ -117,17 +117,6 @@ export interface ApiPallet {
     details?: ApiPalletDetail[];
 }
 
-// 区分の選択肢（設計書の SP 画面表記に合わせて「製品／部品」とする）
-export const CATEGORY_CHOICES = [
-    { key: '1', value: '製品' },
-    { key: '3', value: '部品' },
-];
-
-// コード→表示名の変換表
-export const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-    CATEGORY_CHOICES.map((choice) => [choice.key, choice.value])
-);
-
 /** 検索結果の数量入力の初期値（設計書の画面イメージに合わせて 10） */
 export const DEFAULT_QUANTITY = 10;
 

@@ -8,7 +8,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 const jobApiUrl = import.meta.env.VITE_JOB_API_URL || import.meta.env.VITE_API_URL;
 
@@ -52,7 +52,7 @@ const S090: React.FC = () => {
     const [runOnceDialogJobId, setRunOnceDialogJobId] = useState<string>('');
     const [selectedRowsForDelete, setSelectedRowsForDelete] = useState<TaskData[]>([]);
     const navigate = useNavigate();
-    const gridRef = useRef<DataGridRef<TaskData>>(null);
+    const gridRef = useRef<ResultGridRef<TaskData>>(null);
     const { request } = useApiRequest();
     const [total, setTotal] = useState<number>(0);
     const [pageNum, setPageNum] = useState<number>(1);
@@ -540,13 +540,13 @@ const S090: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<TaskData>
+                    <ResultGrid<TaskData>
                         ref={gridRef}
                         columnDefs={columnDefs}
                         rowData={rowData}
                         rowTotal={total}
                         page={pageNum}
-                        pagination
+                        showBottomPagination
                         onPageChange={handlePageChange}
                         rowUniqueKey='jobId'
                         selectionMode="multiple"

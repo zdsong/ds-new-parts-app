@@ -7,7 +7,6 @@ import SpQuantityInput from '../compontent/SpQuantityInput';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import {
-    CATEGORY_CHOICES,
     normalizeChoiceValue,
     printPalletLabels,
     toApiDetail,
@@ -59,14 +58,19 @@ const SP303: React.FC = () => {
     const [formKey, setFormKey] = useState(0);
 
     // 保管倉庫・ロケ番の選択肢
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
     const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
 
-    /** 保管倉庫の選択肢を取得する */
+    /** 区分（辞書）と保管倉庫の選択肢を取得する */
     useEffect(() => {
         const fetchWarehouses = async () => {
             try {
-                const result = await request('get', 'api/common/wh/options', {}, {}, false, false);
+                const [classification, result] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setClassificationOptions(classification?.data || []);
                 const options: OptionItem[] = result?.data || [];
                 setWarehouseOptions(options);
                 // 未選択の場合は先頭の倉庫を初期値にする
@@ -296,7 +300,7 @@ const SP303: React.FC = () => {
                             label="製品／部品"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                             onChange={handleCategoryChange}
                         />
                         <FormInput

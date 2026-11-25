@@ -9,7 +9,7 @@ import { ColDef } from 'ag-grid-community';
 
 import useApiRequest from '../adapters/apiUtil';
 import PageContainer from '../compontent/PageContainer';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 
 /**
@@ -280,7 +280,7 @@ const P407: React.FC = () => {
                 }
             `}</style>
             <div className="ag-theme-alpine move-info-grid" style={tableSx.tableContainer}>
-                <DataGrid<DetailRow>
+                <ResultGrid<DetailRow>
                     columnDefs={detailColumnDefs}
                     rowData={detailRows}
                     page={1}
@@ -289,7 +289,6 @@ const P407: React.FC = () => {
                     rowUniqueKey="id"
                     selectionMode="none"
                     rowHeight={38}
-                    pagination={false}
                     noRowsShow={moveNo ? '該当する移動情報がありません。' : '移動番号が指定されていません。'}
                 />
             </div>

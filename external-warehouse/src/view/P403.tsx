@@ -99,9 +99,6 @@ const LEGACY_WAREHOUSE: Record<string, string> = {
 
 /** 画面に出す移動状況（辞書 bss_transfer_status から取得する） */
 
-// 表示件数の選択肢（設計書の「表示件数」に相当）
-const PAGE_SIZE_CHOICES = [10, 20, 50];
-
 /** 検索条件の初期値 */
 const INITIAL_CONDITION: SearchCondition = {
     moveNo: '',
@@ -408,7 +405,6 @@ const P403: React.FC = () => {
                 showPageSize
                 showTopPagination
                 showBottomPagination
-                pageSizeChoices={PAGE_SIZE_CHOICES}
                 page={page}
                 pageSize={pageSize}
                 onPageChange={setPage}

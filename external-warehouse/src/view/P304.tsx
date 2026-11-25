@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -11,7 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
+import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { printPalletNumberSheet } from '../utils/palletNumberSheet';
 import { buildPalletLabels } from '../utils/palletData';
@@ -53,9 +54,9 @@ interface PalletDetailItem {
 interface PalletRow {
     id: string;
     palletNo: string;
-    /** 区分（1:製品 / 2:仕掛品） */
+    /** 区分（辞書 bss_classification。1:製品 / 3:部品） */
     category: string;
-    /** 保管場所（1:行田工場 / 2:外部倉庫） */
+    /** 保管場所（倉庫コード） */
     storageLocation: string;
     locationNo: string;
     inboundDate: string;
@@ -75,34 +76,10 @@ interface SearchCondition {
     remark: string;
 }
 
-// 区分の選択肢（製品／仕掛品）
-const CATEGORY_CHOICES = [
-    { key: '1', value: '製品' },
-    { key: '2', value: '仕掛品' },
-];
-
-// 保管場所の選択肢
-const STORAGE_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-// ロケ番（ロケーション番号）の選択肢
-const LOCATION_CHOICES = [
-    { key: 'A-01-03-02', value: 'A-01-03-02' },
-    { key: 'A-01-03-03', value: 'A-01-03-03' },
-    { key: 'B-02-01-01', value: 'B-02-01-01' },
-    { key: 'B-02-01-02', value: 'B-02-01-02' },
-    { key: 'C-01-01-01', value: 'C-01-01-01' },
-];
-
-// 区分・保管場所のコード→表示名変換
-const CATEGORY_LABELS: Record<string, string> = Object.fromEntries(
-    CATEGORY_CHOICES.map((choice) => [choice.key, choice.value])
-);
-const STORAGE_LABELS: Record<string, string> = Object.fromEntries(
-    STORAGE_CHOICES.map((choice) => [choice.key, choice.value])
-);
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 // 検索条件の初期値
 const INITIAL_CONDITION: SearchCondition = {
@@ -151,8 +128,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '1',
         palletNo: 'B260904-026',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-02',
         inboundDate: '2026/09/04',
         storagePeriod: '9ヶ月',
@@ -165,8 +142,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '2',
         palletNo: 'B260904-021',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-02',
         inboundDate: '2026/09/04',
         storagePeriod: '9ヶ月',
@@ -178,8 +155,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '3',
         palletNo: 'B260904-018',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-03',
         inboundDate: '2026/09/03',
         storagePeriod: '9ヶ月',
@@ -194,7 +171,7 @@ const PALLETS: PalletRow[] = [
         id: '4',
         palletNo: 'B260903-012',
         category: '1',
-        storageLocation: '2',
+        storageLocation: '20',
         locationNo: 'B-02-01-01',
         inboundDate: '2026/09/03',
         storagePeriod: '6ヶ月',
@@ -208,7 +185,7 @@ const PALLETS: PalletRow[] = [
         id: '5',
         palletNo: 'B260902-009',
         category: '1',
-        storageLocation: '2',
+        storageLocation: '20',
         locationNo: 'B-02-01-02',
         inboundDate: '2026/09/02',
         storagePeriod: '6ヶ月',
@@ -220,8 +197,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '6',
         palletNo: 'B260902-005',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'C-01-01-01',
         inboundDate: '2026/09/02',
         storagePeriod: '9ヶ月',
@@ -233,8 +210,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '7',
         palletNo: 'B260901-034',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-02',
         inboundDate: '2026/09/01',
         storagePeriod: '9ヶ月',
@@ -248,7 +225,7 @@ const PALLETS: PalletRow[] = [
         id: '8',
         palletNo: 'B260901-030',
         category: '1',
-        storageLocation: '2',
+        storageLocation: '20',
         locationNo: 'B-02-01-01',
         inboundDate: '2026/09/01',
         storagePeriod: '6ヶ月',
@@ -260,8 +237,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '9',
         palletNo: 'B260831-027',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-03',
         inboundDate: '2026/08/31',
         storagePeriod: '9ヶ月',
@@ -273,8 +250,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '10',
         palletNo: 'B260831-022',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'C-01-01-01',
         inboundDate: '2026/08/31',
         storagePeriod: '9ヶ月',
@@ -287,7 +264,7 @@ const PALLETS: PalletRow[] = [
         id: '11',
         palletNo: 'B260830-014',
         category: '1',
-        storageLocation: '2',
+        storageLocation: '20',
         locationNo: 'B-02-01-02',
         inboundDate: '2026/08/30',
         storagePeriod: '6ヶ月',
@@ -300,8 +277,8 @@ const PALLETS: PalletRow[] = [
     {
         id: '12',
         palletNo: 'B260830-008',
-        category: '2',
-        storageLocation: '1',
+        category: '3',
+        storageLocation: '10',
         locationNo: 'A-01-03-02',
         inboundDate: '2026/08/30',
         storagePeriod: '9ヶ月',
@@ -331,6 +308,12 @@ const digitsOnly = (value: string): string => (value || '').replace(/[^0-9]/g, '
 const P304: React.FC = () => {
     const notify = useNotify();
     const navigate = useNavigate();
+    const { request } = useApiRequest();
+
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+    const [searchWhCd, setSearchWhCd] = useState('');
 
     // 検索条件（確定値）
     const [condition, setCondition] = useState<SearchCondition>(INITIAL_CONDITION);
@@ -342,6 +325,43 @@ const P304: React.FC = () => {
     const [page, setPage] = useState(1);
     // 一覧で選択されたパレット（番号表印刷の対象）
     const [selectedPallets, setSelectedPallets] = useState<PalletRow[]>([]);
+
+    /** 区分は辞書、保管場所は倉庫マスタから取得する */
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const [classification, warehouse] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setClassificationOptions(classification?.data || []);
+                setWarehouseOptions(warehouse?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchOptions();
+    }, []);
+
+    /** 選択中の倉庫に紐づくロケ番を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!searchWhCd) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request('get', `api/common/${searchWhCd}/location/options`, {}, {}, false, false);
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [searchWhCd]);
+
+    const labelOf = (options: OptionItem[], key?: string) =>
+        options.find((option) => option.key === key)?.value || '';
 
     // 検索条件で絞り込んだ一覧
     const filteredPallets = useMemo(() => {
@@ -402,6 +422,7 @@ const P304: React.FC = () => {
     const handleClear = () => {
         setCondition(INITIAL_CONDITION);
         setFormValues(INITIAL_CONDITION);
+        setSearchWhCd('');
         setFormVersion((version) => version + 1);
         setPage(1);
         setSelectedPallets([]);
@@ -437,7 +458,7 @@ const P304: React.FC = () => {
                 palletNo: pallet.palletNo,
                 category: pallet.category,
                 storageLocation: pallet.storageLocation,
-                storageLocationName: STORAGE_LABELS[pallet.storageLocation] || '',
+                storageLocationName: labelOf(warehouseOptions, pallet.storageLocation),
                 details: pallet.details,
             }))
         );
@@ -471,13 +492,13 @@ const P304: React.FC = () => {
         {
             headerName: '区分',
             width: 100,
-            valueGetter: (params) => CATEGORY_LABELS[params.data?.category ?? ''] ?? '',
+            valueGetter: (params) => labelOf(classificationOptions, params.data?.category),
         },
         { headerName: '入庫日', field: 'inboundDate', width: 130 },
         {
             headerName: '保管場所',
             width: 120,
-            valueGetter: (params) => STORAGE_LABELS[params.data?.storageLocation ?? ''] ?? '',
+            valueGetter: (params) => labelOf(warehouseOptions, params.data?.storageLocation),
         },
         { headerName: 'ロケ番', field: 'locationNo', width: 140 },
         { headerName: '備考', field: 'remark', flex: 1, minWidth: 160 },
@@ -511,20 +532,21 @@ const P304: React.FC = () => {
                             type={'filter-select'}
                             source="category"
                             label="区分"
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                         />
                         <FormInput type={'input-date'} source="inboundDate" label="入庫日" />
                         <FormInput
                             type={'filter-select'}
                             source="storageLocation"
                             label="保管場所"
-                            choices={STORAGE_CHOICES}
+                            choices={warehouseOptions}
+                            onChange={(value) => setSearchWhCd(normalizeChoiceValue(value))}
                         />
                         <FormInput
                             type={'filter-select'}
                             source="locationNo"
                             label="ロケ番"
-                            choices={LOCATION_CHOICES}
+                            choices={locationOptions}
                         />
                         <div style={{ gridColumn: '1 / -1' }}>
                             <FormInput
@@ -562,7 +584,7 @@ const P304: React.FC = () => {
                 </div>
 
                 <div className="ag-theme-alpine p304-grid" style={tableSx.tableContainer}>
-                    <DataGrid<PalletRow>
+                    <ResultGrid<PalletRow>
                         columnDefs={columnDefs}
                         rowData={pageRows}
                         page={page}
@@ -575,7 +597,7 @@ const P304: React.FC = () => {
                         rowUniqueKey="id"
                         selectionMode="multiple"
                         onSelectionChange={setSelectedPallets}
-                        pagination
+                        showBottomPagination
                         rowHeight={38}
                         noRowsShow="該当するパレットがありません。"
                     />

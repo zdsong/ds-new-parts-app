@@ -10,7 +10,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 export interface DictDetailData {
@@ -37,7 +37,7 @@ const S022: React.FC = () => {
     const [selectedRowsForDelete, setSelectedRowsForDelete] = useState<DictDetailData[]>([]);
     const navigate = useNavigate();
     const location = useLocation();
-    const gridRef = useRef<DataGridRef<DictDetailData>>(null);
+    const gridRef = useRef<ResultGridRef<DictDetailData>>(null);
     const [searchForm, setSearchForm] = useState({
         dictLabel: '',
         dictValue: '',
@@ -299,13 +299,13 @@ const S022: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<DictDetailData>
+                    <ResultGrid<DictDetailData>
                         ref={gridRef}
                         columnDefs={columnDefs}
                         rowData={rowData}
                         rowTotal={total}
                         page={pageNum}
-                        pagination
+                        showBottomPagination
                         onPageChange={handlePageChange}
                         rowUniqueKey='dictCode'
                         selectionMode="multiple"

@@ -10,7 +10,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 interface ParamData {
@@ -35,7 +35,7 @@ const S010: React.FC = () => {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [selectedRowsForDelete, setSelectedRowsForDelete] = useState<ParamData[]>([]);
     const navigate = useNavigate();
-    const gridRef = useRef<DataGridRef<ParamData> | null>(null);
+    const gridRef = useRef<ResultGridRef<ParamData> | null>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
 
@@ -291,13 +291,13 @@ const S010: React.FC = () => {
                 
                 
             <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                <DataGrid<ParamData>
+                <ResultGrid<ParamData>
                     ref={gridRef}
                     columnDefs={columnDefs}
                     rowData={rowData}
                     rowTotal={total}
                     page={pageNum}
-                    pagination={true}
+                    showBottomPagination
                     onPageChange={handlePageChange}
                     rowHeight={35}
                     selectionMode='multiple'

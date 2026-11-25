@@ -7,7 +7,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 import { Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 
 interface RoleData {
@@ -47,7 +47,7 @@ const S060: React.FC = () => {
     const [statusDialogRoleId, setStatusDialogRoleId] = useState<string>('');
     const [selectedRowsForDelete, setSelectedRowsForDelete] = useState<RoleData[]>([]);
     const navigate = useNavigate();
-    const gridRef = useRef<DataGridRef<RoleData>>(null);
+    const gridRef = useRef<ResultGridRef<RoleData>>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
 
@@ -340,13 +340,13 @@ const S060: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<RoleData>
+                    <ResultGrid<RoleData>
                         ref={gridRef}
                         columnDefs={columnDefs}
                         rowData={rowData}
                         rowTotal={total}
                         page={pageNum}
-                        pagination
+                        showBottomPagination
                         onPageChange={handlePageChange}
                         rowUniqueKey='roleId'
                         selectionMode="multiple"

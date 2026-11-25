@@ -12,7 +12,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import useApiRequest from '../adapters/apiUtil';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { ResultGridRef } from '../compontent/ResultGrid';
 
 interface OperLogData {
     id: string;
@@ -47,7 +47,7 @@ const S040: React.FC = () => {
     const [searchForm, setSearchForm] = useState<any>({});
     const navigate = useNavigate();
     const location = useLocation();
-    const gridRef = useRef<DataGridRef<OperLogData>>(null);
+    const gridRef = useRef<ResultGridRef<OperLogData>>(null);
     const formRef = useRef<any>(null);
     const { request } = useApiRequest();
     const notify = useNotify();
@@ -389,13 +389,13 @@ const S040: React.FC = () => {
                 </div>
                 
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<OperLogData>
+                    <ResultGrid<OperLogData>
                         ref={gridRef}
                         columnDefs={columnDefs}
                         rowData={rowData}
                         rowTotal={total}
                         page={pageNum}
-                        pagination
+                        showBottomPagination
                         onPageChange={handlePageChange}
                         rowUniqueKey='operId'
                         selectionMode="multiple"

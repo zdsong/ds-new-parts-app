@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
-import DataGrid, { DataGridRef } from '../compontent/DataGrid';
+import ResultGrid, { DEFAULT_PAGE_SIZE, ResultGridRef } from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
 
 // ユーザー・リストのデータ・インタフェースの定義
@@ -40,7 +40,7 @@ const C013: React.FC<SearchFormProps> = () => {
     status: []
   });
   
-  const newGridRef = useRef<DataGridRef<UserSearch> | null>(null);
+  const newGridRef = useRef<ResultGridRef<UserSearch> | null>(null);
   // 権限の選択肢定義（ロール一覧から動的に取得する）
   const [roleOptions, setRoleOptions] = useState<{ key: string; value: string }[]>([])
   /**
@@ -64,15 +64,15 @@ const C013: React.FC<SearchFormProps> = () => {
       status: Array.isArray(formData.status) ? formData.status.join(',') : formData.status || ''
     };
     setPageNum(1);
-    searchData(formattedSearch, { current: 1, pageSize: newGridRef.current?.getPageSize() });
+    searchData(formattedSearch, { current: 1, pageSize: newGridRef.current?.getPageSize() || DEFAULT_PAGE_SIZE });
   };
 
   /**
    * ページング変更処理方法
    */
-  const handlePageChange = async (current: number, pageSize: number) => {
+  const handlePageChange = async (current: number) => {
     setPageNum(current);
-    searchData(searchForm, { current: current, pageSize: pageSize });
+    searchData(searchForm, { current, pageSize: newGridRef.current?.getPageSize() || DEFAULT_PAGE_SIZE });
   };
 
   /**
@@ -249,13 +249,13 @@ const C013: React.FC<SearchFormProps> = () => {
         </div>
 
         <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-          <DataGrid<UserSearch>
+          <ResultGrid<UserSearch>
             ref={newGridRef}
             columnDefs={columnDefs}
             rowData={data}
             rowTotal={total}
             page={pageNum}
-            pagination={true}
+            showBottomPagination
             rowUniqueKey="userId"
             onPageChange={handlePageChange}
           />

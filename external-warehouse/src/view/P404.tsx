@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
@@ -11,8 +11,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import CustomModal from '../compontent/CustomModal';
+import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 
 /**
@@ -78,43 +79,10 @@ interface SearchItem {
     quantity: number;
 }
 
-// 移動状況の選択肢
-const STATUS_CHOICES = [
-    { key: '1', value: '移動依頼' },
-    { key: '2', value: '移動予定' },
-    { key: '3', value: '移動完了' },
-];
-
-// 移動先の選択肢
-const DEST_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-// ロケ番の選択肢（⑤ロケ番マスタの形式に合わせた仮データ）
-const LOCATION_CHOICES = [
-    { key: 'A-1-2-3-4', value: 'A-1-2-3-4' },
-    { key: 'A-1-2-3-5', value: 'A-1-2-3-5' },
-    { key: 'B-1-1-1-1', value: 'B-1-1-1-1' },
-    { key: 'B-2-2-2-2', value: 'B-2-2-2-2' },
-];
-
-// 検索条件の保管倉庫
-const SEARCH_STORAGE_CHOICES = [
-    { key: '1', value: '行田工場' },
-    { key: '2', value: '外部倉庫' },
-];
-
-// 製品／部品の絞り込み
-const ITEM_TYPE_CHOICES = [
-    { key: '1', value: '製品' },
-    { key: '2', value: '部品' },
-];
-
-// コード→表示名の変換表
-const STATUS_LABELS: Record<string, string> = Object.fromEntries(
-    STATUS_CHOICES.map((choice) => [choice.key, choice.value])
-);
+interface OptionItem {
+    key: string;
+    value: string;
+}
 
 /** 移動（出庫／入庫）品目検索の仮データ（本来は在庫 API から取得する） */
 const SEARCH_ITEMS: SearchItem[] = [
@@ -212,9 +180,9 @@ const normalizeDate = (value?: string): string => (value || '').replace(/\//g, '
 const buildFormDefaults = (state: Partial<MoveRequestDetailState>) => ({
     requestNo: state.requestNo || 'O-260805-001',
     // 依頼状況はコードではなく表示名で保持する（P401 の移動状況と同じ扱い）
-    status: STATUS_LABELS[state.status || '2'] || '移動予定',
-    destWarehouse: state.destWarehouse || '2',
-    locationNo: 'A-1-2-3-4',
+    status: state.status || 'TF_P',
+    destWarehouse: state.destWarehouse || '20',
+    locationNo: 'B-1-1-1-1',
     desiredDate: normalizeDate(state.desiredDate),
     requester: normalizeRequester(state.requester),
     remark: '',
@@ -251,10 +219,16 @@ const P404: React.FC = () => {
     const itemModalTitle = '移動（出庫）品目検索';
     const formId = 'p404-form';
     // 品目検索の保管倉庫の初期値（出庫は行田工場の在庫を移動する）
-    const defaultStorage = '1';
+    const { request } = useApiRequest();
+    const defaultStorage = '10';
+    const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
+    const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
+    const [statusOptions, setStatusOptions] = useState<OptionItem[]>([]);
 
     // 基本情報の初期値（クリア時に戻す先）
     const [initialForm] = useState(() => buildFormDefaults(state));
+    const [destWhCd, setDestWhCd] = useState(initialForm.destWarehouse);
     // 明細の初期値（クリア時に戻す先）
     const [initialDetails] = useState(() => buildInitialDetails(state));
 
@@ -277,26 +251,72 @@ const P404: React.FC = () => {
         itemName: string;
     }>({ storageLocation: defaultStorage, itemTypes: [], itemCode: '', itemName: '' });
 
+    /** 移動状況・区分は辞書、移動先は倉庫マスタから取得する */
+    useEffect(() => {
+        const fetchOptions = async () => {
+            try {
+                const [status, classification, warehouse] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_transfer_status' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
+                    request('get', 'api/common/wh/options', {}, {}, false, false),
+                ]);
+                setStatusOptions(status?.data || []);
+                setClassificationOptions(classification?.data || []);
+                setWarehouseOptions(warehouse?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchOptions();
+    }, []);
+
+    useEffect(() => {
+        if (statusOptions.length === 0) return;
+        setFormData((prev) => {
+            const found = statusOptions.find((option) => option.key === prev.status || option.value === prev.status);
+            if (!found || prev.status === found.value) return prev;
+            return { ...prev, status: found.value };
+        });
+        setFormVersion((version) => version + 1);
+    }, [statusOptions]);
+
+    /** 移動先に紐づくロケ番を取得する */
+    useEffect(() => {
+        const fetchLocations = async () => {
+            if (!destWhCd) {
+                setLocationOptions([]);
+                return;
+            }
+            try {
+                const result = await request('get', `api/common/${destWhCd}/location/options`, {}, {}, false, false);
+                setLocationOptions(result?.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchLocations();
+    }, [destWhCd]);
+
     /** 明細に追加済みのパレット番号 */
     const addedPalletNos = useMemo(() => details.map((detail) => detail.palletNo), [details]);
 
     /** 検索結果（保管倉庫・製品／部品・品目コード・品目名で絞り込む） */
     const searchResult = useMemo(() => {
         const storageLabel =
-            SEARCH_STORAGE_CHOICES.find(
-                (choice) => choice.key === searchCondition.storageLocation
-            )?.value || '';
+            warehouseOptions.find((choice) => choice.key === searchCondition.storageLocation)?.value || '';
+        const typeLabels = classificationOptions
+            .filter((choice) => searchCondition.itemTypes.includes(choice.key))
+            .map((choice) => choice.value);
         const code = searchCondition.itemCode.trim();
         const name = searchCondition.itemName.trim();
         return SEARCH_ITEMS.filter(
             (item) =>
                 (!storageLabel || item.storageLocation === storageLabel) &&
-                (searchCondition.itemTypes.length === 0 ||
-                    searchCondition.itemTypes.includes(item.itemType)) &&
+                (searchCondition.itemTypes.length === 0 || typeLabels.includes(item.itemType)) &&
                 (!code || item.itemCode.includes(code)) &&
                 (!name || item.itemName.includes(name))
         );
-    }, [searchCondition]);
+    }, [searchCondition, warehouseOptions, classificationOptions]);
 
     /** 明細 1 行分の入力チェック結果（移動する数量が保管数を超えていないか） */
     const isOverStock = useCallback(
@@ -544,7 +564,8 @@ const P404: React.FC = () => {
                                 type={'filter-select'}
                                 source="destWarehouse"
                                 label="移動先"
-                                choices={DEST_CHOICES}
+                                choices={warehouseOptions}
+                                onChange={(value) => setDestWhCd(normalizeChoiceValue(value))}
                                 sx={{
                                     display: 'contents',
                                     label: { width: '150px', flexShrink: 0 },
@@ -555,7 +576,7 @@ const P404: React.FC = () => {
                                 type={'filter-select'}
                                 source="locationNo"
                                 label={false}
-                                choices={LOCATION_CHOICES}
+                                choices={locationOptions}
                                 sx={{
                                     width: '100%',
                                     minWidth: 0,
@@ -600,7 +621,7 @@ const P404: React.FC = () => {
                 ) : (
                     <>
                         <div className="ag-theme-alpine move-detail-grid" style={tableSx.tableContainer}>
-                            <DataGrid<DetailRow>
+                            <ResultGrid<DetailRow>
                                 columnDefs={detailColumnDefs}
                                 rowData={details}
                                 page={1}
@@ -670,13 +691,13 @@ const P404: React.FC = () => {
                                 type={'filter-select'}
                                 source="storageLocation"
                                 label="保管倉庫"
-                                choices={SEARCH_STORAGE_CHOICES}
+                                choices={warehouseOptions}
                             />
                             <FormInput
                                 type={'multiple-choice'}
                                 source="itemTypes"
                                 label="製品／部品"
-                                choices={ITEM_TYPE_CHOICES}
+                                choices={classificationOptions}
                             />
                             <FormInput type={'text'} source="itemCode" label="品目コード" />
                             <FormInput type={'text'} source="itemName" label="品目名" />
@@ -695,7 +716,7 @@ const P404: React.FC = () => {
                         検索結果 {searchResult.length} 件
                     </Typography>
                     <div className="ag-theme-alpine move-search-grid" style={tableSx.tableContainer}>
-                        <DataGrid<SearchItem>
+                        <ResultGrid<SearchItem>
                             columnDefs={searchColumnDefs}
                             rowData={searchResult}
                             page={1}

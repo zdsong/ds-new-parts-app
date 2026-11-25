@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import DataGrid from '../compontent/DataGrid';
+import ResultGrid from '../compontent/ResultGrid';
 import CustomModal from '../compontent/CustomModal';
 import useApiRequest from '../adapters/apiUtil';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
@@ -769,7 +769,7 @@ const P303: React.FC = () => {
                     </div>
                 </SimpleForm>
                 <div className="ag-theme-alpine" style={tableSx.tableContainer}>
-                    <DataGrid<ItemMaster>
+                    <ResultGrid<ItemMaster>
                         columnDefs={itemColumnDefs}
                         rowData={itemRows}
                         rowTotal={itemTotal}

@@ -7,7 +7,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import { buttonSx, formSx, tableSx } from '../styles/commonSX';
 import { Modal, Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import ResultGrid from '../compontent/ResultGrid';
+import ResultGrid, { DEFAULT_PAGE_SIZE } from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
 import deleteIcon from '../assets/icons/delete-icon.png';
 
@@ -24,12 +24,10 @@ interface ItemRow {
 
 interface SearchFormProps { }
 
-const PAGE_SIZE_CHOICES = [10, 20, 50];
-
 const P008: React.FC<SearchFormProps> = () => {
   const [data, setData] = useState<ItemRow[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_CHOICES[0]);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [searchForm, setSearchForm] = useState<any>({});
   const { request } = useApiRequest();
   const [formKey, setFormKey] = useState(0);
@@ -119,7 +117,7 @@ const P008: React.FC<SearchFormProps> = () => {
     setFormKey((prevKey: number) => prevKey + 1);
     setData([]);
     setPage(1);
-    setPageSize(PAGE_SIZE_CHOICES[0]);
+    setPageSize(DEFAULT_PAGE_SIZE);
     await searchData({});
   };
 
@@ -308,7 +306,6 @@ const P008: React.FC<SearchFormProps> = () => {
         showResultSummary
         showPageSize
         showBottomPagination
-        pageSizeChoices={PAGE_SIZE_CHOICES}
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}

@@ -7,7 +7,6 @@ import SpQuantityInput from '../compontent/SpQuantityInput';
 import useApiRequest from '../adapters/apiUtil';
 import { spFormInputSx, spSx } from '../styles/spSx';
 import {
-    CATEGORY_CHOICES,
     fromApiPallet,
     hasNonPositiveQuantity,
     normalizeChoiceValue,
@@ -107,6 +106,7 @@ const SP305: React.FC = () => {
     const [updated, setUpdated] = useState({ at: '', by: '' });
 
     // 保管倉庫・ロケ番・辞書の選択肢
+    const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
     const [locationOptions, setLocationOptions] = useState<OptionItem[]>([]);
     const [storageTypeOptions, setStorageTypeOptions] = useState<OptionItem[]>([]);
@@ -116,11 +116,13 @@ const SP305: React.FC = () => {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [warehouse, storageType, usableFlag] = await Promise.all([
+                const [classification, warehouse, storageType, usableFlag] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
                     request('get', 'api/common/wh/options', {}, {}, false, false),
                     request('post', 'api/common/options', { cmdOptionName: 'bss_pallet_storage_type' }, {}, false, false),
                     request('post', 'api/common/options', { cmdOptionName: 'sys_usable_flag' }, {}, false, false),
                 ]);
+                setClassificationOptions(classification?.data || []);
                 setWarehouseOptions(warehouse?.data || []);
                 setStorageTypeOptions(storageType?.data || []);
                 setUsableFlagOptions(usableFlag?.data || []);
@@ -537,7 +539,7 @@ const SP305: React.FC = () => {
                             label="製品／部品"
                             structure="top-bottom"
                             sx={spFormInputSx}
-                            choices={CATEGORY_CHOICES}
+                            choices={classificationOptions}
                             disabled={printed}
                             onChange={(value) =>
                                 setPallet((prev) => ({
