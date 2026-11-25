@@ -196,21 +196,19 @@ const S051: React.FC = () => {
     }, []);
 
     const [sysYesNo, setSysYesNo] = useState([])
+    const [menuTypeOptions, setMenuTypeOptions] = useState([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysYesNoData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_yes_no' },
-            {},
-            false,
-            false
-            );
+            const [sysYesNoData, menuTypeData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_yes_no' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_menu_type' }, {}, false, false),
+            ]);
 
             setSysYesNo(sysYesNoData.data)
+            setMenuTypeOptions(menuTypeData.data || [])
         } catch (error) {
             console.error(error);
         }
@@ -226,11 +224,7 @@ const S051: React.FC = () => {
                             type={'filter-select'}
                             source="menuType"
                             label="種別"
-                            choices={[
-                                { key: 'M', value: 'ディレクトリ' },
-                                { key: 'C', value: 'メニュー' },
-                                { key: 'F', value: 'ボタン' },
-                            ]}
+                            choices={menuTypeOptions}
                             validate={[required()]}
                             required={true}
                             placeholder='選択する必要があります'

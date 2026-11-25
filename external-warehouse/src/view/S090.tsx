@@ -58,6 +58,30 @@ const S090: React.FC = () => {
     const [pageNum, setPageNum] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
     const notify = useNotify();
+    const [concurrentOptions, setConcurrentOptions] = useState<Array<{ key: string; value: string }>>([]);
+    const [taskStatusOptions, setTaskStatusOptions] = useState<Array<{ key: string; value: string }>>([]);
+    const [misfirePolicyOptions, setMisfirePolicyOptions] = useState<Array<{ key: string; value: string }>>([]);
+
+    useEffect(() => {
+        const fetchCommonCode = async () => {
+            try {
+                const [concurrentData, taskStatusData, misfirePolicyData] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_job_concurrent' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_task_status' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_misfire_policy' }, {}, false, false),
+                ]);
+                setConcurrentOptions(concurrentData.data || []);
+                setTaskStatusOptions(taskStatusData.data || []);
+                setMisfirePolicyOptions(misfirePolicyData.data || []);
+            } catch (error) {
+                console.error(error);
+            }
+        };
+        fetchCommonCode();
+    }, []);
+
+    const labelOf = (options: Array<{ key: string; value: string }>, key: unknown) =>
+        options.find((item) => String(item.key) === String(key))?.value || String(key ?? '');
 
     interface SearchForm {
         jobId: string;
@@ -268,7 +292,7 @@ const S090: React.FC = () => {
             field: 'concurrent',
             width:120,
             cellRenderer: (params: any) => (
-                <span>{params.value === '0' ? '許可' : '禁止'}</span>
+                <span>{labelOf(concurrentOptions, params.value)}</span>
             ),
         },
         {
@@ -276,12 +300,7 @@ const S090: React.FC = () => {
             field: 'misfirePolicy',
             width:140,
             cellRenderer: (params: any) => (
-                <span>
-                    {params.value === '0' ? 'デフォルト' : 
-                     params.value === '1' ? '即時実行' : 
-                     params.value === '2' ? '1回実行' : 
-                     params.value === '3' ? '即時実行' : params.value}
-                </span>
+                <span>{labelOf(misfirePolicyOptions, params.value)}</span>
             ),
         },
         {
@@ -289,7 +308,7 @@ const S090: React.FC = () => {
             field: 'status',
             width:150,
             cellRenderer: (params: any) => (
-                <span>{params.value === '0' ? '正常' : '一時停止'}</span>
+                <span>{labelOf(taskStatusOptions, params.value)}</span>
             ),
         },
         {
@@ -435,15 +454,15 @@ const S090: React.FC = () => {
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333' }}>タスクステータス:</div>
-                                <div>{currentTask.status === '0' ? '正常' : '一時停止'}</div>
+                                <div>{labelOf(taskStatusOptions, currentTask.status)}</div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333' }}>同時実行:</div>
-                                <div>{currentTask.concurrent === '0' ? '許可' : '禁止'}</div>
+                                <div>{labelOf(concurrentOptions, currentTask.concurrent)}</div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#333' }}>計画ポリシー:</div>
-                                <div>{currentTask.misfirePolicy === '0' ? 'デフォルト' : currentTask.misfirePolicy === '1' ? '即時実行' : currentTask.misfirePolicy === '2' ? '1回実行がトリガーされ' : '即時実行がトリガーされない'}</div></div>
+                                <div>{labelOf(misfirePolicyOptions, currentTask.misfirePolicy)}</div></div>
                             </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <button 

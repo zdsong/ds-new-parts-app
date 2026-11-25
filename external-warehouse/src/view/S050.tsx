@@ -75,10 +75,8 @@ const typeTagStyle = (menuType: string) => {
 };
 
 // 種別名称を取得する
-const getMenuTypeName = (menuType: string) => {
-    if (menuType === 'M') return 'ディレクトリ';
-    if (menuType === 'F') return 'ボタン';
-    return 'メニュー';
+const getMenuTypeName = (menuType: string, options: Array<{ key: string; value: string }>) => {
+    return options.find((item) => item.key === menuType)?.value || menuType;
 };
 
 const S050: React.FC = () => {
@@ -89,6 +87,7 @@ const S050: React.FC = () => {
     const [deleteTarget, setDeleteTarget] = useState<MenuData | null>(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [sysJobStatus, setSysJobStatus] = useState<Array<{ key: string; value: string }>>([]);
+    const [menuTypeOptions, setMenuTypeOptions] = useState<Array<{ key: string; value: string }>>([]);
     const navigate = useNavigate();
     const { request } = useApiRequest();
 
@@ -289,15 +288,12 @@ const S050: React.FC = () => {
     useEffect(() => {
         const fetchCommonCode = async () => {
             try {
-                const sysJobStatusData = await request(
-                    'post',
-                    'api/common/options',
-                    { cmdOptionName: 'sys_job_status' },
-                    {},
-                    false,
-                    false
-                );
+                const [sysJobStatusData, menuTypeData] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_job_status' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_menu_type' }, {}, false, false),
+                ]);
                 setSysJobStatus(sysJobStatusData.data || []);
+                setMenuTypeOptions(menuTypeData.data || []);
             } catch (error) {
                 // エラーはAPI共通処理で通知される
             }
@@ -430,7 +426,7 @@ const S050: React.FC = () => {
                                                     fontSize: '12px',
                                                 }}
                                             >
-                                                {getMenuTypeName(node.menuType)}
+                                                {getMenuTypeName(node.menuType, menuTypeOptions)}
                                             </span>
                                         </TableCell>
                                         <TableCell sx={bodyCellStyle}>
@@ -460,7 +456,7 @@ const S050: React.FC = () => {
                                                     fontSize: '12px',
                                                 }}
                                             >
-                                                {String(node.status) === '0' ? '正常' : '停止'}
+                                                {sysJobStatus.find((item) => String(item.key) === String(node.status))?.value || node.status}
                                             </span>
                                         </TableCell>
                                         <TableCell sx={bodyCellStyle}>

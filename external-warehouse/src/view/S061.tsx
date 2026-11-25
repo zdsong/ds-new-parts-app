@@ -292,21 +292,19 @@ const S061: React.FC = () => {
     };
 
     const [sysJobStatus, setSysJobStatus] = useState([])
+    const [dataScopeOptions, setDataScopeOptions] = useState([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysJobStatusData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_job_status' },
-            {},
-            false,
-            false
-            );
+            const [sysJobStatusData, dataScopeData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_status' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_data_scope' }, {}, false, false),
+            ]);
 
             setSysJobStatus(sysJobStatusData.data)
+            setDataScopeOptions(dataScopeData.data || [])
         } catch (error) {
             console.error(error);
         }
@@ -388,13 +386,7 @@ const S061: React.FC = () => {
                                 type={'filter-select'}
                                 source="dataScope"
                                 label="データ範囲"
-                                choices={[
-                                    { key: '1', value: 'すべてのデータ権限' },
-                                    { key: '2', value: 'カスタムデータ権限' },
-                                    { key: '3', value: '自部門データ権限' },
-                                    { key: '4', value: '自部門および以下データ権限' },
-                                    { key: '5', value: '自分自身のデータ権限' },
-                                ]}
+                                choices={dataScopeOptions}
                                 validate={[required()]}
                                 required={true}
                                 placeholder='選択する必要があります'

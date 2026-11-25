@@ -161,7 +161,7 @@ const S022: React.FC = () => {
             sortable: true,
             width: 200,
             cellRenderer: (params: any) => {
-                const statusText = params.value === '0' ? '正常' : '停止';
+                const statusText = sysJobStatus.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value;
                 return <span style={{ color: params.value === '0' ? 'green' : 'red' }}>{statusText}</span>;
             }
         },
@@ -171,7 +171,7 @@ const S022: React.FC = () => {
             sortable: true,
             width: 200,
             cellRenderer: (params: any) => {
-                const defaultText = params.value === 'Y' ? 'Yes' : 'No';
+                const defaultText = isDefaultOptions.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value;
                 return <span>{defaultText}</span>;
             }
         },
@@ -198,22 +198,20 @@ const S022: React.FC = () => {
         setPageNum(1);
     };
 
-    const [sysJobStatus, setSysJobStatus] = useState([])
+    const [sysJobStatus, setSysJobStatus] = useState<Array<{ key: string; value: string }>>([])
+    const [isDefaultOptions, setIsDefaultOptions] = useState<Array<{ key: string; value: string }>>([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysJobStatusData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_job_status' },
-            {},
-            false,
-            false
-            );
+            const [sysJobStatusData, isDefaultData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_status' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_is_default' }, {}, false, false),
+            ]);
 
-            setSysJobStatus(sysJobStatusData.data)
+            setSysJobStatus(sysJobStatusData.data || [])
+            setIsDefaultOptions(isDefaultData.data || [])
         } catch (error) {
             console.error(error);
         }

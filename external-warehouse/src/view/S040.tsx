@@ -183,6 +183,31 @@ const S040: React.FC = () => {
         return <div style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }} onClick={handleClick}>{props.value}</div>;
     };
 
+    const [sysOperType, setSysOperType] = useState<Array<{ key: string; value: string }>>([])
+    const [operStatusOptions, setOperStatusOptions] = useState<Array<{ key: string; value: string }>>([])
+    const [operatorTypeOptions, setOperatorTypeOptions] = useState<Array<{ key: string; value: string }>>([])
+
+    useEffect(() => {
+        const fetchCommonCode = async () => {
+            try {
+                const [sysOperTypeData, operStatusData, operatorTypeData] = await Promise.all([
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_oper_type' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_oper_status' }, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'sys_operator_type' }, {}, false, false),
+                ]);
+                setSysOperType(sysOperTypeData.data || [])
+                setOperStatusOptions(operStatusData.data || [])
+                setOperatorTypeOptions(operatorTypeData.data || [])
+            } catch (error) {
+                console.error(error);
+            }
+        }
+        fetchCommonCode();
+    }, []);
+
+    const labelOf = (options: Array<{ key: string; value: string }>, key: unknown) =>
+        options.find((item) => String(item.key) === String(key))?.value || String(key ?? '');
+
     const columnDefs = useMemo<ColDef<OperLogData>[]>(() => [
         { headerName: '番号', field: 'operId', sortable: true, width: 100, cellRenderer: IdLinkRenderer  },
         { headerName: 'オペレーションモジュール', field: 'title', sortable: true, width: 210 },
@@ -191,13 +216,9 @@ const S040: React.FC = () => {
             field: 'businessType',
             sortable: true,
             width: 150,
-            cellRenderer: (params: any) => {
-                const businessTypeMap: {[key: number]: string} = {
-                    0: 'その他', 1: '新規', 2: '修正', 3: '削除', 4: '承認',
-                    5: 'エクスポート', 6: 'インポート', 7: '強退', 8: 'コード生成', 9: 'データ消去'
-                };
-                return <span>{businessTypeMap[params.value] || params.value}</span>;
-            }
+            cellRenderer: (params: any) => (
+                <span>{labelOf(sysOperType, params.value)}</span>
+            )
         },
         { headerName: 'オペレータ', field: 'operName', sortable: true, width: 150 },
         { headerName: 'オペレーションIP', field: 'operIp', sortable: true, width: 200 },
@@ -207,10 +228,9 @@ const S040: React.FC = () => {
             field: 'status',
             sortable: true,
             width: 100,
-            cellRenderer: (params: any) => {
-                const statusText = params.value === 0 ? '正常' : '異常';
-                return <span style={{ color: params.value === 0 ? 'green' : 'red' }}>{statusText}</span>;
-            }
+            cellRenderer: (params: any) => (
+                <span style={{ color: String(params.value) === '0' ? 'green' : 'red' }}>{labelOf(operStatusOptions, params.value)}</span>
+            )
         },
         { headerName: '時間', field: 'operTime', sortable: true, width: 200 },
         {
@@ -230,15 +250,12 @@ const S040: React.FC = () => {
             field: 'operatorType',
             sortable: true,
             width: 200,
-            cellRenderer: (params: any) => {
-                const operatorTypeMap: {[key: number]: string} = {
-                    0: 'その他', 1: 'バックグラウンドユーザ', 2: '携帯端末ユーザ'
-                };
-                return <span>{operatorTypeMap[params.value] || params.value}</span>;
-            }
+            cellRenderer: (params: any) => (
+                <span>{labelOf(operatorTypeOptions, params.value)}</span>
+            )
         },
         { headerName: '方法', field: 'method', sortable: true, width: 300 }
-    ], []);
+    ], [sysOperType, operStatusOptions, operatorTypeOptions]);
 
     const handleReset = () => {
         if (operTimeRef.current) {
@@ -255,29 +272,6 @@ const S040: React.FC = () => {
         setSearchForm(resetParams);
         setPageNum(1);
     };
-
-    const [sysOperType, setSysOperType] = useState([])
-
-    useEffect(() => {
-
-        const fetchCommonCode = async () => {
-        try {
-            const sysOperTypeData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_oper_type' },
-            {},
-            false,
-            false
-            );
-
-            setSysOperType(sysOperTypeData.data)
-        } catch (error) {
-            console.error(error);
-        }
-        }
-        fetchCommonCode();
-    }, []);
 
     return (
         <PageContainer titleUnderline bottomSpace title={'操作ログ'}>
@@ -331,10 +325,7 @@ const S040: React.FC = () => {
                             type={'filter-select'}
                             source="status"
                             label="状態"
-                            choices={[
-                                { key: 0, value: '正常' },
-                                { key: 1, value: '異常' }
-                            ]}
+                            choices={operStatusOptions}
                             onChange={(value)=>{setSearchForm((prev: any) => ({
                                 ...prev,
                                 status: value.key,

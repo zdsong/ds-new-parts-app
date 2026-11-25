@@ -206,7 +206,7 @@ const S030: React.FC = () => {
             sortable: true,
             width: 100,
             cellRenderer: (params: any) => {
-                const statusText = params.value === '0' ? '成功' : '失敗';
+                const statusText = sysCommonStatus.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value;
                 return <span style={{ color: params.value === '0' ? 'green' : 'red' }}>{statusText}</span>;
             }
         },
@@ -243,7 +243,7 @@ const S030: React.FC = () => {
         setPageNum(1);    
     };
 
-    const [sysCommonStatus, setSysCommonStatus] = useState([])
+    const [sysCommonStatus, setSysCommonStatus] = useState<Array<{ key: string; value: string }>>([])
 
     useEffect(() => {
 

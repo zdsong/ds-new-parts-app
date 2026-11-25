@@ -181,7 +181,7 @@ const S095: React.FC = () => {
                 <span style={{ 
                     color: params.value === '0' ? '#52c41a' : '#f5222d' 
                 }}>
-                    {params.value === '0' ? '成功' : '失敗'}
+                    {sysCommonStatus.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value}
                 </span>
             )
         },
@@ -245,7 +245,7 @@ const S095: React.FC = () => {
         fetchCommonCode();
     }, []);
 
-    const [sysCommonStatus, setSysCommonStatus] = useState([])
+    const [sysCommonStatus, setSysCommonStatus] = useState<Array<{ key: string; value: string }>>([])
 
     useEffect(() => {
 
@@ -260,7 +260,7 @@ const S095: React.FC = () => {
             false
             );
 
-            setSysCommonStatus(sysCommonStatusData.data)
+            setSysCommonStatus(sysCommonStatusData.data || [])
         } catch (error) {
             console.error(error);
         }
@@ -340,7 +340,7 @@ const S095: React.FC = () => {
                                 <div style={{ 
                                     color: currentLog.status === '0' ? '#52c41a' : '#f5222d' 
                                 }}>
-                                    {currentLog.status === '0' ? '正常' : '失敗'}
+                                    {sysCommonStatus.find((item) => String(item.key) === String(currentLog.status))?.value || currentLog.status}
                             </div>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gridColumn: 'span 2' }}>

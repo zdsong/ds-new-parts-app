@@ -5,6 +5,7 @@ import { Button } from '@mui/material';
 import PageContainer from '../compontent/PageContainer';
 import CustomCard from '../compontent/CustomCard';
 import { buttonSx } from '../styles/commonSX';
+import useApiRequest from '../adapters/apiUtil';
 
 interface OperLogDetailData {
     operId: string;
@@ -29,40 +30,34 @@ interface OperLogDetailData {
 const S041: React.FC = () => {
     const { operId } = useParams<{ operId: string }>();
     const navigate = useNavigate();
+    const { request } = useApiRequest();
     const [detailData, setDetailData] = useState<OperLogDetailData | null>(null);
 
-    const loadDetailData = () => {
+    const loadDetailData = async () => {
         try {
             const logData = sessionStorage.getItem('operLogDetail');
-            if (logData) {
-                const data = JSON.parse(logData);
-                
-                if (data.operId === operId) {
-                    const businessTypeMap: {[key: number]: string} = {
-                        0: 'その他', 1: '新規', 2: '修正', 3: '削除', 4: '承認',
-                        5: 'エクスポート', 6: 'インポート', 7: '強退', 8: 'コード生成', 9: 'データ消去'
-                    };
-                    
-                    const operatorTypeMap: {[key: number]: string} = {
-                        0: 'その他', 1: 'バックグラウンドユーザ', 2: '携帯端末ユーザ'
-                    };
-                    
-                    const statusMap: {[key: number]: string} = {
-                        0: '正常', 1: '異常'
-                    };
+            if (!logData) return;
+            const data = JSON.parse(logData);
+            if (data.operId !== operId) return;
 
-                    setDetailData({
-                        ...data,
-                        operId: data.operId?.toString() || '',
-                        businessType: businessTypeMap[data.businessType] || data.businessType?.toString() || '',
-                        operatorType: operatorTypeMap[data.operatorType] || data.operatorType?.toString() || '',
-                        status: statusMap[data.status] || data.status?.toString() || '',
-                        costTime: data.costTime?.toString() + 'ミリ秒' || ''
-                    });
-                    
-                    sessionStorage.removeItem('operLogDetail');
-                }
-            }
+            const [businessTypeData, operatorTypeData, statusData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_oper_type' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_operator_type' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_oper_status' }, {}, false, false),
+            ]);
+            const labelOf = (options: Array<{ key: string; value: string }>, key: unknown) =>
+                options.find((item) => String(item.key) === String(key))?.value || (key?.toString() || '');
+
+            setDetailData({
+                ...data,
+                operId: data.operId?.toString() || '',
+                businessType: labelOf(businessTypeData?.data || [], data.businessType),
+                operatorType: labelOf(operatorTypeData?.data || [], data.operatorType),
+                status: labelOf(statusData?.data || [], data.status),
+                costTime: data.costTime?.toString() + 'ミリ秒' || ''
+            });
+
+            sessionStorage.removeItem('operLogDetail');
         } catch (error) {
         }
     };

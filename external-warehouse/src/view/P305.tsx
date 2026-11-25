@@ -115,13 +115,6 @@ interface PalletDetailVo {
     updateBy: string;
 }
 
-// 製品群の選択肢（商品マスタに製品群の項目が無いため、当面は固定の候補から選ぶ）
-const PRODUCT_GROUP_CHOICES = [
-    { key: '門柱', value: '門柱' },
-    { key: '横桟', value: '横桟' },
-    { key: '付属品', value: '付属品' },
-];
-
 // 初期値（パレット情報を取得するまでは空。ロケ番は保管場所の選択後に取得した候補から選ぶ）
 const INITIAL_FORM: PalletFormData = {
     palletNo: '',
@@ -247,6 +240,7 @@ const P305: React.FC = () => {
 
     // 選択肢（辞書・倉庫・ロケ番）
     const [classificationOptions, setClassificationOptions] = useState<OptionItem[]>([]);
+    const [productGroupOptions, setProductGroupOptions] = useState<OptionItem[]>([]);
     const [storageTypeOptions, setStorageTypeOptions] = useState<OptionItem[]>([]);
     const [usableFlagOptions, setUsableFlagOptions] = useState<OptionItem[]>([]);
     const [warehouseOptions, setWarehouseOptions] = useState<OptionItem[]>([]);
@@ -322,13 +316,15 @@ const P305: React.FC = () => {
     useEffect(() => {
         const fetchOptions = async () => {
             try {
-                const [classification, storageType, usableFlag, warehouse] = await Promise.all([
+                const [classification, storageType, usableFlag, warehouse, productGroup] = await Promise.all([
                     request('post', 'api/common/options', { cmdOptionName: 'bss_classification' }, {}, false, false),
                     request('post', 'api/common/options', { cmdOptionName: 'bss_pallet_storage_type' }, {}, false, false),
                     request('post', 'api/common/options', { cmdOptionName: 'sys_usable_flag' }, {}, false, false),
                     request('get', 'api/common/wh/options', {}, {}, false, false),
+                    request('post', 'api/common/options', { cmdOptionName: 'bss_product_group' }, {}, false, false),
                 ]);
                 setClassificationOptions(classification?.data || []);
+                setProductGroupOptions(productGroup?.data || []);
                 setStorageTypeOptions(storageType?.data || []);
                 setUsableFlagOptions(usableFlag?.data || []);
                 setWarehouseOptions(warehouse?.data || []);
@@ -781,7 +777,7 @@ const P305: React.FC = () => {
                                             type={'filter-select'}
                                             source="productGroup"
                                             label="製品群"
-                                            choices={PRODUCT_GROUP_CHOICES}
+                                            choices={productGroupOptions}
                                             onChange={(value) => handleDetailChange(detail.id, 'productGroup', value)}
                                         />
                                         <FormInput

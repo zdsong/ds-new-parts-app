@@ -107,21 +107,19 @@ const S023: React.FC = () => {
     };
 
     const [sysJobStatus, setSysJobStatus] = useState([])
+    const [isDefaultOptions, setIsDefaultOptions] = useState([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysJobStatusData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_job_status' },
-            {},
-            false,
-            false
-            );
+            const [sysJobStatusData, isDefaultData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_status' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_is_default' }, {}, false, false),
+            ]);
 
             setSysJobStatus(sysJobStatusData.data)
+            setIsDefaultOptions(isDefaultData.data || [])
         } catch (error) {
             console.error(error);
         }
@@ -178,10 +176,7 @@ const S023: React.FC = () => {
                             type={'filter-select'}
                             source="isDefault"
                             label="デフォルト"
-                            choices={[
-                                { key: 'Y', value: 'Yes' },
-                                { key: 'N', value: 'No' },
-                            ]}
+                            choices={isDefaultOptions}
                             validate={[required()]}
                             required={true}
                             placeholder='選択する必要があります'

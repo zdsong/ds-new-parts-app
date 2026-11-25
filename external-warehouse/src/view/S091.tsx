@@ -106,21 +106,25 @@ const S091: React.FC = () => {
     };
 
     const [sysJobGroup, setSysJobGroup] = useState([])
+    const [concurrentOptions, setConcurrentOptions] = useState([])
+    const [taskStatusOptions, setTaskStatusOptions] = useState([])
+    const [misfirePolicyOptions, setMisfirePolicyOptions] = useState([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysJobGroupData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_job_group' },
-            {},
-            false,
-            false
-            );
+            const [sysJobGroupData, concurrentData, taskStatusData, misfirePolicyData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_group' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_concurrent' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_task_status' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_misfire_policy' }, {}, false, false),
+            ]);
 
             setSysJobGroup(sysJobGroupData.data)
+            setConcurrentOptions(concurrentData.data || [])
+            setTaskStatusOptions(taskStatusData.data || [])
+            setMisfirePolicyOptions(misfirePolicyData.data || [])
         } catch (error) {
             console.error(error);
         }
@@ -178,10 +182,7 @@ const S091: React.FC = () => {
                             type={'radio'}
                             source="concurrent"
                             label="同時実行"
-                            choices={[
-                                { key: '0', value: '許可' },
-                                { key: '1', value: '禁止' },
-                            ]}
+                            choices={concurrentOptions}
                             validate={[required()]}
                             required={true}
                             placeholder='選択する必要があります'
@@ -191,10 +192,7 @@ const S091: React.FC = () => {
                             type={'radio'}
                             source="status"
                             label="タスクステータス"
-                            choices={[
-                                { key: '0', value: '正常' },
-                                { key: '1', value: '一時停止' },
-                            ]}
+                            choices={taskStatusOptions}
                             validate={[required()]}
                             required={true}
                             placeholder='選択する必要があります'
@@ -204,12 +202,7 @@ const S091: React.FC = () => {
                             type={'radio'}
                             source="misfirePolicy"
                             label="計画ポリシー"
-                            choices={[
-                                { key: '0', value: 'デフォルト' },
-                                { key: '1', value: '即時実行' },
-                                { key: '2', value: '1回実行' },
-                                { key: '3', value: '即時実行' },
-                            ]}
+                            choices={misfirePolicyOptions}
                             validate={[required()]}
                             required={true}
                             placeholder='選択する必要があります'

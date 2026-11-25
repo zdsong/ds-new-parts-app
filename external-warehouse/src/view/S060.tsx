@@ -197,13 +197,7 @@ const S060: React.FC = () => {
             field: 'dataScope',
             width: 200,
             cellRenderer: (params: any) => (
-                <span>
-                    {params.value === '1' ? 'すべてのデータ権限' :
-                     params.value === '2' ? 'カスタムデータ権限' :
-                     params.value === '3' ? '自部門データ権限' :
-                     params.value === '4' ? '自部門および以下データ権限' :
-                     params.value === '5' ? '自分自身のデータ権限' : params.value}
-                </span>
+                <span>{dataScopeOptions.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value}</span>
             ),
         },
         {
@@ -214,7 +208,7 @@ const S060: React.FC = () => {
                 <span style={{ 
                     color: params.value === '0' ? '#52c41a' : '#f5222d' 
                 }}>
-                    {params.value === '0' ? '正常' : '停止'}
+                    {sysJobStatus.find((item: { key: string; value: string }) => String(item.key) === String(params.value))?.value || params.value}
                 </span>
             ),
         },
@@ -245,22 +239,20 @@ const S060: React.FC = () => {
         fetchRoleList();
     }, [pageNum, pageSize, searchForm]);
 
-    const [sysJobStatus, setSysJobStatus] = useState([])
+    const [sysJobStatus, setSysJobStatus] = useState<Array<{ key: string; value: string }>>([])
+    const [dataScopeOptions, setDataScopeOptions] = useState<Array<{ key: string; value: string }>>([])
 
     useEffect(() => {
 
         const fetchCommonCode = async () => {
         try {
-            const sysJobStatusData = await request(
-            'post', 
-            'api/common/options',
-            { cmdOptionName: 'sys_job_status' },
-            {},
-            false,
-            false
-            );
+            const [sysJobStatusData, dataScopeData] = await Promise.all([
+                request('post', 'api/common/options', { cmdOptionName: 'sys_job_status' }, {}, false, false),
+                request('post', 'api/common/options', { cmdOptionName: 'sys_data_scope' }, {}, false, false),
+            ]);
 
-            setSysJobStatus(sysJobStatusData.data)
+            setSysJobStatus(sysJobStatusData.data || [])
+            setDataScopeOptions(dataScopeData.data || [])
         } catch (error) {
             console.error(error);
         }
