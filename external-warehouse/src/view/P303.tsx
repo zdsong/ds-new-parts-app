@@ -30,7 +30,7 @@ import { buttonSx, formSx, tableSx } from '../styles/commonSX';
  * バックエンド連携：
  *   ・選択肢（区分／保管区分／使用可否）… /api/common/options（辞書データ）
  *   ・保管場所／ロケ番 … /api/common/wh/options、/api/common/{whCd}/location/options
- *   ・品目検索 … /api/item/list（sales_flg で部品／製品を絞り込む）
+ *   ・品目検索 … /api/item/list（品目区分 prhnmx で部品／製品を絞り込む）
  *   ・発番 … POST /api/pallet（パレット番号はサーバ側で採番する）
  */
 
@@ -92,16 +92,6 @@ const INITIAL_FORM: PalletFormData = {
     storageLocation: '10',
     locationNo: '',
     remark: '',
-};
-
-/**
- * 部品区分 → 商品マスタの sales_flg
- * mast_item.sales_flg は 1:製品 / 0:部品 として部品・製品を区分する。
- * （辞書 bss_classification は 1:製品 / 3:仕掛品）
- */
-const SALES_FLG_BY_CLASSIFICATION: Record<string, string> = {
-    '1': '1',
-    '3': '0',
 };
 
 // 品目検索の1ページあたりの件数
@@ -247,7 +237,7 @@ const P303: React.FC = () => {
         fetchLocations();
     }, [whCd]);
 
-    /** 品目を検索する（区分に応じて sales_flg を切り替える） */
+    /** 品目を検索する（区分は品目マスタの品目区分 prhnmx で絞り込む） */
     const searchItems = async (condition: { itemCode: string; itemName: string }, page: number) => {
         try {
             const result = await request(
@@ -256,7 +246,7 @@ const P303: React.FC = () => {
                 {
                     itemCode: condition.itemCode,
                     itemName: condition.itemName,
-                    salesFlg: SALES_FLG_BY_CLASSIFICATION[category] || '',
+                    ...(category ? { prhnmx: category } : {}),
                 },
                 { current: page, pageSize: ITEM_PAGE_SIZE },
                 false,
