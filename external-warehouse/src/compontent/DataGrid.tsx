@@ -412,7 +412,7 @@ const DataGrid = forwardRef(
     `;
 
     return (
-      <div style={mergedContainerStyle}>
+      <div className={editing ? 'ew-editing-grid' : undefined} style={mergedContainerStyle}>
         <style>{gridStyles}</style>
         <AgGridReact<T>
           columnDefs={memoizedColumnDefs}

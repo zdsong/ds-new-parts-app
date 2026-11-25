@@ -545,7 +545,8 @@ const EDITABLE_GRID_STYLES = `
     background: #ffffff;
   }
   .ew-editable-grid .ag-cell-focus {
-    border: 2px solid #00b441 !important;
+    border: none !important;
+    outline: none !important;
   }
 `;
 

@@ -83,11 +83,52 @@ export const gridStyles = `
     text-align: right;
   }
 
+  /* 編集テーブルは一覧と区別する。列の縦線を外し、ヘッダーは白地に濃い文字にする */
+  .ew-editing-grid .ag-header,
+  .ew-editing-grid .ag-header-viewport,
+  .ew-editing-grid .ag-header-container,
+  .ew-editing-grid .ag-header-row {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border-bottom: 1px solid #d0d0d0;
+  }
+  .ew-editing-grid .ag-header-cell,
+  .ew-editing-grid .ag-header-cell-label,
+  .ew-editing-grid .ag-header-cell-text {
+    background-color: #ffffff !important;
+    color: #333333 !important;
+    border-right: none !important;
+  }
+  .ew-editing-grid .ag-cell {
+    border-right: none !important;
+  }
+
   .ag-theme-alpine .ag-cell-focus,
   .ag-theme-alpine .ag-cell-focus-outline {
     outline: none !important;
-    // border: none !important;
     border: 1px solid #00b441 !important; 
+  }
+
+  /* 編集テーブルは選択時の緑枠と、表の上・左・右の外枠を出さない */
+  .ew-editing-grid .ag-root-wrapper,
+  .ew-editing-grid .ag-root,
+  .ew-editing-grid .ag-header {
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  .ew-editing-grid .ag-cell-focus,
+  .ew-editing-grid .ag-cell-focus-outline,
+  .ew-editing-grid .ag-cell-range-selected,
+  .ew-editing-grid .ag-row-selected,
+  .ew-editing-grid .ag-row-hover,
+  .ew-editing-grid .ag-row-focus {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  .ag-theme-alpine .ew-editing-grid .ew-cell-editor:focus {
+    border-color: #9e9e9e;
   }
 `;
 
