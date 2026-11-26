@@ -99,6 +99,13 @@ const notifyMessages = {
         move_delete_failed: '移動登録の削除に失敗しました。',
         registered_demo: '移動依頼 %{requestNo} を登録しました（デモのため送信はしていません）。',
     },
+    userRelation: {
+        select_warehouse: '保管倉庫を選択してください。',
+        select_one: '修正するデータを1件選択してください。',
+        select_target: '設定するデータを選択してください。',
+        select_type: '関係タイプを1つ以上選択してください。',
+        select_user: 'ユーザーを選択してください。',
+    },
 };
 
 export default notifyMessages;

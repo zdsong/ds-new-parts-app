@@ -128,10 +128,30 @@ const clearMenuEntry = () => {
 };
 
 /**
- * 表示中の画面までの遷移順と、AppBar に出すメニュー名を求める。
- * 親メニューは出さず、メニューから開いた画面を起点に、画面内の遷移を後ろへ足す。
+ * メニューツリーから、指定画面までの親を含む経路を探す。
+ * 画面名は取得したメニューの名称を使う。
  */
-export const useMenuTrail = (_menuTree: MenuTrailNode[], menuTitles: MenuTitleMaps) => {
+const findMenuChain = (
+  nodes: MenuTrailNode[],
+  screenId: string,
+  chain: MenuTrailNode[] = [],
+): MenuTrailNode[] | null => {
+  for (const node of nodes) {
+    const next = [...chain, node];
+    if (node.name === screenId) return next;
+    if (node.children && node.children.length > 0) {
+      const found = findMenuChain(node.children, screenId, next);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+/**
+ * 表示中の画面までの遷移順と、AppBar に出すメニュー名を求める。
+ * 親メニュー（マスターなど）は取得したメニュー階層から先頭に足す。
+ */
+export const useMenuTrail = (menuTree: MenuTrailNode[], menuTitles: MenuTitleMaps) => {
   const location = useLocation();
   const routeName = routeNameOf(location.pathname);
   const screenId = screenIdOf(location.pathname);
@@ -164,15 +184,23 @@ export const useMenuTrail = (_menuTree: MenuTrailNode[], menuTitles: MenuTitleMa
     return () => window.removeEventListener('ew-menu-entry', onEntry);
   }, [location.pathname, applyPath]);
 
-  // 画面 ID そのものは出さない。メニュー名が無い画面は、メニューから入ったときの親メニュー名を引き継ぐ
+  // 画面 ID そのものは出さない。メニュー名が無い画面は、登録済みの画面名を使う
   const titleOf = (id: string) => menuTitles.current[id] || SCREEN_TITLES[id] || '';
   const parentOf = (id: string) => menuTitles.parent[id] || '';
   const trailParent = steps.map((step) => parentOf(step.screenId)).find((title) => title !== '') || '';
+  // いまの機能に一番近いメニュー項目を起点に、その親フォルダを前置する
+  const anchor = [...steps].reverse().find((step) => findMenuChain(menuTree, step.screenId));
+  const menuChain = anchor ? findMenuChain(menuTree, anchor.screenId) || [] : [];
+  const parentItems: MenuTrailItem[] = menuChain
+    .slice(0, -1)
+    .map((node) => ({ title: node.meta?.title || '' }))
+    .filter((item) => item.title !== '');
+  const stepItems: MenuTrailItem[] = steps
+    .map((step) => ({ title: titleOf(step.screenId), path: step.path }))
+    .filter((item) => item.title !== '');
   const visibleTrail: MenuTrailItem[] = isHomePath(location.pathname)
     ? []
-    : steps
-        .map((step) => ({ title: titleOf(step.screenId), path: step.path }))
-        .filter((item) => item.title !== '');
+    : [...parentItems, ...stepItems];
   const headerTitle = isHomePath(location.pathname)
     ? ''
     : parentOf(screenId) || parentOf(routeName) || mobileMenuTitle || trailParent || currentMenuTitle || '';

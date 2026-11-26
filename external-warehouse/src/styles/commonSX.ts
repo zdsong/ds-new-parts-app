@@ -20,6 +20,16 @@ export const buttonSx = {
         justifyContent: 'end',
     },
 
+    /** 入力欄と画面下の操作ボタンを分ける */
+    formActionBar: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '8px',
+        paddingTop: '16px',
+        borderTop: '1px solid #d0d0d0',
+    },
+
     centerButtonBar : {
         width: '100%',
         display: 'flex',

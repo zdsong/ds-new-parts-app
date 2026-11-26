@@ -63,6 +63,8 @@ export interface ResultGridProps<T extends { id: string | number }> {
     onPageChange?: (page: number, pageSize: number) => void;
     onPageSizeChange?: (pageSize: number) => void;
     selectionMode?: 'single' | 'multiple' | 'none';
+    /** false のとき、行のクリックでは選択しない */
+    selectOnRowClick?: boolean;
     onSelectionChange?: (selectedRows: T[]) => void;
     editing?: boolean;
     editType?: 'singleCell' | 'fullRow';
@@ -174,6 +176,7 @@ function ResultGridInner<T extends { id: string | number }>(
         onPageChange,
         onPageSizeChange,
         selectionMode = 'none',
+        selectOnRowClick,
         onSelectionChange,
         editing = false,
         editType = 'singleCell',
@@ -277,6 +280,7 @@ function ResultGridInner<T extends { id: string | number }>(
                     onPageChange={(current) => changePage(current)}
                     rowUniqueKey={rowUniqueKey}
                     selectionMode={selectionMode}
+                    selectOnRowClick={selectOnRowClick}
                     onSelectionChange={onSelectionChange}
                     rowHeight={rowHeight}
                     noRowsShow={noRowsShow}

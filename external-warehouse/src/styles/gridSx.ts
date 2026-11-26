@@ -55,10 +55,13 @@ export const gridStyles = `
     background-color: #f9f9f9 !important;
   }
 
-  .ag-theme-alpine .ag-row-selected,
   .ag-theme-alpine .ag-row-hover {
     background-color: transparent !important;
-    border: 1 solid #00b441 !important;
+    border: 1px solid #00b441 !important;
+  }
+  /* 選択してもセルを灰色にしない。行の縞はロケ番一覧と同じ */
+  .ag-theme-alpine .ag-row-selected .ag-cell {
+    background-color: transparent !important;
   }
   .ag-theme-alpine .ag-cell.ew-cell-has-input {
     padding: 3px 6px !important;

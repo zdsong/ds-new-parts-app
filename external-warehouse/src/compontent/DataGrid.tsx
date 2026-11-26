@@ -59,6 +59,8 @@ export interface DataGridProps<T extends BaseItemColumn> {
   enableDebug?: boolean;
   gridContainerStyle?: React.CSSProperties;
   selectionMode?: 'single' | 'multiple' | 'none';
+  /** false のとき、行のクリックでは選択しない（チェック欄だけ） */
+  selectOnRowClick?: boolean;
   rowUniqueKey?: keyof T;
   onSelectionChange?: (selectedRows: T[]) => void;
   pagination?: boolean;
@@ -209,6 +211,7 @@ const DataGrid = forwardRef(
       enableDebug = false,
       gridContainerStyle,
       selectionMode = 'none',
+      selectOnRowClick = true,
       rowUniqueKey = 'id',
       onSelectionChange,
       pagination = false,
@@ -265,6 +268,9 @@ const DataGrid = forwardRef(
           ...selectionColStyles,
           ...columnBaseStyle,
           sortable: false,
+          // 見出しのチェックで、表示中の行をまとめて選ぶ
+          headerCheckboxSelection: true,
+          headerCheckboxSelectionCurrentPageOnly: true,
           checkboxSelection: (params: CheckboxSelectionCallbackParams<T>) => true,
           valueGetter: () => null,
         };
@@ -381,7 +387,9 @@ const DataGrid = forwardRef(
     // Gridオプションマージ（型安全）
     const mergedGridOptions = useMemo<GridOptions<T>>(() => 
       ({
-        ...getGridBaseOptions<T>(rowHeight, selectionMode), 
+        ...getGridBaseOptions<T>(rowHeight, selectionMode),
+        // 行クリックでは選ばない。チェック欄だけが選択になる
+        ...(selectOnRowClick === false ? { suppressRowClickSelection: true } : {}),
         suppressColumnMove: true,
         suppressDragLeaveHidesColumns: true,
         // 編集モードのみ有効にするオプション群。
@@ -397,7 +405,7 @@ const DataGrid = forwardRef(
             }
           : {}),
       }),
-    [rowHeight, selectionMode, editing, editType]);
+    [rowHeight, selectionMode, selectOnRowClick, editing, editType]);
 
     // コンテナスタイルマージ
     const mergedContainerStyle = useMemo<CSSProperties>(() => ({
