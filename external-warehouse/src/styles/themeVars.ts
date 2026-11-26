@@ -14,6 +14,15 @@ export interface ThemeConfig {
   'back-button-color': string;
   'text-primary': string;
   'divider': string;
+  // メニューパネル。親の地色はスタイル色、文字は地色の上で読める濃さにする
+  'menu-parent-bg': string;
+  'menu-parent-hover': string;
+  'menu-parent-text': string;
+  'menu-parent-border': string;
+  'menu-child-hover': string;
+  'menu-child-text': string;
+  'menu-group-bg': string;
+  'menu-accent': string;
 }
 
 export const themeStyles: Record<ThemeType, ThemeConfig> = {
@@ -23,6 +32,14 @@ export const themeStyles: Record<ThemeType, ThemeConfig> = {
     'back-button-color': '#6f9fd0',
     'text-primary': '#204080',
     'divider': '#B3D0FF',
+    'menu-parent-bg': '#D4E6FA',
+    'menu-parent-hover': '#C0D7F4',
+    'menu-parent-text': '#16325C',
+    'menu-parent-border': '#B4CDE8',
+    'menu-child-hover': '#EEF5FF',
+    'menu-child-text': '#1558B0',
+    'menu-group-bg': '#F4F8FC',
+    'menu-accent': '#1A73E8',
   },
   gray: {
     'card-header-color': '#E4E4E4',
@@ -30,6 +47,14 @@ export const themeStyles: Record<ThemeType, ThemeConfig> = {
     'back-button-color': '#B0B0B0',
     'text-primary': '#333333',
     'divider': '#D0D0D0',
+    'menu-parent-bg': '#DCDCDC',
+    'menu-parent-hover': '#CECECE',
+    'menu-parent-text': '#222222',
+    'menu-parent-border': '#C4C4C4',
+    'menu-child-hover': '#F2F2F2',
+    'menu-child-text': '#333333',
+    'menu-group-bg': '#F6F6F6',
+    'menu-accent': '#5A5A5A',
   },
   brown: {
     'card-header-color': '#E8DDD6',
@@ -37,6 +62,14 @@ export const themeStyles: Record<ThemeType, ThemeConfig> = {
     'back-button-color': '#C4B2A6',
     'text-primary': '#4A3C34',
     'divider': '#D9CFC6',
+    'menu-parent-bg': '#E4D3C8',
+    'menu-parent-hover': '#D6C2B4',
+    'menu-parent-text': '#3D2C24',
+    'menu-parent-border': '#CDB5A6',
+    'menu-child-hover': '#F7F1EC',
+    'menu-child-text': '#5A3E32',
+    'menu-group-bg': '#F8F3EF',
+    'menu-accent': '#897067',
   },
 };
 

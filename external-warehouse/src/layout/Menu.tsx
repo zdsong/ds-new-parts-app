@@ -35,54 +35,54 @@ const sxStyles = {
     flexDirection: 'column',
     zIndex: 1000,
   },
-  // 親メニュー（ディレクトリ）。子と区別するため背景と太字にする
+  // 親メニュー（ディレクトリ）。スタイル色の地に、読める濃さの文字を載せる
   parentMenuItem: {
     px: 2,
     height: '46px',
     justifyContent: 'space-between',
-    backgroundColor: '#e7eef8',
-    borderBottom: '1px solid #d3deee',
+    backgroundColor: 'var(--mui-menu-parent-bg)',
+    borderBottom: '1px solid var(--mui-menu-parent-border)',
     '& .MuiListItemText-primary': {
       fontWeight: 700,
       fontSize: '15px',
-      color: '#1a2b42',
+      color: 'var(--mui-menu-parent-text)',
     },
-    '&:hover': { backgroundColor: '#dbe6f4' },
+    '&:hover': { backgroundColor: 'var(--mui-menu-parent-hover)' },
   },
-  // 子メニュー（画面）。親より字下げし、リンク色で遷移できることを示す
+  // 子メニュー（画面）。白地に、スタイル色より濃い文字にする
   childMenuItem: {
     pl: 3.5,
     pr: 2,
     height: '40px',
     justifyContent: 'space-between',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #eef2f6',
+    borderBottom: '1px solid var(--mui-menu-parent-border)',
     '& .MuiListItemText-primary': {
       fontWeight: 400,
       fontSize: '14px',
-      color: 'var(--mui-page-header-color)',
+      color: 'var(--mui-menu-child-text)',
     },
-    '&:hover': { backgroundColor: '#f3f8ff' },
+    '&:hover': { backgroundColor: 'var(--mui-menu-child-hover)' },
   },
   // 展開した子メニューのまとまり
   childGroup: {
-    backgroundColor: '#f7fafc',
-    borderLeft: '3px solid var(--mui-page-header-color)',
+    backgroundColor: 'var(--mui-menu-group-bg)',
+    borderLeft: '3px solid var(--mui-menu-accent)',
     marginLeft: '12px',
     marginBottom: '4px',
   },
   rootMenuItem: {
     px: 2,
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e4e4e4',
+    borderBottom: '1px solid var(--mui-menu-parent-border)',
     height: '46px',
     justifyContent: 'space-between',
     '& .MuiListItemText-primary': {
       fontWeight: 500,
       fontSize: '15px',
-      color: 'var(--mui-page-header-color)',
+      color: 'var(--mui-menu-child-text)',
     },
-    '&:hover': { backgroundColor: '#f3f8ff' },
+    '&:hover': { backgroundColor: 'var(--mui-menu-child-hover)' },
   },
   arrowIcon: {
     transition: 'transform 0.2s ease',
@@ -117,7 +117,7 @@ const sxStyles = {
     width: '280px',
     height: 'var(--app-vh)',
     backgroundColor: '#ffffff',
-    borderLeft: '1px solid #d3deee',
+    borderLeft: '1px solid var(--mui-menu-parent-border)',
     boxShadow: 3,
     zIndex: 1200,
     display: 'flex',
@@ -184,7 +184,7 @@ const MenuNode: React.FC<{
           </div>
           <ChevronRight
             fontSize="small"
-            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--mui-page-header-color)' }}
+            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--mui-menu-parent-text)' }}
           />
         </MenuItem>
         <Collapse in={isOpen} timeout="auto" unmountOnExit>
