@@ -116,7 +116,7 @@ export const LoginUserInfoBar: React.FC = () => {
                     fontFamily: 'inherit',
                     fontSize: '0.75rem',
                     lineHeight: 1.2,
-                    color: '#1976d2',
+                    color: 'var(--mui-page-header-color)',
                     textDecoration: 'underline',
                     '&:hover': { opacity: 0.7 },
                 }}

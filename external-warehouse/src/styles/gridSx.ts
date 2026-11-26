@@ -168,7 +168,7 @@ export const radioButtonStyle: CSSProperties = {
   cursor: 'pointer',
   appearance: 'radio',
   WebkitAppearance: 'radio',
-  accentColor: '#1976d2',
+  accentColor: 'var(--mui-page-header-color)',
 };
 
 export const radioWrapperStyle: CSSProperties = {

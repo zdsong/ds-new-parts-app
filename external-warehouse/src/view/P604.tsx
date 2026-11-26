@@ -83,6 +83,14 @@ const toTypeList = (value: any): string[] => {
     return [];
 };
 
+/** クリアボタン：白底・テーマ色の枠と文字（在庫一覧と同じ） */
+const outlineButtonStyle: React.CSSProperties = {
+    ...buttonSx.button,
+    backgroundColor: '#ffffff',
+    color: 'var(--mui-page-header-color)',
+    border: '1px solid var(--mui-page-header-color)',
+};
+
 const P604: React.FC = () => {
     const navigate = useNavigate();
     const { request } = useApiRequest();
@@ -225,7 +233,7 @@ const P604: React.FC = () => {
                                     readOnly
                                     tabIndex={-1}
                                     onClick={(event) => event.preventDefault()}
-                                    style={{ pointerEvents: 'none', accentColor: '#1976d2' }}
+                                    style={{ pointerEvents: 'none', accentColor: 'var(--mui-page-header-color)' }}
                                 />
                                 {option.value}
                             </label>
@@ -333,13 +341,13 @@ const P604: React.FC = () => {
                         style={{
                             width: '100%',
                             display: 'flex',
-                            justifyContent: 'center',
-                            gap: '30px',
-                            marginTop: '20px',
+                            justifyContent: 'flex-end',
+                            gap: '1rem',
+                            marginTop: '1rem',
                             marginBottom: '22px',
                         }}
                     >
-                        <button style={buttonSx.button} type="button" onClick={handleClear}>
+                        <button style={outlineButtonStyle} type="button" onClick={handleClear}>
                             クリア
                         </button>
                         <button style={buttonSx.button} type="submit">

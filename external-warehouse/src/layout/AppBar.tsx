@@ -9,7 +9,6 @@ import { AppBarSx } from '../styles/layoutSx';
 import customIcon from '../assets/icons/logo-icon.png';
 import { useNavigate } from 'react-router';
 import { Notice } from './Notice';
-import ThemeToggle from './ThemeToggel';
 import LoginUserInfoBar from './LoginUserInfo';
 import MenuTrail, { MenuTitleMaps, useMenuTrail } from './MenuTrail';
 import { fetchAdminMenus, AdminMenu } from '../admin/adminApi';
@@ -227,7 +226,7 @@ interface RightToolbarProps {
 } 
 
 // デフォルト右側ツールバーコンポーネント
-const EmptyRightToolbar: React.FC<RightToolbarProps> = ({ 
+const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
 }) => {
 
   // メニューアイテム初期データ
@@ -254,7 +253,6 @@ const EmptyRightToolbar: React.FC<RightToolbarProps> = ({
     flex: 1,
     justifyContent: 'end',
   }}>
-    <ThemeToggle></ThemeToggle>
     {/* <MessageChatAppBar></MessageChatAppBar>
     <Notice></Notice> */}
     {/* ログインユーザー情報（ID・最終ログイン・ログアウト）

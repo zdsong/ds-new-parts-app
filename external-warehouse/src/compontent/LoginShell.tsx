@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import LoginLogoIcon from '../assets/icons/D.png';
 import { buttonSx } from '../styles/commonSX';
-import { applyThemeVars, resolveInitialTheme } from '../styles/themeVars';
+import { applyThemeVars, resolveInitialTheme, applyFontSize, resolveInitialFontSize } from '../styles/themeVars';
 
 /**
  * ログイン画面（N001、P002〜P004）共通の外枠レイアウト
@@ -96,6 +96,8 @@ const LoginShell: React.FC<LoginShellProps> = ({ subtitle, children }) => {
         if (!document.documentElement.style.getPropertyValue('--mui-page-header-color')) {
             applyThemeVars(resolveInitialTheme());
         }
+        // 保存済みのフォントサイズを起動時に反映する
+        applyFontSize(resolveInitialFontSize());
     }, []);
 
     return (

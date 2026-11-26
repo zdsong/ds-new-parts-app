@@ -15,6 +15,20 @@ import japaneseMessages from './i18n/jp';
 import notifyMessages from './i18n/notify';
 import { Layout } from './layout';
 import { createTheme } from '@mui/material/styles';
+import { applyThemeVars, resolveInitialTheme, applyFontSize, resolveInitialFontSize } from './styles/themeVars';
+
+// モジュール読み込み時に即座にテーマ色とフォントサイズを CSS 変数へ反映する。
+// ThemeToggel を AppBar から削除したため、ここで初期化しないと
+// var(--mui-page-header-color) などが未定義になり、ボタンや見出しが消える。
+if (typeof document !== 'undefined') {
+  applyThemeVars(resolveInitialTheme());
+  // body はまだ存在しない場合があるため、DOMContentLoaded でフォントを適用する
+  if (document.body) {
+    applyFontSize(resolveInitialFontSize());
+  } else {
+    document.addEventListener('DOMContentLoaded', () => applyFontSize(resolveInitialFontSize()));
+  }
+}
 
 import CustomLoginPage from './layout/CustomLogin';
 import AdminPage from './admin/AdminPage';
@@ -96,7 +110,14 @@ const theme = createTheme({
         // 画面下端が隠れるため使わない。
         html: { height: 'var(--app-vh)', overflow: 'hidden' },
         body: { height: 'var(--app-vh)', margin: 0, padding: 0, overflow: 'hidden' },
-        '#root': { height: 'var(--app-vh)', overflow: 'hidden' }
+        '#root': { height: 'var(--app-vh)', overflow: 'hidden' },
+        // ダイアログなどの MUI 主ボタンも、選択中の共通スタイル色に合わせる
+        '.MuiButton-containedPrimary': {
+          backgroundColor: 'var(--mui-page-header-color)',
+        },
+        '.MuiButton-containedPrimary:hover': {
+          backgroundColor: 'color-mix(in srgb, var(--mui-page-header-color) 85%, black 15%)',
+        },
       }
     }
   }
