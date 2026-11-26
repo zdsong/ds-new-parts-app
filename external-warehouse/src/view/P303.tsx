@@ -616,26 +616,22 @@ const P303: React.FC = () => {
                                             onChange={(value) => handleDetailChange(detail.id, 'storageCapacity', value)}
                                         />
                                         {isProduct && (
-                                            <div style={{ gridColumn: '1 / -1' }}>
-                                                <FormInput
-                                                    type={'radio'}
-                                                    source="storageCategory"
-                                                    label="保管区分"
-                                                    choices={storageTypeOptions}
-                                                    onChange={(value) => handleDetailChange(detail.id, 'storageCategory', value)}
-                                                />
-                                            </div>
+                                            <FormInput
+                                                type={'radio'}
+                                                source="storageCategory"
+                                                label="保管区分"
+                                                choices={storageTypeOptions}
+                                                onChange={(value) => handleDetailChange(detail.id, 'storageCategory', value)}
+                                            />
                                         )}
                                         {isProduct && (
-                                            <div style={{ gridColumn: '1 / -1' }}>
-                                                <FormInput
-                                                    type={'radio'}
-                                                    source="usableFlag"
-                                                    label="使用可否"
-                                                    choices={usableFlagOptions}
-                                                    onChange={(value) => handleDetailChange(detail.id, 'usableFlag', value)}
-                                                />
-                                            </div>
+                                            <FormInput
+                                                type={'radio'}
+                                                source="usableFlag"
+                                                label="使用可否"
+                                                choices={usableFlagOptions}
+                                                onChange={(value) => handleDetailChange(detail.id, 'usableFlag', value)}
+                                            />
                                         )}
                                         <div style={{ gridColumn: '1 / -1' }}>
                                             <FormInput

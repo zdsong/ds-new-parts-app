@@ -157,27 +157,27 @@ const attributeTopBottomSx = {
     marginTop: '5px'
 }
 
-// ラジオボタンスタイル
-const radioSx = {
-    '& .MuiFormControlLabel-root': { marginLeft: 0, marginRight: 0, flex: '1' },
-    '& .MuiFormGroup-root': { minHeight: 'auto', gap: '4px' },
+// 単一選択・複数選択の共通スタイル（横並び・余白を詰める）
+const choiceGroupSx = {
+    '& .MuiFormGroup-root': {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        minHeight: 'auto',
+        height: 'auto',
+        gap: '2px 12px',
+    },
+    '& .MuiFormControlLabel-root': {
+        margin: 0,
+        width: 'auto',
+        flex: 'none',
+    },
+    '& .MuiButtonBase-root': { padding: '4px' },
+    '& .MuiFormControlLabel-label': { fontSize: '14px', lineHeight: 1.2 },
     '& .MuiFormHelperText-root': { display: 'none' },
     width: '100%',
-    height: '28px',
-    marginBottom: '0',
-    ...inputContainer
-}
-
-// 複数選択チェックボックススタイル
-const multipleChoiceSx = {
-    '& .MuiFormControlLabel-root': { marginRight: '0', flex: '1' },
-    '& .MuiFormGroup-root': { minHeight: 'auto', gap: '9px' },
-    '& .MuiFormHelperText-root': { display: 'none' },
-    '& .MuiFormGroup-row': {display: 'flex',flexDirextion: 'column'},
-    '& .MuiFormControlLabel-labelPlacementEnd': {width: 'auto', flex: 'none'},
-    '& .MuiButtonBase-root': {padding: '5px 0 9px 9px'},
-    width: '100%',
-    height: '28px',
+    height: 'auto',
+    minHeight: '28px',
     marginBottom: '0',
     ...inputContainer
 }
@@ -742,7 +742,8 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
             case 'radio':
                 return (
                     <RadioButtonGroupInput
-                        sx={{ ...radioSx, ...sx?.input }}
+                        row
+                        sx={{ ...choiceGroupSx, ...sx?.input }}
                         helperText={helperText ? helperText : false}
                         source={source}
                         value={value}
@@ -763,7 +764,8 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
                 return (
                     <CheckboxGroupInput
                     inputRef={inputRef}
-                        sx={{ ...multipleChoiceSx, ...sx?.input }}
+                        row
+                        sx={{ ...choiceGroupSx, ...sx?.input }}
                         helperText={helperText ? helperText : false}
                         source={source}
                         value={value}
@@ -866,12 +868,16 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
         }
     };
 
+    const choiceGroup = type === 'radio' || type === 'multiple-choice';
+
     return (
         <div style={structure === 'left-right'
             ? {
                   ...attributeLeftRightSx,
                   // 複数行入力は枠が高いため、外枠の 30px 固定を解除してラベルを上寄せにする
+                  // 選択項目は高さを内容に合わせ、ラベルと横並びの中央に揃える
                   ...(multilineHeight ? { height: 'auto', alignItems: 'flex-start' } : {}),
+                  ...(choiceGroup ? { height: 'auto', alignItems: 'center' } : {}),
                   ...sx
               } as React.CSSProperties
             : { ...attributeTopBottomSx, ...sx } as React.CSSProperties}>
