@@ -111,6 +111,9 @@ const S051: React.FC = () => {
         try {
             // メニューID／親メニューID は 19 桁の雪花IDを含むため、Number 変換すると
             // 精度が落ちて別のIDになる。文字列のまま送信すること。
+            // isFrame はパスから自動判定する（外部リンク=http(s):// 始まり、それ以外は内部ルート）。
+            // 手動で選ぶと「外部なのに内部パス」で后端の検証に失敗するため、ここで上書きする。
+            const isHttp = /^https?:\/\//i.test((data.path || '').trim());
             const paramsData = {
                 menuName: data.menuName,
                 menuType: data.menuType,
@@ -122,7 +125,7 @@ const S051: React.FC = () => {
                 component: data.component,
                 query: data.query,
                 routeName: data.routeName,
-                isFrame: data.isFrame,
+                isFrame: isHttp ? '0' : '1',
                 isCache: data.isCache,
                 visible: data.visible,
                 status: data.status,

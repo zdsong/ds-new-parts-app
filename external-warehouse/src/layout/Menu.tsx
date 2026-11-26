@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { IconButton, Menu, MenuItem, ListItemText, Collapse, Box, Divider } from '@mui/material';
+import { IconButton, Icon, Menu, MenuItem, ListItemText, Collapse, Box, Divider } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import Logout from '@mui/icons-material/Logout';
@@ -156,6 +156,19 @@ const menuContains = (item: MenuItemType, name: string): boolean => {
   return (item.children || []).some((child) => menuContains(child, name));
 };
 
+/**
+ * アイコンを描画する。
+ * S051 で設定した文字列（Google Material Icons の名前）の場合は <Icon> で表示し、
+ * 既に React ノードになっている場合はそのまま返す。
+ */
+const renderMenuIcon = (icon: any): React.ReactNode => {
+  if (!icon) return null;
+  if (typeof icon === 'string') {
+    return <Icon sx={{ fontSize: 20, color: 'var(--mui-page-header-color)' }}>{icon}</Icon>;
+  }
+  return icon;
+};
+
 // メニューの1項目を描画する
 const MenuNode: React.FC<{
   item: MenuItemType;
@@ -179,7 +192,7 @@ const MenuNode: React.FC<{
           sx={{ ...sxStyles.parentMenuItem, pl: 2 + depth * 1.5 }}
         >
           <div style={{ display: 'flex', alignItems: 'center'}}>
-            {item.icon}
+            {renderMenuIcon(item.icon)}
             <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
           </div>
           <ChevronRight
@@ -219,7 +232,7 @@ const MenuNode: React.FC<{
       sx={isRootLevel ? sxStyles.rootMenuItem : { ...sxStyles.childMenuItem, pl: 3.5 + (depth - 1) * 1.5 }}
     >
       <div style={{ display: 'flex', alignItems: 'center'}}>
-        {item.icon}
+        {renderMenuIcon(item.icon)}
         <ListItemText primary={item.meta.title} sx={{ ml: 1 }} />
       </div>
     </MenuItem>

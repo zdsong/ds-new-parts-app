@@ -14,6 +14,7 @@
         "data-generator-retail": "^5.0.0",
         "date-fns": "^4.1.0",
         "jsqr": "^1.4.0",
+        "material-icons": "^1.13.14",
         "qrcode": "^1.5.4",
         "ra-data-simple-rest": "^5.0.0",
         "ra-i18n-polyglot": "^5.0.0",

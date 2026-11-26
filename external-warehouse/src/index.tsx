@@ -2,6 +2,8 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import { disableMobileZoom } from './utils/zoomControl';
 import { applyViewportHeight } from './utils/viewportHeight';
+// Material Icons を npm パッケージから読み込む（内网など外部 CDN に接続できない環境でも使えるようにする）
+import 'material-icons/iconfont/material-icons.css';
 
 // スマートフォンでの画面拡大（ピンチ・ダブルタップ）を無効化する
 // ログイン画面より前に有効にしたいため、描画前に 1 度だけ設定する

@@ -56,6 +56,8 @@ interface MenuItem {
   component?: string,
   path?: string,
   meta: any,
+  /** Google Material Icons のアイコン名（例: school, home, settings） */
+  icon?: string,
   children?: MenuItem[],
 }
 
@@ -127,6 +129,8 @@ const buildMenuItems = (menus: AdminMenu[]): MenuItem[] => {
     nodeMap.set(String(menu.menuId), {
       name: resolveMenuName(menu),
       meta: { title: menu.menuName, menuType: menu.menuType },
+      // S051 で設定したアイコン名をそのまま保持する
+      icon: menu.icon || undefined,
       children: [],
     });
   });
