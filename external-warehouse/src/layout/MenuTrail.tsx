@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router';
 
 import { HOME_ROUTE } from '../utils/appRoutes';
 import { useIsMobile } from '../utils/deviceUtil';
+import { usePopupControl } from './usePopupMutex';
 
 /** メニュー階層の 1 ノード（AppBar が組み立てたメニュー） */
 export interface MenuTrailNode {
@@ -22,6 +23,8 @@ export interface MenuTitleMaps {
 interface MenuTrailItem {
   title: string;
   path?: string;
+  /** 右メニューで展開する親メニューの識別子 */
+  menuName?: string;
 }
 
 /** メニューから開いた画面。この画面をパンくずの起点にする */
@@ -193,7 +196,7 @@ export const useMenuTrail = (menuTree: MenuTrailNode[], menuTitles: MenuTitleMap
   const menuChain = anchor ? findMenuChain(menuTree, anchor.screenId) || [] : [];
   const parentItems: MenuTrailItem[] = menuChain
     .slice(0, -1)
-    .map((node) => ({ title: node.meta?.title || '' }))
+    .map((node) => ({ title: node.meta?.title || '', menuName: node.name }))
     .filter((item) => item.title !== '');
   const stepItems: MenuTrailItem[] = steps
     .map((step) => ({ title: titleOf(step.screenId), path: step.path }))
@@ -214,6 +217,23 @@ const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
   const routeName = routeNameOf(location.pathname);
+  const { activePopup, setActivePopup, closeAllPopups, setPopupParam } = usePopupControl();
+
+  // パンくず先頭の「メニュー」は画面遷移せず、右上のメニューを開閉する
+  const toggleAppMenu = () => {
+    if (activePopup === 'menu') {
+      closeAllPopups();
+      return;
+    }
+    setPopupParam(null);
+    setActivePopup('menu');
+  };
+
+  // 親メニュー名をクリックしたときは、右メニューの同じ項目を開く
+  const openMenuSection = (menuName: string) => {
+    setPopupParam({ expandName: menuName });
+    setActivePopup('menu');
+  };
 
   if (isMobile || routeName.startsWith('SP') || trail.length === 0) return null;
 
@@ -240,11 +260,22 @@ const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
               {'>'}
             </Box>
           )}
-          {item.path ? (
+          {index === 0 || item.menuName || item.path ? (
             <Box
               component="button"
               type="button"
-              onClick={() => navigate(item.path as string)}
+              onClick={() => {
+                if (index === 0) {
+                  toggleAppMenu();
+                  return;
+                }
+                // 次の階層（マスターなど）は、右メニューの対応する子一覧を開く
+                if (item.menuName) {
+                  openMenuSection(item.menuName);
+                  return;
+                }
+                navigate(item.path as string);
+              }}
               sx={{
                 border: 'none',
                 background: 'none',

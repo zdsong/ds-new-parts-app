@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { IconButton, Menu, MenuItem, ListItemText, Collapse, Box, Divider } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronRight from '@mui/icons-material/ChevronRight';
@@ -33,24 +33,54 @@ const sxStyles = {
     flexDirection: 'column',
     zIndex: 1000,
   },
+  // 親メニュー（ディレクトリ）。子と区別するため背景と太字にする
   parentMenuItem: {
     px: 2,
-    height: '50px',
+    height: '46px',
     justifyContent: 'space-between',
-    '&:hover': { bgcolor: 'action.hover' },
+    backgroundColor: '#e7eef8',
+    borderBottom: '1px solid #d3deee',
+    '& .MuiListItemText-primary': {
+      fontWeight: 700,
+      fontSize: '15px',
+      color: '#1a2b42',
+    },
+    '&:hover': { backgroundColor: '#dbe6f4' },
   },
+  // 子メニュー（画面）。親より字下げし、リンク色で遷移できることを示す
   childMenuItem: {
-    px: 3,
-    height: '50px',
+    pl: 3.5,
+    pr: 2,
+    height: '40px',
     justifyContent: 'space-between',
-    '&:hover': { bgcolor: 'action.hover' },
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #eef2f6',
+    '& .MuiListItemText-primary': {
+      fontWeight: 400,
+      fontSize: '14px',
+      color: '#1565c0',
+    },
+    '&:hover': { backgroundColor: '#f3f8ff' },
+  },
+  // 展開した子メニューのまとまり
+  childGroup: {
+    backgroundColor: '#f7fafc',
+    borderLeft: '3px solid #2f6fdb',
+    marginLeft: '12px',
+    marginBottom: '4px',
   },
   rootMenuItem: {
     px: 2,
-    '&:hover': { bgcolor: 'action.hover' },
-    borderBottom: '1px solid rgba(0,0,0,0.12)',
-    height: '50px',
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #e4e4e4',
+    height: '46px',
     justifyContent: 'space-between',
+    '& .MuiListItemText-primary': {
+      fontWeight: 500,
+      fontSize: '15px',
+      color: '#1b79e4',
+    },
+    '&:hover': { backgroundColor: '#f3f8ff' },
   },
   arrowIcon: {
     transition: 'transform 0.2s ease',
@@ -99,22 +129,38 @@ const logoutMenuItem: MenuItemType = {
   icon: <Logout fontSize="small" />,
 };
 
+// 指定名がこの項目自身、または配下にあるか
+const menuContains = (item: MenuItemType, name: string): boolean => {
+  if (!name) return false;
+  if (item.name === name) return true;
+  return (item.children || []).some((child) => menuContains(child, name));
+};
+
 // メニューの1項目を描画する
 const MenuNode: React.FC<{
   item: MenuItemType;
   onClose: () => void;
   navigate: (path: string) => void;
   isRootLevel: boolean;
-}> = ({ item, onClose, navigate, isRootLevel }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  depth: number;
+  expandName: string;
+}> = ({ item, onClose, navigate, isRootLevel, depth, expandName }) => {
+  // パンくずの親メニューと一致する項目（とその祖先）は開いた状態にする
+  const shouldOpen = !!item.children?.length && menuContains(item, expandName);
+  const [isOpen, setIsOpen] = useState(shouldOpen);
 
-  // 子メニューが存在する場合
+  useEffect(() => {
+    if (!expandName) return;
+    setIsOpen(shouldOpen);
+  }, [expandName, shouldOpen]);
+
+  // 子メニューが存在する場合は親メニューとして展開する
   if (item.children && item.children.length > 0) {
     return (
       <>
         <MenuItem
           onClick={() => setIsOpen(!isOpen)}
-          sx={sxStyles.parentMenuItem}
+          sx={{ ...sxStyles.parentMenuItem, pl: 2 + depth * 1.5 }}
         >
           <div style={{ display: 'flex', alignItems: 'center'}}>
             {item.icon}
@@ -122,11 +168,20 @@ const MenuNode: React.FC<{
           </div>
           <ChevronRight
             fontSize="small"
-            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: '#2f6fdb' }}
           />
         </MenuItem>
         <Collapse in={isOpen} timeout="auto" unmountOnExit>
-          <RecursiveMenuItems items={item.children} onClose={onClose} navigate={navigate} isRootLevel={false} />
+          <Box sx={sxStyles.childGroup}>
+            <RecursiveMenuItems
+              items={item.children}
+              onClose={onClose}
+              navigate={navigate}
+              isRootLevel={false}
+              depth={depth + 1}
+              expandName={expandName}
+            />
+          </Box>
         </Collapse>
       </>
     );
@@ -145,7 +200,7 @@ const MenuNode: React.FC<{
         }
         onClose();
       }}
-      sx={isRootLevel ? sxStyles.rootMenuItem : sxStyles.childMenuItem}
+      sx={isRootLevel ? sxStyles.rootMenuItem : { ...sxStyles.childMenuItem, pl: 3.5 + (depth - 1) * 1.5 }}
     >
       <div style={{ display: 'flex', alignItems: 'center'}}>
         {item.icon}
@@ -161,7 +216,9 @@ const RecursiveMenuItems: React.FC<{
   onClose: () => void;
   navigate: (path: string) => void;
   isRootLevel?: boolean;
-}> = ({ items, onClose, navigate, isRootLevel = true }) => {
+  depth?: number;
+  expandName?: string;
+}> = ({ items, onClose, navigate, isRootLevel = true, depth = 0, expandName = '' }) => {
   return (
     <>
       {items.map((item) => (
@@ -171,6 +228,8 @@ const RecursiveMenuItems: React.FC<{
           onClose={onClose}
           navigate={navigate}
           isRootLevel={isRootLevel}
+          depth={depth}
+          expandName={expandName}
         />
       ))}
     </>
@@ -182,17 +241,19 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
   const navigate = useNavigate();
   const logout = useLogout();
   const menuRef = useRef<HTMLDivElement>(null);
-  const { activePopup, setActivePopup, closeAllPopups } = usePopupControl();
+  const { activePopup, setActivePopup, closeAllPopups, PopupParam, setPopupParam } = usePopupControl();
   const isMenuOpen = activePopup === 'menu';
+  // パンくずの親メニューから開いたときは、その項目を展開する
+  const expandName = isMenuOpen && PopupParam?.expandName ? String(PopupParam.expandName) : '';
 
   // メニューの開閉処理
   const handleToggleMenu = () => {
     if (isMenuOpen) {
       closeAllPopups();
-    } else {
-      closeAllPopups();
-      setActivePopup('menu');
+      return;
     }
+    setPopupParam(null);
+    setActivePopup('menu');
   };
 
   return (
@@ -245,7 +306,7 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
           </Box>
         {/* メニューコンテンツ */}
         <Box sx={sxStyles.menuContent}>
-          <RecursiveMenuItems items={menuItems} onClose={closeAllPopups} navigate={navigate} />
+          <RecursiveMenuItems items={menuItems} onClose={closeAllPopups} navigate={navigate} expandName={expandName} />
         </Box>
         <Divider sx={sxStyles.divider} />
           <Box sx={{ display: 'flex', alignItems: 'center', paddingLeft: '10px', '&:hover': { bgcolor: 'action.hover' }}} onClick={()=>{logout()}}>

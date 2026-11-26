@@ -285,7 +285,7 @@ const S010: React.FC = () => {
                         type="button"
                         onClick={handleRefreshCache}
                     >
-                        キャッシュのリフレッシュ
+                        キャッシュクリア
                     </button>
                 </div>
                 
