@@ -367,7 +367,7 @@ const CustomAppBar: React.FC<CustomAppBarProps> = ({
               gutterBottom
               onClick={()=> navigateHome()}
               sx={{
-                color: 'black',
+                color: 'var(--mui-page-header-color)',
                 cursor: 'pointer',
                 // 文字は折り返さず、幅に応じて少しずつ縮める（極端に狭い場合のみ省略記号）
                 fontSize: isMobile ? FLUID.mobileTitleFont : FLUID.titleFont,

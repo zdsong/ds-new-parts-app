@@ -250,13 +250,14 @@ const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
         pb: '2px',
         backgroundColor: '#ffffff',
         fontSize: '14px',
+        fontWeight: 700,
         lineHeight: 1.4,
       }}
     >
       {items.map((item, index) => (
         <React.Fragment key={`${item.title}-${index}`}>
           {index > 0 && (
-            <Box component="span" sx={{ color: 'var(--mui-page-header-color)' }}>
+            <Box component="span" sx={{ color: 'var(--mui-page-header-color)', fontWeight: 700 }}>
               {'>'}
             </Box>
           )}
@@ -284,6 +285,7 @@ const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 fontSize: 'inherit',
+                fontWeight: 700,
                 lineHeight: 'inherit',
                 color: 'var(--mui-page-header-color)',
               }}
@@ -291,7 +293,7 @@ const MenuTrail: React.FC<{ trail: MenuTrailItem[] }> = ({ trail }) => {
               {item.title}
             </Box>
           ) : (
-            <Box component="span" sx={{ color: 'var(--mui-page-header-color)' }}>
+            <Box component="span" sx={{ color: 'var(--mui-page-header-color)', fontWeight: 700 }}>
               {item.title}
             </Box>
           )}

@@ -32,15 +32,15 @@ export const themeStyles: Record<ThemeType, ThemeConfig> = {
     'back-button-color': '#7AA6C9',
     'text-primary': '#324251',
     'divider': '#D6E3EE',
-    // 見本の青。閉じた行は白、開いた子は #E5F2FE、文字は #324251
+    // 見本の青。閉じた行は白、開いた子は #E5F2FE。文字は灰と紛らわない青にする
     'menu-parent-bg': '#FFFFFF',
     'menu-parent-hover': '#F4F8FB',
-    'menu-parent-text': '#324251',
+    'menu-parent-text': '#1A6CB3',
     'menu-parent-border': '#E8EEF3',
     'menu-child-hover': '#D6E3EE',
-    'menu-child-text': '#324251',
+    'menu-child-text': '#1A6CB3',
     'menu-group-bg': '#E5F2FE',
-    'menu-icon': '#64707C',
+    'menu-icon': '#2E79BE',
   },
   gray: {
     'card-header-color': '#E6E8EB',
