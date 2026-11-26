@@ -35,28 +35,40 @@ const sxStyles = {
     flexDirection: 'column',
     zIndex: 1000,
   },
-  // 親メニュー（ディレクトリ）。スタイル色の地に、読める濃さの文字を載せる
+  // 閉じた親。見本どおり白地に濃い文字
   parentMenuItem: {
     px: 2,
-    height: '46px',
+    height: '42px',
     justifyContent: 'space-between',
     backgroundColor: 'var(--mui-menu-parent-bg)',
     borderBottom: '1px solid var(--mui-menu-parent-border)',
     '& .MuiListItemText-primary': {
-      fontWeight: 700,
-      fontSize: '15px',
+      fontWeight: 600,
+      fontSize: '14px',
       color: 'var(--mui-menu-parent-text)',
     },
     '&:hover': { backgroundColor: 'var(--mui-menu-parent-hover)' },
   },
-  // 子メニュー（画面）。白地に、スタイル色より濃い文字にする
-  childMenuItem: {
-    pl: 3.5,
-    pr: 2,
+  // 開いた中の親。子の地色を潰さない
+  nestedParentMenuItem: {
+    px: 2,
     height: '40px',
     justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid var(--mui-menu-parent-border)',
+    backgroundColor: 'transparent',
+    '& .MuiListItemText-primary': {
+      fontWeight: 600,
+      fontSize: '14px',
+      color: 'var(--mui-menu-parent-text)',
+    },
+    '&:hover': { backgroundColor: 'var(--mui-menu-child-hover)' },
+  },
+  // 子メニュー。開いたまとまりの地色の上に、濃い文字を載せる
+  childMenuItem: {
+    pl: 4,
+    pr: 2,
+    height: '38px',
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
     '& .MuiListItemText-primary': {
       fontWeight: 400,
       fontSize: '14px',
@@ -64,25 +76,22 @@ const sxStyles = {
     },
     '&:hover': { backgroundColor: 'var(--mui-menu-child-hover)' },
   },
-  // 展開した子メニューのまとまり
+  // 展開した子メニューのまとまり。幅いっぱいにスタイル色を敷く
   childGroup: {
     backgroundColor: 'var(--mui-menu-group-bg)',
-    borderLeft: '3px solid var(--mui-menu-accent)',
-    marginLeft: '12px',
-    marginBottom: '4px',
   },
   rootMenuItem: {
     px: 2,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--mui-menu-parent-bg)',
     borderBottom: '1px solid var(--mui-menu-parent-border)',
-    height: '46px',
+    height: '42px',
     justifyContent: 'space-between',
     '& .MuiListItemText-primary': {
       fontWeight: 500,
-      fontSize: '15px',
-      color: 'var(--mui-menu-child-text)',
+      fontSize: '14px',
+      color: 'var(--mui-menu-parent-text)',
     },
-    '&:hover': { backgroundColor: 'var(--mui-menu-child-hover)' },
+    '&:hover': { backgroundColor: 'var(--mui-menu-parent-hover)' },
   },
   arrowIcon: {
     transition: 'transform 0.2s ease',
@@ -164,7 +173,7 @@ const menuContains = (item: MenuItemType, name: string): boolean => {
 const renderMenuIcon = (icon: any): React.ReactNode => {
   if (!icon) return null;
   if (typeof icon === 'string') {
-    return <Icon sx={{ fontSize: 20, color: 'var(--mui-page-header-color)' }}>{icon}</Icon>;
+    return <Icon sx={{ fontSize: 18, color: 'var(--mui-menu-icon)' }}>{icon}</Icon>;
   }
   return icon;
 };
@@ -189,7 +198,7 @@ const MenuNode: React.FC<{
       <>
         <MenuItem
           onClick={() => onToggle(item.name)}
-          sx={{ ...sxStyles.parentMenuItem, pl: 2 + depth * 1.5 }}
+          sx={{ ...(depth === 0 ? sxStyles.parentMenuItem : sxStyles.nestedParentMenuItem), pl: 2 + depth * 1.5 }}
         >
           <div style={{ display: 'flex', alignItems: 'center'}}>
             {renderMenuIcon(item.icon)}
@@ -197,7 +206,7 @@ const MenuNode: React.FC<{
           </div>
           <ChevronRight
             fontSize="small"
-            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--mui-menu-parent-text)' }}
+            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--mui-menu-icon)' }}
           />
         </MenuItem>
         <Collapse in={isOpen} timeout="auto" unmountOnExit>

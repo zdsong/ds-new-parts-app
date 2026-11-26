@@ -14,7 +14,7 @@ export interface ThemeConfig {
   'back-button-color': string;
   'text-primary': string;
   'divider': string;
-  // メニューパネル。親の地色はスタイル色、文字は地色の上で読める濃さにする
+  // メニュー。閉じた項目は白、開いた子のまとまりだけスタイル色。文字は濃くする
   'menu-parent-bg': string;
   'menu-parent-hover': string;
   'menu-parent-text': string;
@@ -22,54 +22,55 @@ export interface ThemeConfig {
   'menu-child-hover': string;
   'menu-child-text': string;
   'menu-group-bg': string;
-  'menu-accent': string;
+  'menu-icon': string;
 }
 
 export const themeStyles: Record<ThemeType, ThemeConfig> = {
   blue: {
-    'card-header-color': '#CCE5FF',
-    'page-header-color': '#1A73E8',
-    'back-button-color': '#6f9fd0',
-    'text-primary': '#204080',
-    'divider': '#B3D0FF',
-    'menu-parent-bg': '#D4E6FA',
-    'menu-parent-hover': '#C0D7F4',
-    'menu-parent-text': '#16325C',
-    'menu-parent-border': '#B4CDE8',
-    'menu-child-hover': '#EEF5FF',
-    'menu-child-text': '#1558B0',
-    'menu-group-bg': '#F4F8FC',
-    'menu-accent': '#1A73E8',
+    'card-header-color': '#D7E7F1',
+    'page-header-color': '#2E79BE',
+    'back-button-color': '#7AA6C9',
+    'text-primary': '#324251',
+    'divider': '#D6E3EE',
+    // 見本の青。閉じた行は白、開いた子は #E5F2FE、文字は #324251
+    'menu-parent-bg': '#FFFFFF',
+    'menu-parent-hover': '#F4F8FB',
+    'menu-parent-text': '#324251',
+    'menu-parent-border': '#E8EEF3',
+    'menu-child-hover': '#D6E3EE',
+    'menu-child-text': '#324251',
+    'menu-group-bg': '#E5F2FE',
+    'menu-icon': '#64707C',
   },
   gray: {
-    'card-header-color': '#E4E4E4',
-    'page-header-color': '#6E6E6E',
-    'back-button-color': '#B0B0B0',
-    'text-primary': '#333333',
-    'divider': '#D0D0D0',
-    'menu-parent-bg': '#DCDCDC',
-    'menu-parent-hover': '#CECECE',
-    'menu-parent-text': '#222222',
-    'menu-parent-border': '#C4C4C4',
-    'menu-child-hover': '#F2F2F2',
-    'menu-child-text': '#333333',
-    'menu-group-bg': '#F6F6F6',
-    'menu-accent': '#5A5A5A',
+    'card-header-color': '#E6E8EB',
+    'page-header-color': '#5C656E',
+    'back-button-color': '#A8B0B8',
+    'text-primary': '#2C3136',
+    'divider': '#DDE0E4',
+    'menu-parent-bg': '#FFFFFF',
+    'menu-parent-hover': '#F4F5F6',
+    'menu-parent-text': '#2C3136',
+    'menu-parent-border': '#E6E8EB',
+    'menu-child-hover': '#DDE0E4',
+    'menu-child-text': '#2C3136',
+    'menu-group-bg': '#EEEFF1',
+    'menu-icon': '#6B727A',
   },
   brown: {
-    'card-header-color': '#E8DDD6',
+    'card-header-color': '#EFE4DC',
     'page-header-color': '#897067',
-    'back-button-color': '#C4B2A6',
-    'text-primary': '#4A3C34',
-    'divider': '#D9CFC6',
-    'menu-parent-bg': '#E4D3C8',
-    'menu-parent-hover': '#D6C2B4',
-    'menu-parent-text': '#3D2C24',
-    'menu-parent-border': '#CDB5A6',
-    'menu-child-hover': '#F7F1EC',
-    'menu-child-text': '#5A3E32',
-    'menu-group-bg': '#F8F3EF',
-    'menu-accent': '#897067',
+    'back-button-color': '#C4B0A4',
+    'text-primary': '#3E322C',
+    'divider': '#E5D6CC',
+    'menu-parent-bg': '#FFFFFF',
+    'menu-parent-hover': '#FBF7F4',
+    'menu-parent-text': '#3E322C',
+    'menu-parent-border': '#EFE6E0',
+    'menu-child-hover': '#E8D8CC',
+    'menu-child-text': '#3E322C',
+    'menu-group-bg': '#F6EBE4',
+    'menu-icon': '#8A7368',
   },
 };
 
