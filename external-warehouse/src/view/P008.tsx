@@ -24,6 +24,14 @@ interface ItemRow {
 
 interface SearchFormProps { }
 
+/** クリアボタン：白底・テーマ色の枠と文字（在庫一覧と同じ） */
+const outlineButtonStyle: React.CSSProperties = {
+    ...buttonSx.button,
+    backgroundColor: '#ffffff',
+    color: 'var(--mui-page-header-color)',
+    border: '1px solid var(--mui-page-header-color)',
+};
+
 const P008: React.FC<SearchFormProps> = () => {
   const [data, setData] = useState<ItemRow[]>([]);
   const [page, setPage] = useState(1);
@@ -228,16 +236,16 @@ const P008: React.FC<SearchFormProps> = () => {
           >
             <div style={{
               display: 'flex',
-              justifyContent: 'center',
-              gap: '30px',
-              marginTop: '20px',
+              justifyContent: 'flex-end',
+              gap: '1rem',
+              marginTop: '1rem',
               marginBottom: '22px',
             }}>
-              <button style={{ ...buttonSx.button, width: '300px' }} type="submit">
-                検索
-              </button>
-              <button style={{ ...buttonSx.button, backgroundColor: 'gray' }} type='button' onClick={handleClear}>
+              <button style={outlineButtonStyle} type='button' onClick={handleClear}>
                 クリア
+              </button>
+              <button style={buttonSx.button} type="submit">
+                検索
               </button>
             </div>
           </div>

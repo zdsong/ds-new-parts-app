@@ -437,13 +437,13 @@ const searchButtonBarStyle: React.CSSProperties = {
 const outlineButtonStyle: React.CSSProperties = {
     ...buttonSx.button,
     backgroundColor: '#ffffff',
-    color: '#1a73c7',
-    border: '1px solid #1a73c7',
+    color: 'var(--mui-page-header-color)',
+    border: '1px solid var(--mui-page-header-color)',
 };
 
 const linkStyle: React.CSSProperties = {
     ...(tableSx.linkFontColumn as React.CSSProperties),
-    color: '#1a73c7',
+    color: 'var(--mui-page-header-color)',
 };
 
 export default P403;

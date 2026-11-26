@@ -1,56 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { IconButton, Menu, MenuItem } from '@mui/material';
-import PaletteIcon from '@mui/icons-material/Palette';
-import { ThemeType, applyThemeVars, resolveInitialTheme, THEME_CACHE_KEY } from '../styles/themeVars';
+import React, { useEffect, useState } from 'react';
+import { Box, FormControl, MenuItem, Select } from '@mui/material';
+import {
+  THEME_CACHE_KEY,
+  THEME_OPTIONS,
+  ThemeType,
+  applyThemeVars,
+  resolveInitialTheme,
+  themeStyles,
+} from '../styles/themeVars';
 
+// 画面最上部で、青・灰・茶の共通スタイルを選ぶ
 const ThemeToggle: React.FC = () => {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [currentTheme, setCurrentTheme] = useState<ThemeType>(resolveInitialTheme);
-
 
   const changeTheme = (theme: ThemeType) => {
     setCurrentTheme(theme);
-    setAnchorEl(null);
     applyThemeVars(theme);
-    localStorage.setItem(THEME_CACHE_KEY, theme);
+    try {
+      localStorage.setItem(THEME_CACHE_KEY, theme);
+    } catch {
+      // 保存できない場合でも、表示中の色は切り替える
+    }
   };
 
   useEffect(() => {
-    changeTheme(currentTheme);
-  }, []);
+    applyThemeVars(currentTheme);
+  }, [currentTheme]);
 
   return (
-    <div style={{display: 'none', alignItems: 'center'}}>
-      <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} size="small">
-        <PaletteIcon sx= {{color: '#808080'}} />
-      </IconButton>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
-        sx={{ '& .MuiMenuItem-root': { minHeight: '36px' } }}
+    <FormControl size="small" sx={{ minWidth: 92, mr: 1, justifyContent: 'center' }}>
+      <Select
+        value={currentTheme}
+        onChange={(event) => changeTheme(event.target.value as ThemeType)}
+        aria-label="スタイル"
+        sx={{
+          height: 28,
+          fontSize: 13,
+          backgroundColor: '#fff',
+          '& .MuiSelect-select': {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            py: 0,
+          },
+        }}
       >
-        <MenuItem 
-          onClick={() => changeTheme('green')}
-          sx={{ bgcolor: currentTheme === 'green' ? '#D4F4CD' : 'transparent' }}
-        >
-          緑
-        </MenuItem>
-        <MenuItem 
-          onClick={() => changeTheme('blue')}
-          sx={{ bgcolor: currentTheme === 'blue' ? '#CCE5FF' : 'transparent' }}
-        >
-          青
-        </MenuItem>
-        <MenuItem 
-          onClick={() => changeTheme('purple')}
-          sx={{ bgcolor: currentTheme === 'purple' ? '#8C31AA' : 'transparent' }}
-        >
-          紫
-        </MenuItem>
-      </Menu>
-    </div>
+        {THEME_OPTIONS.map((option) => (
+          <MenuItem key={option.value} value={option.value} sx={{ fontSize: 13, gap: '6px' }}>
+            <Box
+              component="span"
+              sx={{
+                width: 14,
+                height: 14,
+                borderRadius: '2px',
+                backgroundColor: themeStyles[option.value]['page-header-color'],
+                border: '1px solid rgba(0,0,0,0.15)',
+                flexShrink: 0,
+              }}
+            />
+            {option.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
   );
 };
 

@@ -776,7 +776,7 @@ const SP401: React.FC = () => {
                             height: '48px',
                             border: 'none',
                             borderRadius: '5px',
-                            backgroundColor: '#0b5cab',
+                            backgroundColor: 'var(--mui-page-header-color)',
                             color: 'white',
                             fontSize: 'clamp(14px, 4vw, 17px)',
                             fontWeight: 700,
@@ -841,7 +841,7 @@ const SP401: React.FC = () => {
                                     padding: '0 14px',
                                     border: 'none',
                                     borderRadius: '5px',
-                                    backgroundColor: '#0b5cab',
+                                    backgroundColor: 'var(--mui-page-header-color)',
                                     color: 'white',
                                     fontSize: '14px',
                                     fontWeight: 700,
@@ -1079,7 +1079,7 @@ const SP401: React.FC = () => {
 };
 
 const linkSx = {
-    color: '#0b5cab',
+    color: 'var(--mui-page-header-color)',
     fontSize: 'clamp(12px, 3.4vw, 14px)',
     textDecoration: 'underline',
     cursor: 'pointer',
@@ -1146,7 +1146,7 @@ const palletLineStyle: React.CSSProperties = {
 
 const primaryButtonStyle: React.CSSProperties = {
     ...spSx.actionBackButton,
-    backgroundColor: '#0b5cab',
+    backgroundColor: 'var(--mui-page-header-color)',
 };
 
 /** カード内の項目名と値。valueStyle で値だけ見た目を変えられる */

@@ -462,14 +462,14 @@ const S050: React.FC = () => {
                                         <TableCell sx={bodyCellStyle}>
                                             <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                 <span
-                                                    style={{ color: '#1677ff', cursor: 'pointer' }}
+                                                    style={{ color: 'var(--mui-page-header-color)', cursor: 'pointer' }}
                                                     onClick={() => handleEdit(node)}
                                                 >
                                                     修正
                                                 </span>
                                                 {node.menuType !== 'F' && (
                                                     <span
-                                                        style={{ color: '#1677ff', cursor: 'pointer' }}
+                                                        style={{ color: 'var(--mui-page-header-color)', cursor: 'pointer' }}
                                                         onClick={() => handleAddChild(node)}
                                                     >
                                                         追加

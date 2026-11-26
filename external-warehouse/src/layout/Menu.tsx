@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router'
 import { usePopupControl } from './usePopupMutex';
 import { markMenuTrailEntry } from './MenuTrail';
 import Close from '@mui/icons-material/Close';
+import { MenuSettingsButton } from './MenuSettings';
+import { resolveInitialMenuDock, saveMenuDock } from '../styles/themeVars';
 
 // スタイル定義（集中管理）
 const sxStyles = {
@@ -58,14 +60,14 @@ const sxStyles = {
     '& .MuiListItemText-primary': {
       fontWeight: 400,
       fontSize: '14px',
-      color: '#1565c0',
+      color: 'var(--mui-page-header-color)',
     },
     '&:hover': { backgroundColor: '#f3f8ff' },
   },
   // 展開した子メニューのまとまり
   childGroup: {
     backgroundColor: '#f7fafc',
-    borderLeft: '3px solid #2f6fdb',
+    borderLeft: '3px solid var(--mui-page-header-color)',
     marginLeft: '12px',
     marginBottom: '4px',
   },
@@ -78,7 +80,7 @@ const sxStyles = {
     '& .MuiListItemText-primary': {
       fontWeight: 500,
       fontSize: '15px',
-      color: '#1b79e4',
+      color: 'var(--mui-page-header-color)',
     },
     '&:hover': { backgroundColor: '#f3f8ff' },
   },
@@ -107,7 +109,25 @@ const sxStyles = {
     '&:hover': { bgcolor: 'action.hover' },
     mt: 'auto',
   },
+  // 右側へ固定したときのパネル
+  dockPanel: {
+    position: 'fixed',
+    top: 0,
+    right: 0,
+    width: '280px',
+    height: 'var(--app-vh)',
+    backgroundColor: '#ffffff',
+    borderLeft: '1px solid #d3deee',
+    boxShadow: 3,
+    zIndex: 1200,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+  },
 };
+
+// 右側固定時に本文へ空ける幅
+const DOCK_WIDTH = '280px';
 
 // 型定義
 interface MenuItemType {
@@ -144,22 +164,18 @@ const MenuNode: React.FC<{
   isRootLevel: boolean;
   depth: number;
   expandName: string;
-}> = ({ item, onClose, navigate, isRootLevel, depth, expandName }) => {
-  // パンくずの親メニューと一致する項目（とその祖先）は開いた状態にする
-  const shouldOpen = !!item.children?.length && menuContains(item, expandName);
-  const [isOpen, setIsOpen] = useState(shouldOpen);
-
-  useEffect(() => {
-    if (!expandName) return;
-    setIsOpen(shouldOpen);
-  }, [expandName, shouldOpen]);
+  openName: string | null;
+  onToggle: (name: string) => void;
+}> = ({ item, onClose, navigate, isRootLevel, depth, expandName, openName, onToggle }) => {
+  // 同じ階層では 1 つだけ開く（アコーディオン動作）
+  const isOpen = openName === item.name;
 
   // 子メニューが存在する場合は親メニューとして展開する
   if (item.children && item.children.length > 0) {
     return (
       <>
         <MenuItem
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => onToggle(item.name)}
           sx={{ ...sxStyles.parentMenuItem, pl: 2 + depth * 1.5 }}
         >
           <div style={{ display: 'flex', alignItems: 'center'}}>
@@ -168,7 +184,7 @@ const MenuNode: React.FC<{
           </div>
           <ChevronRight
             fontSize="small"
-            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: '#2f6fdb' }}
+            sx={{ ...sxStyles.arrowIcon, transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)', color: 'var(--mui-page-header-color)' }}
           />
         </MenuItem>
         <Collapse in={isOpen} timeout="auto" unmountOnExit>
@@ -219,6 +235,23 @@ const RecursiveMenuItems: React.FC<{
   depth?: number;
   expandName?: string;
 }> = ({ items, onClose, navigate, isRootLevel = true, depth = 0, expandName = '' }) => {
+  // 同じ階層で開いている項目名（アコーディオン動作のため 1 つだけ保持）
+  // パンくずの親メニューから開いたときは、その経路上の項目を初期展開する
+  const initialOpen = React.useMemo(
+    () => items.find((item) => !!item.children?.length && menuContains(item, expandName))?.name ?? null,
+    [items, expandName],
+  );
+  const [openName, setOpenName] = useState<string | null>(initialOpen);
+
+  useEffect(() => {
+    setOpenName(initialOpen);
+  }, [initialOpen]);
+
+  // 同じ項目を再度クリックしたら閉じ、別の項目をクリックしたらそれだけを開く
+  const handleToggle = (name: string) => {
+    setOpenName((prev) => (prev === name ? null : name));
+  };
+
   return (
     <>
       {items.map((item) => (
@@ -230,9 +263,62 @@ const RecursiveMenuItems: React.FC<{
           isRootLevel={isRootLevel}
           depth={depth}
           expandName={expandName}
+          openName={openName}
+          onToggle={handleToggle}
         />
       ))}
     </>
+  );
+};
+
+// ポップアップと右側固定で共通の中身
+const MenuPanelBody: React.FC<{
+  menuItems: Array<any>;
+  navigate: (path: string) => void;
+  onClose: () => void;
+  expandName: string;
+  docked: boolean;
+  onSetDocked: (value: boolean) => void;
+  onDismiss: () => void;
+  onLogout: () => void;
+}> = ({ menuItems, navigate, onClose, expandName, docked, onSetDocked, onDismiss, onLogout }) => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'end',
+        maxHeight: docked ? '100%' : 'calc(var(--app-vh) - 30px)',
+        height: docked ? '100%' : undefined,
+        minHeight: 0,
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          height: '36px',
+          pl: 1,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <MenuSettingsButton docked={docked} onDockChange={onSetDocked} />
+          <IconButton onClick={onDismiss} aria-label="メニューを閉じる">
+            <Close />
+          </IconButton>
+        </Box>
+      </Box>
+      <Box sx={sxStyles.menuContent}>
+        <RecursiveMenuItems items={menuItems} onClose={onClose} navigate={navigate} expandName={expandName} />
+      </Box>
+      <Divider sx={sxStyles.divider} />
+      <Box sx={{ display: 'flex', alignItems: 'center', paddingLeft: '10px', height: '50px', '&:hover': { bgcolor: 'action.hover' }}} onClick={onLogout}>
+        {logoutMenuItem.icon}
+        <ListItemText primary={logoutMenuItem.meta.title} sx={{ ml: 1 }} />
+      </Box>
+    </Box>
   );
 };
 
@@ -243,11 +329,35 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const { activePopup, setActivePopup, closeAllPopups, PopupParam, setPopupParam } = usePopupControl();
   const isMenuOpen = activePopup === 'menu';
+  // 前回保存した右側固定の設定を初期値として使う
+  const [docked, setDocked] = useState<boolean>(() => resolveInitialMenuDock());
   // パンくずの親メニューから開いたときは、その項目を展開する
-  const expandName = isMenuOpen && PopupParam?.expandName ? String(PopupParam.expandName) : '';
+  const expandName = (isMenuOpen || docked) && PopupParam?.expandName ? String(PopupParam.expandName) : '';
+  // 右側に固定している間は、項目を選んでも閉じない
+  const handleItemClose = () => {
+    if (docked) return;
+    closeAllPopups();
+  };
+
+  // 右側固定とポップアップを切り替える。本文が隠れないよう幅を確保する
+  useEffect(() => {
+    document.documentElement.style.setProperty('--app-menu-dock', docked ? DOCK_WIDTH : '0px');
+    // 一覧の幅を、固定したメニュー分だけ詰め直す
+    window.dispatchEvent(new Event('resize'));
+    // 設定ダイアログからも変更できるよう、現在値を保存する
+    saveMenuDock(docked);
+    return () => {
+      document.documentElement.style.setProperty('--app-menu-dock', '0px');
+    };
+  }, [docked]);
 
   // メニューの開閉処理
   const handleToggleMenu = () => {
+    if (docked) {
+      setDocked(false);
+      closeAllPopups();
+      return;
+    }
     if (isMenuOpen) {
       closeAllPopups();
       return;
@@ -256,6 +366,7 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
     setActivePopup('menu');
   };
 
+  // 固定中はポップアップを閉じ、解除すると固定前のポップアップに戻す
   return (
     <Box sx={sxStyles.container}>
       {/* ハンバーガーボタン */}
@@ -268,9 +379,9 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
         <MenuIcon />
       </IconButton>
 
-      {/* メニューポップアップ */}
+      {/* メニューポップアップ。右側固定中は出さない */}
       <Menu
-        open={isMenuOpen}
+        open={isMenuOpen && !docked}
         onClose={closeAllPopups}
         PaperProps={{
           ref: menuRef,
@@ -280,41 +391,31 @@ export const CustomAppBarMenu: React.FC<MenuConfigProps> = ({menuItems}) => {
         anchorPosition={{ top: 64, left: 0 }}
         disableScrollLock
       >
-      <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'end',
-            maxHeight: 'calc(var(--app-vh) - 30px)',
-            minHeight: 0
-          }}
-        >
-          {/* 閉じるボタン */}
-          <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'end',
-            height: '30px'
-          }}
-          >
-          <IconButton
-              onClick={handleToggleMenu}
-          >
-              <Close />
-          </IconButton>
-          </Box>
-        {/* メニューコンテンツ */}
-        <Box sx={sxStyles.menuContent}>
-          <RecursiveMenuItems items={menuItems} onClose={closeAllPopups} navigate={navigate} expandName={expandName} />
-        </Box>
-        <Divider sx={sxStyles.divider} />
-          <Box sx={{ display: 'flex', alignItems: 'center', paddingLeft: '10px', '&:hover': { bgcolor: 'action.hover' }}} onClick={()=>{logout()}}>
-            {logoutMenuItem.icon}
-            <ListItemText primary={logoutMenuItem.meta.title} sx={{ ml: 1 }} />
-          </Box>
-        </Box>
+        <MenuPanelBody
+          menuItems={menuItems}
+          navigate={navigate}
+          onClose={handleItemClose}
+          expandName={expandName}
+          docked={false}
+          onSetDocked={setDocked}
+          onDismiss={closeAllPopups}
+          onLogout={() => logout()}
+        />
       </Menu>
+      {docked && (
+        <Box sx={sxStyles.dockPanel}>
+          <MenuPanelBody
+            menuItems={menuItems}
+            navigate={navigate}
+            onClose={handleItemClose}
+            expandName={expandName}
+            docked
+            onSetDocked={setDocked}
+            onDismiss={() => setDocked(false)}
+            onLogout={() => logout()}
+          />
+        </Box>
+      )}
     </Box>
   );
 };

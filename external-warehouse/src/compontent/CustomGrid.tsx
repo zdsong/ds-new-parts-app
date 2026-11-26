@@ -117,7 +117,7 @@ export const UniversalDataGrid = forwardRef(
                 cursor: 'pointer',
                 appearance: 'radio',
                 WebkitAppearance: 'radio',
-                accentColor: '#1976d2',
+                accentColor: 'var(--mui-page-header-color)',
               }}
             />
           </div>

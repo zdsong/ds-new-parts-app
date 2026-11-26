@@ -323,14 +323,14 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
               textAlign: 'center',
               lineHeight: '30px',
               cursor: 'pointer',
-              backgroundColor: isSelected ? '#1976d2' : isToday ? '#e3f2fd' : 'transparent',
+              backgroundColor: isSelected ? 'var(--mui-page-header-color)' : isToday ? '#e3f2fd' : 'transparent',
               color: isSelected ? 'white' : 'inherit',
               borderRadius: 4,
               fontSize: '13px'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
             onMouseLeave={(e) => {
-              if (isSelected) e.currentTarget.style.backgroundColor = '#1976d2';
+              if (isSelected) e.currentTarget.style.backgroundColor = 'var(--mui-page-header-color)';
               else if (isToday) e.currentTarget.style.backgroundColor = '#e3f2fd';
               else e.currentTarget.style.backgroundColor = 'transparent';
             }}
@@ -403,7 +403,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
               fontSize: '13px',
               color: '#666',
               cursor: 'pointer',
-              '&:hover': { color: '#1976d2' }
+              '&:hover': { color: 'var(--mui-page-header-color)' }
             }}
           >
             クリア
@@ -414,7 +414,7 @@ const CustomDateInput = forwardRef<CustomDateInputHandle, CustomDateInputProps>(
               fontSize: '13px',
               color: '#666',
               cursor: 'pointer',
-              '&:hover': { color: '#1976d2' }
+              '&:hover': { color: 'var(--mui-page-header-color)' }
             }}
           >
             今日

@@ -128,7 +128,7 @@ const PageLinks: React.FC<{
             style={{
                 border: 'none',
                 background: 'transparent',
-                color: current ? '#0b5cab' : '#1a73c7',
+                color: 'var(--mui-page-header-color)',
                 fontWeight: current ? 700 : 500,
                 cursor: disabled ? 'default' : 'pointer',
                 padding: '0 4px',
@@ -144,7 +144,7 @@ const PageLinks: React.FC<{
             {link('<<', 1, page <= 1)}
             {items.map((item, index) =>
                 item === '...' ? (
-                    <span key={`ellipsis-${index}`} style={{ color: '#1a73c7', padding: '0 4px' }}>
+                    <span key={`ellipsis-${index}`} style={{ color: 'var(--mui-page-header-color)', padding: '0 4px' }}>
                         ...
                     </span>
                 ) : (

@@ -77,7 +77,7 @@ const infoItemStyle: React.CSSProperties = {
 
 const linkStyle: React.CSSProperties = {
     ...(tableSx.linkFontColumn as React.CSSProperties),
-    color: '#1a73c7',
+    color: 'var(--mui-page-header-color)',
 };
 
 const InfoItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
