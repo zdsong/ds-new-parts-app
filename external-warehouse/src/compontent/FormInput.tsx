@@ -8,6 +8,7 @@ import {
 import CustomImageInput from './CustomImageInput';
 import CustomDateInput from './DateSelect';
 import { FORM_INPUT_MIN_WIDTH } from '../styles/inputSx';
+import { choiceControlSx } from '../styles/commonSX';
 
 // カスタム入力コンポーネントProps型定義
 interface CustomInputProps {
@@ -167,13 +168,7 @@ const choiceGroupSx = {
         height: 'auto',
         gap: '2px 12px',
     },
-    '& .MuiFormControlLabel-root': {
-        margin: 0,
-        width: 'auto',
-        flex: 'none',
-    },
-    '& .MuiButtonBase-root': { padding: '4px' },
-    '& .MuiFormControlLabel-label': { fontSize: '14px', lineHeight: 1.2 },
+    ...choiceControlSx,
     '& .MuiFormHelperText-root': { display: 'none' },
     width: '100%',
     height: 'auto',

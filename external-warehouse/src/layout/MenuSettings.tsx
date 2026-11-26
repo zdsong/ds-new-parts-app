@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import SettingsIcon from '@mui/icons-material/Settings';
 import CloseIcon from '@mui/icons-material/Close';
+import { choiceGroupRowSx } from '../styles/commonSX';
 import {
   ThemeType,
   THEME_OPTIONS,
@@ -32,7 +33,7 @@ import {
 } from '../styles/themeVars';
 
 interface MenuSettingsButtonProps {
-  /**生猪右侧固定の現在値（メニュー本体と同期する） */
+  /** 右側固定の現在値（メニュー本体と同期する） */
   docked: boolean;
   /** 右側固定の変更をメニュー本体へ通知する */
   onDockChange: (docked: boolean) => void;
@@ -122,6 +123,7 @@ export const MenuSettingsButton: React.FC<MenuSettingsButtonProps> = ({ docked, 
             </FormLabel>
             <RadioGroup
               row
+              sx={choiceGroupRowSx}
               value={theme}
               onChange={(event) => handleThemeChange(event.target.value as ThemeType)}
             >
@@ -131,7 +133,6 @@ export const MenuSettingsButton: React.FC<MenuSettingsButtonProps> = ({ docked, 
                   value={option.value}
                   control={<Radio size="small" />}
                   label={option.label}
-                  sx={{ mr: 2 }}
                 />
               ))}
             </RadioGroup>
@@ -146,6 +147,7 @@ export const MenuSettingsButton: React.FC<MenuSettingsButtonProps> = ({ docked, 
             </FormLabel>
             <RadioGroup
               row
+              sx={choiceGroupRowSx}
               value={fontSize}
               onChange={(event) => handleFontChange(event.target.value as FontSizeType)}
             >
@@ -155,7 +157,6 @@ export const MenuSettingsButton: React.FC<MenuSettingsButtonProps> = ({ docked, 
                   value={option.value}
                   control={<Radio size="small" />}
                   label={option.label}
-                  sx={{ mr: 2 }}
                 />
               ))}
             </RadioGroup>
@@ -170,11 +171,12 @@ export const MenuSettingsButton: React.FC<MenuSettingsButtonProps> = ({ docked, 
             </FormLabel>
             <RadioGroup
               row
+              sx={choiceGroupRowSx}
               value={dock ? 'yes' : 'no'}
               onChange={(event) => handleDockChange(event.target.value === 'yes')}
             >
-              <FormControlLabel value="yes" control={<Radio size="small" />} label="はい" sx={{ mr: 2 }} />
-              <FormControlLabel value="no" control={<Radio size="small" />} label="いいえ" sx={{ mr: 2 }} />
+              <FormControlLabel value="yes" control={<Radio size="small" />} label="はい" />
+              <FormControlLabel value="no" control={<Radio size="small" />} label="いいえ" />
             </RadioGroup>
           </FormControl>
         </DialogContent>

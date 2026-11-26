@@ -124,8 +124,11 @@ const sxStyles = {
     top: 0,
     right: 0,
     width: '280px',
-    height: 'var(--app-vh)',
+    bottom: 0,
+    height: 'auto',
     backgroundColor: '#ffffff',
+    // AppBar の白文字を引き継ぐと、白背景のログアウトが見えなくなる
+    color: '#000000',
     borderLeft: '1px solid var(--mui-menu-parent-border)',
     boxShadow: 3,
     zIndex: 1200,
@@ -336,7 +339,20 @@ const MenuPanelBody: React.FC<{
         <RecursiveMenuItems items={menuItems} onClose={onClose} navigate={navigate} expandName={expandName} />
       </Box>
       <Divider sx={sxStyles.divider} />
-      <Box sx={{ display: 'flex', alignItems: 'center', paddingLeft: '10px', height: '50px', '&:hover': { bgcolor: 'action.hover' }}} onClick={onLogout}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: '10px',
+          height: '50px',
+          color: '#000000',
+          cursor: 'pointer',
+          '&:hover': { bgcolor: 'action.hover' },
+          '& .MuiSvgIcon-root': { color: '#000000' },
+          '& .MuiListItemText-primary': { color: '#000000' },
+        }}
+        onClick={onLogout}
+      >
         {logoutMenuItem.icon}
         <ListItemText primary={logoutMenuItem.meta.title} sx={{ ml: 1 }} />
       </Box>

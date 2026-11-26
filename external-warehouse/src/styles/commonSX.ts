@@ -1,3 +1,23 @@
+/** 単一選択・複数選択のラベルと余白（横並びの見た目を揃える） */
+export const choiceControlSx = {
+    '& .MuiFormControlLabel-root': {
+        margin: 0,
+        width: 'auto',
+        flex: 'none',
+    },
+    '& .MuiButtonBase-root': { padding: '4px' },
+    '& .MuiFormControlLabel-label': { fontSize: '14px', lineHeight: 1.2 },
+};
+
+/** RadioGroup へ直接付けるときの横並び */
+export const choiceGroupRowSx = {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '2px 12px',
+    ...choiceControlSx,
+};
+
 /** 戻るボタン。主ボタンより一段薄く、選択中のスタイル色に合わせる */
 export const BACK_BUTTON_COLOR = 'var(--mui-back-button-color, #6f9fd0)';
 

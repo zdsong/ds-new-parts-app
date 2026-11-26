@@ -225,7 +225,7 @@ const P604: React.FC = () => {
                         {relationTypeOptions.map((option) => (
                             <label
                                 key={option.key}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', fontSize: '14px', lineHeight: 1.2 }}
                             >
                                 <input
                                     type="checkbox"

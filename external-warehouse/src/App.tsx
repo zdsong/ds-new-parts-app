@@ -105,12 +105,10 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: {
-        // 高さは index.html の --app-vh（dvh 相当）に合わせる。
-        // ここで 100% を指定すると、モバイルでブラウザ下部ツールバーに
-        // 画面下端が隠れるため使わない。
-        html: { height: 'var(--app-vh)', overflow: 'hidden' },
-        body: { height: 'var(--app-vh)', margin: 0, padding: 0, overflow: 'hidden' },
-        '#root': { height: 'var(--app-vh)', overflow: 'hidden' },
+        // ウィンドウいっぱいにする。100dvh だと下端に余白が残り、スクロールバーも届かない。
+        html: { height: '100%', overflow: 'hidden' },
+        body: { height: '100%', margin: 0, padding: 0, overflow: 'hidden' },
+        '#root': { height: '100%', overflow: 'hidden' },
         // ダイアログなどの MUI 主ボタンも、選択中の共通スタイル色に合わせる
         '.MuiButton-containedPrimary': {
           backgroundColor: 'var(--mui-page-header-color)',

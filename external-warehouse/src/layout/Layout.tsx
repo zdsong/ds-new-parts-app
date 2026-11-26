@@ -75,15 +75,13 @@ export default ({ children }: { children: React.ReactNode }) => {
   return ( 
     <LoadingProvider>
       <PopupMutexProvider>
-            {/* 高さは --app-vh（モバイルでは dvh）に合わせる。
-                100vh だとブラウザ下部ツールバー分だけ画面が下にはみ出し、
-                画面下端のボタンや入力欄が隠れる。 */}
+            {/* ウィンドウの四辺に固定する。height だけだと 100dvh 相当で下端が届かない。 */}
             {/* メニューを右側に固定したときは、本文が隠れないよう右に余白を空ける */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: 'var(--app-vh)', boxSizing: 'border-box', pr: 'var(--app-menu-dock, 0px)' }}>
+            <Box sx={{ position: 'fixed', top: 0, right: 0, bottom: 0, left: 0, display: 'flex', flexDirection: 'column', minHeight: 0, boxSizing: 'border-box', overflow: 'hidden', pr: 'var(--app-menu-dock, 0px)' }}>
                 {!isLoginRoute && !p004Page?<CustomAppBar />:''}
-                <Box component="main" ref={mainRef} sx={{ flex: 1, overflow: 'auto', overscrollBehavior: 'none', p: 2 ,paddingTop: 0,
+                <Box component="main" ref={mainRef} sx={{ flex: 1, minHeight: 0, overflow: 'auto', overscrollBehavior: 'none', px: 2, pt: 0,
                     // iPhone のホームインジケーター（画面下端の横棒）に内容が重ならないようにする
-                    paddingBottom: 'env(safe-area-inset-bottom)' }}>
+                    pb: 'env(safe-area-inset-bottom)' }}>
                 <ErrorBoundary FallbackComponent={Error}>
                         <Suspense fallback={<Loading />}>{children}</Suspense>
                 </ErrorBoundary>

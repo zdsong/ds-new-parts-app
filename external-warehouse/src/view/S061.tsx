@@ -492,12 +492,15 @@ const S061: React.FC = () => {
                             {availableUsers.map((user) => (
                                 <Box key={user.userId} sx={{ display: 'flex', alignItems: 'center', paddingY: '2px' }}>
                                     <Checkbox
+                                        size="small"
+                                        sx={{ padding: '4px' }}
                                         checked={selectedUserIds.includes(user.userId)}
                                         onChange={(event) => handleToggleUser(user.userId, event.target.checked)}
                                     />
                                     <ListItemText
                                         primary={`${user.userName}${user.nickName ? `（${user.nickName}）` : ''}`}
                                         secondary={`ユーザーID: ${user.userId}`}
+                                        slotProps={{ primary: { sx: { fontSize: '14px', lineHeight: 1.2 } } }}
                                     />
                                 </Box>
                             ))}
