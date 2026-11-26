@@ -81,7 +81,6 @@ import P603 from './view/P603';
 import P604 from './view/P604';
 import P605 from './view/P605';
 import P606 from './view/P606';
-import P607 from './view/P607';
 import P001 from './view/P001';
 
 
@@ -253,11 +252,10 @@ const App = () => {
               <Route path="/P601" element={<P601 />} />
               <Route path="/P602" element={<P602 />} />
               <Route path="/P603" element={<P603 />} />
-              {/* マスター：ユーザー倉庫関係 一覧・新規・更新・一括設定 */}
+              {/* マスター：ユーザー倉庫関係 一覧・新規・更新 */}
               <Route path="/P604" element={<P604 />} />
               <Route path="/P605" element={<P605 />} />
               <Route path="/P606" element={<P606 />} />
-              <Route path="/P607" element={<P607 />} />
 
               {/* 部品マスタ：詳細 */}
               <Route path="/P010/:cd" element={<P010 />} />

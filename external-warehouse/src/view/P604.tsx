@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 
-import { SimpleForm, useNotify } from 'react-admin';
+import { SimpleForm } from 'react-admin';
 import {
     Button,
     Dialog,
@@ -86,7 +86,6 @@ const toTypeList = (value: any): string[] => {
 const P604: React.FC = () => {
     const navigate = useNavigate();
     const { request } = useApiRequest();
-    const notify = useNotify();
     const isNarrow = useMediaQuery('(max-width: 900px)');
 
     const [rows, setRows] = useState<RelationRow[]>([]);
@@ -97,7 +96,6 @@ const P604: React.FC = () => {
     const [refreshKey, setRefreshKey] = useState<number>(0);
     const [warehouseChoices, setWarehouseChoices] = useState<OptionItem[]>([]);
     const [relationTypeOptions, setRelationTypeOptions] = useState<OptionItem[]>([]);
-    const [selectedRows, setSelectedRows] = useState<RelationRow[]>([]);
     const [deleteTarget, setDeleteTarget] = useState<RelationRow | null>(null);
 
     /** 倉庫と関係タイプの選択肢を取得する */
@@ -140,11 +138,9 @@ const P604: React.FC = () => {
                         typeRows: item.typeRows || [],
                     }));
                     setRows(list);
-                    setSelectedRows([]);
                 }
             } catch (error) {
                 setRows([]);
-                setSelectedRows([]);
             }
         };
         fetchList();
@@ -172,15 +168,6 @@ const P604: React.FC = () => {
     /** 修正画面へ遷移する */
     const openEdit = (row: RelationRow) => {
         navigate('/P606', { state: { row } });
-    };
-
-    /** 選択行の一括設定画面へ遷移する */
-    const openBatch = () => {
-        if (selectedRows.length === 0) {
-            notify('notify.userRelation.select_target', { type: 'warning' });
-            return;
-        }
-        navigate('/P607', { state: { rows: selectedRows } });
     };
 
     /** 削除を確定する */
@@ -293,18 +280,13 @@ const P604: React.FC = () => {
                 title="検索条件"
                 border={false}
                 action={
-                    <div style={{ display: 'flex', gap: '10px', marginRight: '10px' }}>
-                        <button
-                            style={buttonSx.button}
-                            type="button"
-                            onClick={() => navigate('/P605')}
-                        >
-                            新規追加
-                        </button>
-                        <button style={buttonSx.button} type="button" onClick={openBatch}>
-                            一括設定
-                        </button>
-                    </div>
+                    <button
+                        style={{ ...buttonSx.button, marginRight: '10px' }}
+                        type="button"
+                        onClick={() => navigate('/P605')}
+                    >
+                        新規追加
+                    </button>
                 }
             >
                 <SimpleForm
@@ -373,9 +355,6 @@ const P604: React.FC = () => {
                     rowData={rows}
                     rowUniqueKey="id"
                     rowHeight={38}
-                    selectionMode="multiple"
-                    selectOnRowClick={false}
-                    onSelectionChange={setSelectedRows}
                     showResultSummary
                     showPageSize
                     showBottomPagination
