@@ -1,10 +1,12 @@
 import React, { useMemo, forwardRef, useImperativeHandle, PropsWithoutRef, RefAttributes, useState, useCallback, useEffect } from 'react';
-import { ColDef, GridReadyEvent, CheckboxSelectionCallbackParams, GridApi } from 'ag-grid-community';
+import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
+import Radio from '@mui/material/Radio';
 import { AgGridReact } from 'ag-grid-react';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { useAgGridPagination } from '../adapters/gridUtil';
-import { tableSx } from '../styles/commonSX';
+import { tableSx, choiceMarkSx } from '../styles/commonSX';
+import { GridChoiceCheckbox, GridChoiceHeader } from './ChoiceMark';
 
 // 親コンポーネントに暴露するメソッドインターフェース
 export interface UniversalDataGridRef<T> {
@@ -92,7 +94,8 @@ export const UniversalDataGrid = forwardRef(
           suppressMovable: true,
           suppressSorting: true,
           suppressFilter: true,
-          checkboxSelection: (params: CheckboxSelectionCallbackParams<T>) => true,
+          headerComponent: GridChoiceHeader,
+          cellRenderer: GridChoiceCheckbox,
           valueGetter: () => null, // fieldを設定しない
         };
       }
@@ -107,18 +110,11 @@ export const UniversalDataGrid = forwardRef(
         suppressFilter: true,
         cellRenderer: ({ data }: { data: T }) => (
           <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-            <input
-              type="radio"
+            <Radio
+              size="small"
+              sx={choiceMarkSx}
               checked={selectedRow?.[rowUniqueKey] === data[rowUniqueKey]}
               onChange={() => setSelectedRow(data)}
-              style={{
-                width: '16px',
-                height: '16px',
-                cursor: 'pointer',
-                appearance: 'radio',
-                WebkitAppearance: 'radio',
-                accentColor: 'var(--mui-page-header-color)',
-              }}
             />
           </div>
         ),

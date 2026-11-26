@@ -3,7 +3,7 @@ import { SimpleForm, useNotify, required } from 'react-admin';
 import CustomCard from '../compontent/CustomCard';
 import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
-import { buttonSx, formSx } from '../styles/commonSX';
+import { buttonSx, formSx, choiceMarkSx } from '../styles/commonSX';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useApiRequest from '../adapters/apiUtil';
 import { Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Checkbox, ListItemText, useMediaQuery } from '@mui/material';
@@ -493,7 +493,7 @@ const S061: React.FC = () => {
                                 <Box key={user.userId} sx={{ display: 'flex', alignItems: 'center', paddingY: '2px' }}>
                                     <Checkbox
                                         size="small"
-                                        sx={{ padding: '4px' }}
+                                        sx={choiceMarkSx}
                                         checked={selectedUserIds.includes(user.userId)}
                                         onChange={(event) => handleToggleUser(user.userId, event.target.checked)}
                                     />

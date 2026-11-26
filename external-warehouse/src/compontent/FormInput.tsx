@@ -400,7 +400,7 @@ const FormInput= forwardRef<FormInputRefHandle,CustomInputProps> (({
                 return (
                     <BooleanInput
                         inputRef={inputRef}
-                        sx={{ ...inputSx, ...sx?.input }}
+                        sx={{ ...choiceGroupSx, ...sx?.input }}
                         helperText={helperText ? helperText : false}
                         source={source}
                         value={value}

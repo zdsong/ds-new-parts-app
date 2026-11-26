@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Checkbox, FormControlLabel } from '@mui/material';
-import { choiceControlSx } from '../styles/commonSX';
+import { choiceControlSx, choiceMarkSx } from '../styles/commonSX';
 import { SimpleTreeView, TreeItem } from '@mui/x-tree-view';
 import { useTranslate } from 'react-admin';
 
@@ -247,7 +247,7 @@ const CheckboxTreeSelect: React.FC<CheckboxTreeSelectProps> = ({
       )}
       <SimpleTreeView
         sx={{
-          '& .MuiCheckbox-root': { padding: '4px' },
+          '& .MuiCheckbox-root': choiceMarkSx,
           '& .MuiTreeItem-label': { fontSize: '14px', lineHeight: 1.2 },
         }}
         checkboxSelection={mode === 'multiple'}

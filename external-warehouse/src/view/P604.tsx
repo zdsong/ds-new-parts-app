@@ -6,6 +6,7 @@ import 'ag-grid-community/styles/ag-theme-alpine.css';
 import { SimpleForm } from 'react-admin';
 import {
     Button,
+    Checkbox,
     Dialog,
     DialogActions,
     DialogContent,
@@ -21,7 +22,7 @@ import PageContainer from '../compontent/PageContainer';
 import FormInput from '../compontent/FormInput';
 import ResultGrid, { DEFAULT_PAGE_SIZE } from '../compontent/ResultGrid';
 import useApiRequest from '../adapters/apiUtil';
-import { buttonSx, formSx, tableSx } from '../styles/commonSX';
+import { buttonSx, formSx, tableSx, choiceMarkSx } from '../styles/commonSX';
 
 /**
  * ユーザー倉庫関係一覧（P604）
@@ -227,13 +228,11 @@ const P604: React.FC = () => {
                                 key={option.key}
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', fontSize: '14px', lineHeight: 1.2 }}
                             >
-                                <input
-                                    type="checkbox"
+                                <Checkbox
+                                    size="small"
+                                    sx={{ ...choiceMarkSx, pointerEvents: 'none' }}
                                     checked={checked.includes(option.key)}
-                                    readOnly
                                     tabIndex={-1}
-                                    onClick={(event) => event.preventDefault()}
-                                    style={{ pointerEvents: 'none', accentColor: 'var(--mui-page-header-color)' }}
                                 />
                                 {option.value}
                             </label>

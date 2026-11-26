@@ -162,15 +162,6 @@ export const paginationContainerStyle: CSSProperties = {
   justifyContent: 'right',
 };
 
-export const radioButtonStyle: CSSProperties = {
-  width: '16px',
-  height: '16px',
-  cursor: 'pointer',
-  appearance: 'radio',
-  WebkitAppearance: 'radio',
-  accentColor: 'var(--mui-page-header-color)',
-};
-
 export const radioWrapperStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',

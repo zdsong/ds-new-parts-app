@@ -1,3 +1,15 @@
+/**
+ * 単一選択・複数選択の印（ラジオ／チェック）。
+ * 大きさ・余白・選択色を画面の共通色に揃える。
+ */
+export const choiceMarkSx = {
+    padding: '4px',
+    '& .MuiSvgIcon-root': { fontSize: '20px' },
+    '&.Mui-checked:not(.Mui-disabled)': {
+        color: 'var(--mui-page-header-color)',
+    },
+};
+
 /** 単一選択・複数選択のラベルと余白（横並びの見た目を揃える） */
 export const choiceControlSx = {
     '& .MuiFormControlLabel-root': {
@@ -5,7 +17,7 @@ export const choiceControlSx = {
         width: 'auto',
         flex: 'none',
     },
-    '& .MuiButtonBase-root': { padding: '4px' },
+    '& .MuiRadio-root, & .MuiCheckbox-root': choiceMarkSx,
     '& .MuiFormControlLabel-label': { fontSize: '14px', lineHeight: 1.2 },
 };
 

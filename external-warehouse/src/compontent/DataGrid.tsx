@@ -5,7 +5,6 @@ import {
   ColDef, 
   GridReadyEvent, 
   GetRowIdParams, 
-  CheckboxSelectionCallbackParams,
   GridApi,
   GridOptions,
   GetRowIdFunc,
@@ -18,6 +17,7 @@ import {
   ICellRendererParams
 } from 'ag-grid-community';
 import Pagination from '@mui/material/Pagination';
+import Radio from '@mui/material/Radio';
 
 // AG Gridコミュニティモジュール登録
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -26,13 +26,14 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 import {
   gridContainerBaseStyle,
   paginationContainerStyle,
-  radioButtonStyle,
   radioWrapperStyle,
   getSelectionColumnStyles,
   getGridBaseOptions,
   columnBaseStyle,
   gridStyles
 } from '../styles/gridSx';
+import { choiceMarkSx } from '../styles/commonSX';
+import { GridChoiceCheckbox, GridChoiceHeader } from './ChoiceMark';
 
 // 基礎インターフェース（idフィールド必須）
 export interface BaseItemColumn {
@@ -269,9 +270,8 @@ const DataGrid = forwardRef(
           ...columnBaseStyle,
           sortable: false,
           // 見出しのチェックで、表示中の行をまとめて選ぶ
-          headerCheckboxSelection: true,
-          headerCheckboxSelectionCurrentPageOnly: true,
-          checkboxSelection: (params: CheckboxSelectionCallbackParams<T>) => true,
+          headerComponent: GridChoiceHeader,
+          cellRenderer: GridChoiceCheckbox,
           valueGetter: () => null,
         };
       }
@@ -284,11 +284,11 @@ const DataGrid = forwardRef(
         sortable: false,
         cellRenderer: ({ data }: { data: T }) => (
           <div style={radioWrapperStyle}>
-            <input
-              type="radio"
+            <Radio
+              size="small"
+              sx={choiceMarkSx}
               checked={selectedRow?.[rowUniqueKey] === data[rowUniqueKey]}
               onChange={() => setSelectedRow(data)}
-              style={radioButtonStyle}
             />
           </div>
         ),
